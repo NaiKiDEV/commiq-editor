@@ -1,0 +1,50 @@
+{
+  "name": "@commiq-editor/app",
+  "productName": "Commiq Editor",
+  "version": "0.1.0",
+  "description": "A cross-platform workbench for embedding terminals, browsers, and applications",
+  "main": ".vite/build/index.js",
+  "private": true,
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "author": {
+    "name": "NaiKiDEV",
+    "email": "pc999111@gmail.com"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@electron-forge/cli": "^7.11.1",
+    "@electron-forge/maker-deb": "^7.11.1",
+    "@electron-forge/maker-rpm": "^7.11.1",
+    "@electron-forge/maker-squirrel": "^7.11.1",
+    "@electron-forge/maker-zip": "^7.11.1",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
+    "@electron-forge/plugin-fuses": "^7.11.1",
+    "@electron-forge/plugin-vite": "^7.11.1",
+    "@electron/fuses": "^1.8.0",
+    "@tailwindcss/vite": "^4.2.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "electron": "41.0.3",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^5.7.0",
+    "vite": "^7.3.1"
+  },
+  "dependencies": {
+    "@naikidev/commiq": "1.1.0",
+    "@naikidev/commiq-context": "1.1.0",
+    "@naikidev/commiq-effects": "1.1.0",
+    "@naikidev/commiq-react": "1.1.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-webgl": "^0.19.0",
+    "@xterm/xterm": "^6.0.0",
+    "electron-squirrel-startup": "^1.0.1",
+    "node-pty": "^1.1.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  }
+}

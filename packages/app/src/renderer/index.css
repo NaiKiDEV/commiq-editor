@@ -1,0 +1,58 @@
+@import "tailwindcss";
+@import "@xterm/xterm/css/xterm.css";
+
+@font-face {
+  font-family: 'CommitMono NF';
+  src: url('./assets/fonts/CommitMonoNerdFont-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'CommitMono NF';
+  src: url('./assets/fonts/CommitMonoNerdFont-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'CommitMono NF';
+  src: url('./assets/fonts/CommitMonoNerdFont-Italic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'CommitMono NF';
+  src: url('./assets/fonts/CommitMonoNerdFont-BoldItalic.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'CommitMono NF Mono';
+  src: url('./assets/fonts/CommitMonoNerdFontMono-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'CommitMono NF Mono';
+  src: url('./assets/fonts/CommitMonoNerdFontMono-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'CommitMono NF Mono';
+  src: url('./assets/fonts/CommitMonoNerdFontMono-Italic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'CommitMono NF Mono';
+  src: url('./assets/fonts/CommitMonoNerdFontMono-BoldItalic.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+}

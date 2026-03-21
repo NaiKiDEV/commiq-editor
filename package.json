@@ -1,0 +1,20 @@
+{
+  "name": "commiq-editor",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @commiq-editor/app start",
+    "build": "pnpm --filter @commiq-editor/app package",
+    "make": "pnpm --filter @commiq-editor/app make"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "electron-winstaller",
+      "esbuild",
+      "node-pty"
+    ],
+    "overrides": {
+      "vite": "^7.3.1"
+    }
+  }
+}
