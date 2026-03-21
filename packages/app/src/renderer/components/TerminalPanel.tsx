@@ -22,13 +22,33 @@ export function TerminalPanel({ sessionId, panelId }: TerminalPanelProps) {
 
     const terminal = new Terminal({
       cursorBlink: true,
+      cursorStyle: 'bar',
       fontSize: 13,
+      lineHeight: 1.2,
       fontFamily: "'CommitMono NF', 'CommitMono NF Mono', Menlo, Monaco, monospace",
       theme: {
         background: '#0a0a0a',
         foreground: '#e5e5e5',
-        cursor: '#e5e5e5',
-        selectionBackground: '#404040',
+        cursor: '#a3a3a3',
+        cursorAccent: '#0a0a0a',
+        selectionBackground: '#525252',
+        selectionForeground: '#fafafa',
+        black: '#171717',
+        red: '#ef4444',
+        green: '#22c55e',
+        yellow: '#eab308',
+        blue: '#3b82f6',
+        magenta: '#a855f7',
+        cyan: '#06b6d4',
+        white: '#d4d4d4',
+        brightBlack: '#525252',
+        brightRed: '#f87171',
+        brightGreen: '#4ade80',
+        brightYellow: '#facc15',
+        brightBlue: '#60a5fa',
+        brightMagenta: '#c084fc',
+        brightCyan: '#22d3ee',
+        brightWhite: '#fafafa',
       },
       allowProposedApi: true,
     });
@@ -49,6 +69,14 @@ export function TerminalPanel({ sessionId, panelId }: TerminalPanelProps) {
 
     fitAddon.fit();
     terminalRef.current = terminal;
+
+    // Let app-level shortcuts bubble up to the DOM instead of being consumed by xterm
+    terminal.attachCustomKeyEventHandler((e) => {
+      if (e.type !== 'keydown') return true;
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && e.key.toLowerCase() === 'k') return false;
+      return true;
+    });
 
     // Title tracking: shell escape sequences update tab title
     terminal.onTitleChange((title) => {
