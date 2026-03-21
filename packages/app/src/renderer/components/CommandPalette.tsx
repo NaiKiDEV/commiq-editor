@@ -9,19 +9,14 @@ import {
   CommandItem,
   CommandShortcut,
 } from './ui/command';
-import { usePanels, useActivePanelId, useLayout, useWorkspaceActions } from '../hooks/use-workspace';
-import { useTerminalActions } from '../hooks/use-terminal';
-import { useBrowserActions } from '../hooks/use-browser';
+import { usePanels, useLayout, useWorkspaceActions } from '../hooks/use-workspace';
 import { getVisiblePanelIds } from '../lib/layout';
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
-  const activePanelId = useActivePanelId();
   const panels = usePanels();
   const layout = useLayout();
   const { openPanel, activatePanel, closePanel, splitPanel } = useWorkspaceActions();
-  const { kill: killTerminal } = useTerminalActions();
-  const { close: closeBrowser } = useBrowserActions();
 
   const restoreVisibleBrowsers = useCallback(() => {
     const visibleIds = getVisiblePanelIds(layout);
@@ -79,9 +74,7 @@ export function CommandPalette() {
     handleOpenChange(false);
   };
 
-  const handleClosePanel = (id: string, type: string) => {
-    if (type === 'terminal') killTerminal(id);
-    else if (type === 'browser') closeBrowser(id);
+  const handleClosePanel = (id: string) => {
     closePanel(id);
   };
 
@@ -130,22 +123,22 @@ export function CommandPalette() {
         )}
         {panels.length > 0 && (
           <>
-            <CommandGroup heading="Switch Tab">
+            <CommandGroup heading="Focus Pane">
               {panels.map((panel) => (
                 <CommandItem
-                  key={`switch-${panel.id}`}
+                  key={`focus-${panel.id}`}
                   onSelect={() => runAction(() => activatePanel(panel.id))}
                 >
-                  {panel.type === 'terminal' ? <TerminalSquare /> : <Globe />}
+                  {panel.type === 'terminal' ? <TerminalSquare /> : panel.type === 'browser' ? <Globe /> : <NotepadText />}
                   <span>{panel.title}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
-            <CommandGroup heading="Close Tab">
+            <CommandGroup heading="Close Pane">
               {panels.map((panel) => (
                 <CommandItem
                   key={`close-${panel.id}`}
-                  onSelect={() => runAction(() => handleClosePanel(panel.id, panel.type))}
+                  onSelect={() => runAction(() => handleClosePanel(panel.id))}
                 >
                   <X />
                   <span>Close: {panel.title}</span>

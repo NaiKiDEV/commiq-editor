@@ -46,22 +46,31 @@ const _store = createStore(initialState)
     const { layout, activePanelId } = ctx.state;
 
     let newLayout: LayoutNode;
+    let panels = [...ctx.state.panels];
+    const closedIds: string[] = [];
+
     if (!layout) {
       // First panel — create a single leaf
       newLayout = { type: 'leaf', panelId: panel.id };
     } else if (activePanelId && containsPanel(layout, activePanelId)) {
-      // Replace the focused leaf's panel with the new one
+      // Replace the focused leaf — close the old panel
       newLayout = replaceLeafPanel(layout, activePanelId, panel.id);
+      closedIds.push(activePanelId);
+      panels = panels.filter((p) => p.id !== activePanelId);
     } else {
-      // Fallback: just create a leaf (shouldn't happen normally)
       newLayout = { type: 'leaf', panelId: panel.id };
     }
 
     ctx.patch({
-      panels: [...ctx.state.panels, panel],
+      panels: [...panels, panel],
       activePanelId: panel.id,
       layout: newLayout,
     });
+
+    // Emit close for replaced panel so sessions get cleaned up
+    for (const id of closedIds) {
+      ctx.emit(PanelClosed, { id });
+    }
     ctx.emit(PanelOpened, panel);
   })
   .addCommandHandler('panel:close', (ctx, cmd) => {
@@ -85,20 +94,9 @@ const _store = createStore(initialState)
   })
   .addCommandHandler('panel:activate', (ctx, cmd) => {
     const { id } = cmd.data as { id: string };
-    if (!ctx.state.panels.some((p) => p.id === id)) return;
-
-    const { layout } = ctx.state;
-
-    if (layout && containsPanel(layout, id)) {
-      // Panel is already visible in a leaf — just focus it
-      ctx.patch({ activePanelId: id });
-    } else if (layout && ctx.state.activePanelId) {
-      // Panel not in layout — swap it into the focused leaf
-      const newLayout = replaceLeafPanel(layout, ctx.state.activePanelId, id);
-      ctx.patch({ activePanelId: id, layout: newLayout });
-    } else {
-      ctx.patch({ activePanelId: id });
-    }
+    // Only focus panels that are in the layout — never mutate layout
+    if (!ctx.state.layout || !containsPanel(ctx.state.layout, id)) return;
+    ctx.patch({ activePanelId: id });
     ctx.emit(PanelActivated, { id });
   })
   .addCommandHandler('panel:updateTitle', (ctx, cmd) => {

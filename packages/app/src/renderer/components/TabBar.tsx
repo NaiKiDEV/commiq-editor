@@ -25,7 +25,7 @@ type TabBarProps = {
   onNewTerminal: () => void;
   onNewBrowser: () => void;
   onNewNotes: () => void;
-  onClosePanel: (id: string, type: string) => void;
+  onClosePanel: (id: string) => void;
 };
 
 export function TabBar({ onNewTerminal, onNewBrowser, onNewNotes, onClosePanel }: TabBarProps) {
@@ -73,7 +73,7 @@ export function TabBar({ onNewTerminal, onNewBrowser, onNewNotes, onClosePanel }
               className="ml-0.5 rounded-sm p-0.5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground hover:bg-muted"
               onClick={(e) => {
                 e.stopPropagation();
-                onClosePanel(panel.id, panel.type);
+                onClosePanel(panel.id);
               }}
             >
               <X className="size-3" />

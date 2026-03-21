@@ -1,6 +1,5 @@
 import { TerminalSquare, Globe, NotepadText, Columns2 } from 'lucide-react';
-import { usePanels, useActivePanel, useLayout } from '../hooks/use-workspace';
-import { getVisiblePanelIds } from '../lib/layout';
+import { usePanels, useActivePanel } from '../hooks/use-workspace';
 
 function PanelIcon({ type }: { type: string }) {
   switch (type) {
@@ -14,10 +13,6 @@ function PanelIcon({ type }: { type: string }) {
 export function StatusBar() {
   const panels = usePanels();
   const activePanel = useActivePanel();
-  const layout = useLayout();
-
-  const visibleIds = getVisiblePanelIds(layout);
-  const visibleCount = visibleIds.size;
 
   return (
     <div className="flex items-center h-6 px-3 bg-card border-t border-border text-[11px] text-muted-foreground select-none shrink-0 gap-3">
@@ -32,16 +27,13 @@ export function StatusBar() {
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Split indicator */}
-      {visibleCount > 1 && (
+      {/* Pane count */}
+      {panels.length > 1 && (
         <div className="flex items-center gap-1">
           <Columns2 className="size-3" />
-          <span>{visibleCount} panes</span>
+          <span>{panels.length} panes</span>
         </div>
       )}
-
-      {/* Panel count */}
-      <span>{panels.length} {panels.length === 1 ? 'tab' : 'tabs'}</span>
     </div>
   );
 }

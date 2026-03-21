@@ -25,7 +25,11 @@ function relativeTime(iso: string): string {
   return `${days}d ago`;
 }
 
-export function NotesPanel() {
+type NotesPanelProps = {
+  panelId: string;
+};
+
+export function NotesPanel({ panelId: _panelId }: NotesPanelProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
