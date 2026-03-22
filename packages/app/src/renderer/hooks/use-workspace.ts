@@ -146,13 +146,13 @@ export function useWorkspaceActions() {
       queue(deleteWorkspaceCmd(id));
     },
 
-    createTab: (type: PanelType, title: string, options?: { transient?: boolean }) => {
+    createTab: (type: PanelType, title: string, options?: { transient?: boolean; background?: boolean }) => {
       const panel: Panel = {
         id: crypto.randomUUID(),
         type,
         title,
       };
-      queue(createTabCmd(panel, undefined, options?.transient));
+      queue(createTabCmd(panel, undefined, options?.transient, options?.background));
       return panel.id;
     },
     closeTab: (id: string) => queue(closeTabCmd(id)),

@@ -259,7 +259,7 @@ const _store = createStore(initialState)
   // ── Tab commands ───────────────────────────────────────────────────
 
   .addCommandHandler('tab:create', (ctx, cmd) => {
-    const { panel, tabName, transient } = cmd.data as { panel: Panel; tabName?: string; transient?: boolean };
+    const { panel, tabName, transient, background } = cmd.data as { panel: Panel; tabName?: string; transient?: boolean; background?: boolean };
     const ws = getActiveWorkspace(ctx.state);
     if (!ws) return;
 
@@ -275,7 +275,7 @@ const _store = createStore(initialState)
     const newWs = {
       ...ws,
       tabs: [...ws.tabs, tab],
-      activeTabId: tab.id,
+      activeTabId: background ? ws.activeTabId : tab.id,
     };
 
     ctx.patch({
@@ -286,7 +286,7 @@ const _store = createStore(initialState)
     ctx.emit(TabCreated, { tab, workspaceId: ws.id });
     ctx.emit(PanelOpened, panel);
 
-    if (ws.activeTabId && ws.activeTabId !== tab.id) {
+    if (!background && ws.activeTabId && ws.activeTabId !== tab.id) {
       const browserPanelIds = panel.type === 'browser' ? [panel.id] : [];
       ctx.emit(TabActivated, { tabId: tab.id, browserPanelIds });
     }
@@ -587,8 +587,8 @@ export const renameWorkspace = (id: string, name: string) =>
 export const deleteWorkspace = (id: string) =>
   createCommand('workspace:delete', { id });
 
-export const createTab = (panel: Panel, tabName?: string, transient?: boolean) =>
-  createCommand('tab:create', { panel, tabName, transient });
+export const createTab = (panel: Panel, tabName?: string, transient?: boolean, background?: boolean) =>
+  createCommand('tab:create', { panel, tabName, transient, background });
 
 export const closeTab = (id: string) =>
   createCommand('tab:close', { id });
