@@ -32,24 +32,24 @@ export function registerBrowserIpc(mainWindow: BrowserWindow): void {
     wc.on('did-navigate', (_e, url) => {
       send(`browser:navigated:${sessionId}`, {
         url,
-        canGoBack: wc.canGoBack(),
-        canGoForward: wc.canGoForward(),
+        canGoBack: wc.navigationHistory.canGoBack(),
+        canGoForward: wc.navigationHistory.canGoForward(),
       });
     });
 
     wc.on('did-navigate-in-page', (_e, url) => {
       send(`browser:navigated:${sessionId}`, {
         url,
-        canGoBack: wc.canGoBack(),
-        canGoForward: wc.canGoForward(),
+        canGoBack: wc.navigationHistory.canGoBack(),
+        canGoForward: wc.navigationHistory.canGoForward(),
       });
     });
 
     wc.on('did-finish-load', () => {
       send(`browser:navigated:${sessionId}`, {
         url: wc.getURL(),
-        canGoBack: wc.canGoBack(),
-        canGoForward: wc.canGoForward(),
+        canGoBack: wc.navigationHistory.canGoBack(),
+        canGoForward: wc.navigationHistory.canGoForward(),
       });
     });
 
@@ -100,14 +100,14 @@ export function registerBrowserIpc(mainWindow: BrowserWindow): void {
 
   ipcMain.on('browser:back', (_event, sessionId: string) => {
     const view = views.get(sessionId);
-    if (view && view.webContents.canGoBack()) {
+    if (view && view.webContents.navigationHistory.canGoBack()) {
       view.webContents.goBack();
     }
   });
 
   ipcMain.on('browser:forward', (_event, sessionId: string) => {
     const view = views.get(sessionId);
-    if (view && view.webContents.canGoForward()) {
+    if (view && view.webContents.navigationHistory.canGoForward()) {
       view.webContents.goForward();
     }
   });

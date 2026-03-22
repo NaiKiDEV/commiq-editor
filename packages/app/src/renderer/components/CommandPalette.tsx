@@ -17,7 +17,6 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandItem,
-  CommandShortcut,
 } from './ui/command';
 import {
   usePanels,
@@ -32,6 +31,13 @@ import { getVisiblePanelIds } from '../lib/layout';
 export type CommandPaletteHandle = {
   openWithSearch: (search: string) => void;
 };
+
+function PanelIcon({ type }: { type: string }) {
+  if (type === 'terminal') return <TerminalSquare />;
+  if (type === 'browser') return <Globe />;
+  if (type === 'workflow') return <Zap />;
+  return <NotepadText />;
+}
 
 export const CommandPalette = forwardRef<CommandPaletteHandle>(function CommandPalette(_props, ref) {
   const [open, setOpen] = useState(false);
@@ -125,93 +131,68 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(function CommandP
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
 
-        {/* New tab actions */}
+        {/* New tab */}
         <CommandGroup heading="New Tab">
-          <CommandItem
-            onSelect={() => runAction(() => createTab('terminal', 'Terminal'))}
-          >
+          <CommandItem onSelect={() => runAction(() => createTab('terminal', 'Terminal'))}>
             <TerminalSquare />
             <span>New Terminal Tab</span>
-            <CommandShortcut>terminal</CommandShortcut>
           </CommandItem>
-          <CommandItem
-            onSelect={() => runAction(() => createTab('browser', 'Browser'))}
-          >
+          <CommandItem onSelect={() => runAction(() => createTab('browser', 'Browser'))}>
             <Globe />
             <span>New Browser Tab</span>
-            <CommandShortcut>browser</CommandShortcut>
           </CommandItem>
-          <CommandItem
-            onSelect={() => runAction(() => createTab('notes', 'Notes'))}
-          >
+          <CommandItem onSelect={() => runAction(() => createTab('notes', 'Notes'))}>
             <NotepadText />
             <span>New Notes Tab</span>
-            <CommandShortcut>notes</CommandShortcut>
           </CommandItem>
-          <CommandItem
-            onSelect={() => runAction(() => createTab('workflow', 'Workflows'))}
-          >
+          <CommandItem onSelect={() => runAction(() => createTab('workflow', 'Workflows'))}>
             <Zap />
             <span>New Workflow Tab</span>
-            <CommandShortcut>workflow</CommandShortcut>
           </CommandItem>
         </CommandGroup>
 
-        {/* Split actions (within active tab) */}
+        {/* Split */}
         {panels.length > 0 && (
           <CommandGroup heading="Split">
-            <CommandItem
-              onSelect={() =>
-                runAction(() =>
-                  splitPanel('horizontal', 'terminal', 'Terminal'),
-                )
-              }
-            >
+            <CommandItem onSelect={() => runAction(() => splitPanel('horizontal', 'terminal', 'Terminal'))}>
               <Columns2 />
               <span>Split Right: Terminal</span>
-              <CommandShortcut>split</CommandShortcut>
             </CommandItem>
-            <CommandItem
-              onSelect={() =>
-                runAction(() =>
-                  splitPanel('vertical', 'terminal', 'Terminal'),
-                )
-              }
-            >
+            <CommandItem onSelect={() => runAction(() => splitPanel('vertical', 'terminal', 'Terminal'))}>
               <Rows2 />
               <span>Split Down: Terminal</span>
             </CommandItem>
-            <CommandItem
-              onSelect={() =>
-                runAction(() =>
-                  splitPanel('horizontal', 'browser', 'Browser'),
-                )
-              }
-            >
+            <CommandItem onSelect={() => runAction(() => splitPanel('horizontal', 'browser', 'Browser'))}>
               <Columns2 />
               <span>Split Right: Browser</span>
             </CommandItem>
-            <CommandItem
-              onSelect={() =>
-                runAction(() =>
-                  splitPanel('vertical', 'browser', 'Browser'),
-                )
-              }
-            >
+            <CommandItem onSelect={() => runAction(() => splitPanel('vertical', 'browser', 'Browser'))}>
               <Rows2 />
               <span>Split Down: Browser</span>
+            </CommandItem>
+            <CommandItem onSelect={() => runAction(() => splitPanel('horizontal', 'notes', 'Notes'))}>
+              <Columns2 />
+              <span>Split Right: Notes</span>
+            </CommandItem>
+            <CommandItem onSelect={() => runAction(() => splitPanel('vertical', 'notes', 'Notes'))}>
+              <Rows2 />
+              <span>Split Down: Notes</span>
+            </CommandItem>
+            <CommandItem onSelect={() => runAction(() => splitPanel('horizontal', 'workflow', 'Workflows'))}>
+              <Columns2 />
+              <span>Split Right: Workflows</span>
+            </CommandItem>
+            <CommandItem onSelect={() => runAction(() => splitPanel('vertical', 'workflow', 'Workflows'))}>
+              <Rows2 />
+              <span>Split Down: Workflows</span>
             </CommandItem>
           </CommandGroup>
         )}
 
-        {/* Workspace actions */}
+        {/* Workspace */}
         <CommandGroup heading="Workspace">
           <CommandItem
-            onSelect={() =>
-              runAction(() =>
-                createWorkspace(`Workspace ${workspaces.length + 1}`),
-              )
-            }
+            onSelect={() => runAction(() => createWorkspace(`Workspace ${workspaces.length + 1}`))}
           >
             <Plus />
             <span>New Workspace</span>
@@ -229,7 +210,7 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(function CommandP
             ))}
         </CommandGroup>
 
-        {/* Tab navigation */}
+        {/* Switch tab */}
         {tabs.length > 1 && (
           <CommandGroup heading="Switch Tab">
             {tabs.map((tab) => (
@@ -237,20 +218,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(function CommandP
                 key={`tab-${tab.id}`}
                 onSelect={() => runAction(() => activateTab(tab.id))}
               >
-                {tab.panels[0]?.type === 'terminal' ? (
-                  <TerminalSquare />
-                ) : tab.panels[0]?.type === 'browser' ? (
-                  <Globe />
-                ) : (
-                  <NotepadText />
-                )}
+                <PanelIcon type={tab.panels[0]?.type ?? ''} />
                 <span>{tab.name}</span>
               </CommandItem>
             ))}
           </CommandGroup>
         )}
 
-        {/* Focus pane (within active tab) */}
+        {/* Focus pane */}
         {panels.length > 1 && (
           <CommandGroup heading="Focus Pane">
             {panels.map((panel) => (
@@ -258,20 +233,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(function CommandP
                 key={`focus-${panel.id}`}
                 onSelect={() => runAction(() => activatePanel(panel.id))}
               >
-                {panel.type === 'terminal' ? (
-                  <TerminalSquare />
-                ) : panel.type === 'browser' ? (
-                  <Globe />
-                ) : (
-                  <NotepadText />
-                )}
+                <PanelIcon type={panel.type} />
                 <span>{panel.title}</span>
               </CommandItem>
             ))}
           </CommandGroup>
         )}
 
-        {/* Close actions */}
+        {/* Close */}
         {(tabs.length > 0 || panels.length > 0) && (
           <CommandGroup heading="Close">
             {tabs.map((tab) => (
@@ -286,7 +255,7 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(function CommandP
             {panels.length > 1 &&
               panels.map((panel) => (
                 <CommandItem
-                  key={`close-${panel.id}`}
+                  key={`close-pane-${panel.id}`}
                   onSelect={() => runAction(() => closePanel(panel.id))}
                 >
                   <X />
