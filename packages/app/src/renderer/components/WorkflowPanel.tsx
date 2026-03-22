@@ -1,8 +1,11 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { Plus, Trash2, Play, Zap, Check, Loader2 } from 'lucide-react';
-import { Button } from './ui/button';
-import { cn } from '@/lib/utils';
-import { useWorkspaceActions, useActiveWorkspaceId } from '../hooks/use-workspace';
+import { useEffect, useState, useRef, useCallback } from "react";
+import { Plus, Trash2, Play, Zap, Check, Loader2 } from "lucide-react";
+import { Button } from "./ui/button";
+import { cn } from "@/lib/utils";
+import {
+  useWorkspaceActions,
+  useActiveWorkspaceId,
+} from "../hooks/use-workspace";
 
 type WorkflowCommand = {
   id: string;
@@ -13,11 +16,11 @@ type WorkflowCommand = {
 type Workflow = {
   id: string;
   name: string;
-  scope: 'workspace' | 'global';
+  scope: "workspace" | "global";
   commands: WorkflowCommand[];
 };
 
-type SaveState = 'saved' | 'saving' | 'idle';
+type SaveState = "saved" | "saving" | "idle";
 
 type WorkflowPanelProps = {
   panelId: string;
@@ -30,13 +33,14 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [saveState, setSaveState] = useState<SaveState>("idle");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const activeWorkflow = workflows.find((w) => w.id === activeWorkflowId) ?? null;
+  const activeWorkflow =
+    workflows.find((w) => w.id === activeWorkflowId) ?? null;
 
-  const globalWorkflows = workflows.filter((w) => w.scope === 'global');
-  const workspaceWorkflows = workflows.filter((w) => w.scope === 'workspace');
+  const globalWorkflows = workflows.filter((w) => w.scope === "global");
+  const workspaceWorkflows = workflows.filter((w) => w.scope === "workspace");
 
   // Load workflows on mount / when workspaceId changes
   useEffect(() => {
@@ -51,12 +55,12 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
   const scheduleSave = useCallback(
     (workflow: Workflow) => {
       if (!workspaceId) return;
-      setSaveState('saving');
+      setSaveState("saving");
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(async () => {
         await window.electronAPI.workflow.save(workflow, workspaceId);
-        setSaveState('saved');
-        setTimeout(() => setSaveState('idle'), 1500);
+        setSaveState("saved");
+        setTimeout(() => setSaveState("idle"), 1500);
       }, 400);
     },
     [workspaceId],
@@ -66,8 +70,8 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
     if (!workspaceId) return;
     const workflow: Workflow = {
       id: crypto.randomUUID(),
-      name: 'New Workflow',
-      scope: 'workspace',
+      name: "New Workflow",
+      scope: "workspace",
       commands: [],
     };
     await window.electronAPI.workflow.save(workflow, workspaceId);
@@ -93,7 +97,7 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
   );
 
   const updateWorkflow = useCallback(
-    (id: string, data: Partial<Omit<Workflow, 'id'>>) => {
+    (id: string, data: Partial<Omit<Workflow, "id">>) => {
       setWorkflows((prev) => {
         const updated = prev.map((w) => (w.id === id ? { ...w, ...data } : w));
         const target = updated.find((w) => w.id === id);
@@ -105,7 +109,7 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
   );
 
   const changeScope = useCallback(
-    async (id: string, newScope: 'workspace' | 'global') => {
+    async (id: string, newScope: "workspace" | "global") => {
       if (!workspaceId) return;
       const target = workflows.find((w) => w.id === id);
       if (!target || target.scope === newScope) return;
@@ -116,27 +120,30 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
       await window.electronAPI.workflow.save(updated, workspaceId);
 
       setWorkflows((prev) => prev.map((w) => (w.id === id ? updated : w)));
-      setSaveState('saved');
-      setTimeout(() => setSaveState('idle'), 1500);
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 1500);
     },
     [workflows, workspaceId],
   );
 
-  const addCommand = useCallback((workflowId: string) => {
-    const newCmd: WorkflowCommand = {
-      id: crypto.randomUUID(),
-      name: '',
-      command: '',
-    };
-    setWorkflows((prev) => {
-      const updated = prev.map((w) =>
-        w.id === workflowId ? { ...w, commands: [...w.commands, newCmd] } : w,
-      );
-      const target = updated.find((w) => w.id === workflowId);
-      if (target) scheduleSave(target);
-      return updated;
-    });
-  }, [scheduleSave]);
+  const addCommand = useCallback(
+    (workflowId: string) => {
+      const newCmd: WorkflowCommand = {
+        id: crypto.randomUUID(),
+        name: "",
+        command: "",
+      };
+      setWorkflows((prev) => {
+        const updated = prev.map((w) =>
+          w.id === workflowId ? { ...w, commands: [...w.commands, newCmd] } : w,
+        );
+        const target = updated.find((w) => w.id === workflowId);
+        if (target) scheduleSave(target);
+        return updated;
+      });
+    },
+    [scheduleSave],
+  );
 
   const updateCommand = useCallback(
     (workflowId: string, cmdId: string, data: Partial<WorkflowCommand>) => {
@@ -180,11 +187,11 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
     for (const cmd of activeWorkflow.commands) {
       if (!cmd.command.trim()) continue;
       const tabName = cmd.name.trim() || activeWorkflow.name;
-      const panelId = createTab('terminal', tabName);
+      const panelId = createTab("terminal", tabName);
       // Wait for the shell to emit its first data (prompt) before sending the command
       const removeListener = window.electronAPI.terminal.onData(panelId, () => {
         removeListener();
-        window.electronAPI.terminal.write(panelId, cmd.command + '\r');
+        window.electronAPI.terminal.write(panelId, cmd.command + "\r");
       });
     }
   }, [activeWorkflow, createTab]);
@@ -267,10 +274,10 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
                 className="flex-1 bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground"
               />
               <div className="flex items-center gap-1.5">
-                {saveState === 'saving' && (
+                {saveState === "saving" && (
                   <Loader2 className="size-3 text-muted-foreground/50 animate-spin" />
                 )}
-                {saveState === 'saved' && (
+                {saveState === "saved" && (
                   <Check className="size-3 text-muted-foreground/50" />
                 )}
                 <Button
@@ -300,23 +307,23 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
               <div className="flex items-center rounded-md border border-border overflow-hidden">
                 <button
                   className={cn(
-                    'px-2.5 py-1 text-xs transition-colors',
-                    activeWorkflow.scope === 'global'
-                      ? 'bg-muted text-foreground'
-                      : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                    "px-2.5 py-1 text-xs transition-colors",
+                    activeWorkflow.scope === "global"
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                   )}
-                  onClick={() => changeScope(activeWorkflow.id, 'global')}
+                  onClick={() => changeScope(activeWorkflow.id, "global")}
                 >
                   Global
                 </button>
                 <button
                   className={cn(
-                    'px-2.5 py-1 text-xs transition-colors border-l border-border',
-                    activeWorkflow.scope === 'workspace'
-                      ? 'bg-muted text-foreground'
-                      : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                    "px-2.5 py-1 text-xs transition-colors border-l border-border",
+                    activeWorkflow.scope === "workspace"
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                   )}
-                  onClick={() => changeScope(activeWorkflow.id, 'workspace')}
+                  onClick={() => changeScope(activeWorkflow.id, "workspace")}
                 >
                   Workspace
                 </button>
@@ -335,7 +342,7 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
                   key={cmd.id}
                   className="flex items-start gap-2 rounded-md border border-border bg-muted/30 p-2"
                 >
-                  <div className="flex-1 min-w-0 space-y-1.5">
+                  <div className="grow flex flex-col gap-2">
                     <input
                       type="text"
                       value={cmd.name}
@@ -347,17 +354,20 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
                       placeholder="Label (optional)"
                       className="w-full bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground/50"
                     />
-                    <input
-                      type="text"
-                      value={cmd.command}
-                      onChange={(e) =>
-                        updateCommand(activeWorkflow.id, cmd.id, {
-                          command: e.target.value,
-                        })
-                      }
-                      placeholder="e.g., npm run dev"
-                      className="w-full bg-transparent text-xs font-mono text-foreground outline-none placeholder:text-muted-foreground/40"
-                    />
+                    <span className="flex flex-row">
+                      <span className="pr-2 text-xs font-mono">{">"}</span>
+                      <input
+                        type="text"
+                        value={cmd.command}
+                        onChange={(e) =>
+                          updateCommand(activeWorkflow.id, cmd.id, {
+                            command: e.target.value,
+                          })
+                        }
+                        placeholder="e.g., npm run dev"
+                        className="w-full bg-transparent text-xs font-mono text-muted-foreground outline-none placeholder:text-muted-foreground/40"
+                      />
+                    </span>
                   </div>
                   <Button
                     variant="ghost"
@@ -404,24 +414,29 @@ type WorkflowListItemProps = {
   onClick: () => void;
 };
 
-function WorkflowListItem({ workflow, isActive, onClick }: WorkflowListItemProps) {
+function WorkflowListItem({
+  workflow,
+  isActive,
+  onClick,
+}: WorkflowListItemProps) {
   return (
     <button
       className={cn(
-        'w-full flex items-start gap-2 px-3 py-2 text-left transition-colors',
+        "w-full flex items-start gap-2 px-3 py-2 text-left transition-colors",
         isActive
-          ? 'bg-muted text-foreground'
-          : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+          ? "bg-muted text-foreground"
+          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
       )}
       onClick={onClick}
     >
       <Zap className="size-3.5 mt-0.5 shrink-0" />
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium truncate">
-          {workflow.name || 'Untitled'}
+          {workflow.name || "Untitled"}
         </p>
         <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-          {workflow.commands.length} command{workflow.commands.length !== 1 ? 's' : ''}
+          {workflow.commands.length} command
+          {workflow.commands.length !== 1 ? "s" : ""}
         </p>
       </div>
     </button>
