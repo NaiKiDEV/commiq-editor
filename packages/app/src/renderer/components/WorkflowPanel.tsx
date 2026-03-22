@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import {
   Plus, Trash2, Play, Zap, Check, Loader2, Terminal, Globe,
-  GripVertical, Circle, CheckCircle2, XCircle, Square, RotateCcw,
+  GripVertical, Circle, CheckCircle2, XCircle, Square, RotateCcw, Download, Upload,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
@@ -60,6 +60,7 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
     currentY: number;
   } | null>(null);
   const commandListRef = useRef<HTMLDivElement>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
 
   const activeWorkflow =
     workflows.find((w) => w.id === activeWorkflowId) ?? null;
@@ -454,6 +455,41 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
     [createTab, navigateBrowser],
   );
 
+  const exportWorkflow = useCallback((workflow: Workflow) => {
+    const exported = { ...workflow, scope: "global" as const };
+    const blob = new Blob([JSON.stringify(exported, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${workflow.name.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.workflow.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const importWorkflow = useCallback(async (file: File) => {
+    if (!workspaceId) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const workflow: Workflow = {
+        ...parsed,
+        id: crypto.randomUUID(),
+        scope: "global",
+        mode: parsed.mode || "parallel",
+        commands: (parsed.commands || []).map((c: any) => ({
+          ...c,
+          id: crypto.randomUUID(),
+          type: c.type || "terminal",
+        })),
+      };
+      await window.electronAPI.workflow.save(workflow, workspaceId);
+      setWorkflows((prev) => [...prev, workflow]);
+      setActiveWorkflowId(workflow.id);
+    } catch {
+      // Invalid file — silently ignore
+    }
+  }, [workspaceId]);
+
   if (!workspaceId) return null;
   if (!loaded) return null;
 
@@ -465,10 +501,31 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Workflows
           </span>
-          <Button variant="ghost" size="icon-xs" onClick={createWorkflow}>
-            <Plus className="size-3.5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => importFileRef.current?.click()}
+              title="Import workflow"
+            >
+              <Upload className="size-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon-xs" onClick={createWorkflow} title="New workflow">
+              <Plus className="size-3.5" />
+            </Button>
+          </div>
         </div>
+        <input
+          ref={importFileRef}
+          type="file"
+          accept=".json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) importWorkflow(file);
+            e.target.value = "";
+          }}
+        />
         <div className="px-3 py-2 border-b border-border">
           <input
             type="text"
@@ -581,6 +638,15 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
                     <Play className="size-3.5" />
                   </Button>
                 )}
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={() => exportWorkflow(activeWorkflow)}
+                  className="text-muted-foreground hover:text-foreground"
+                  title="Export workflow"
+                >
+                  <Download className="size-3.5" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon-xs"
