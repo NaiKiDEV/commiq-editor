@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEvent } from '@naikidev/commiq-react';
 import { TooltipProvider } from './ui/tooltip';
 import { TitleBar } from './TitleBar';
@@ -7,6 +7,8 @@ import { PanelContainer } from './PanelContainer';
 import { StatusBar } from './StatusBar';
 import { CommandPalette } from './CommandPalette';
 import type { CommandPaletteHandle } from './CommandPalette';
+import { SettingsProvider } from '../contexts/settings';
+import { SettingsModal } from './SettingsModal';
 import { useTerminalActions } from '../hooks/use-terminal';
 import { useBrowserActions } from '../hooks/use-browser';
 import {
@@ -63,6 +65,7 @@ export function Shell() {
   const activeTabId = useActiveTabId();
   const { activateTab, closeTab } = useWorkspaceActions();
   const commandPaletteRef = useRef<CommandPaletteHandle | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -105,6 +108,12 @@ export function Shell() {
         commandPaletteRef.current?.openWithSearch('New');
         return;
       }
+
+      if (e.key === ',') {
+        e.preventDefault();
+        setSettingsOpen(true);
+        return;
+      }
     };
 
     window.addEventListener('keydown', handler);
@@ -140,14 +149,17 @@ export function Shell() {
   }, [tabs, activeTabId, activateTab, closeTab]);
 
   return (
-    <TooltipProvider delay={300}>
-      <div className="flex flex-col h-screen bg-background text-foreground">
-        <TitleBar />
-        <TabBar />
-        <PanelContainer />
-        <StatusBar />
-        <CommandPalette ref={commandPaletteRef} />
-      </div>
-    </TooltipProvider>
+    <SettingsProvider>
+      <TooltipProvider delay={300}>
+        <div className="flex flex-col h-screen bg-background text-foreground">
+          <TitleBar onSettingsOpen={() => setSettingsOpen(true)} />
+          <TabBar />
+          <PanelContainer />
+          <StatusBar />
+          <CommandPalette ref={commandPaletteRef} />
+          <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+        </div>
+      </TooltipProvider>
+    </SettingsProvider>
   );
 }

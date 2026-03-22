@@ -92,6 +92,16 @@ const electronAPI = {
       ipcRenderer.invoke('env:list') as Promise<Array<{ name: string; value: string }>>,
   },
 
+  settings: {
+    load: () =>
+      ipcRenderer.invoke('settings:load') as Promise<{
+        terminal: { fontFamily: string; fontSize: number; cursorStyle: 'block' | 'underline' | 'bar'; scrollback: number };
+        browser: { defaultUrl: string };
+      }>,
+    save: (s: { terminal: { fontFamily: string; fontSize: number; cursorStyle: 'block' | 'underline' | 'bar'; scrollback: number }; browser: { defaultUrl: string } }) =>
+      ipcRenderer.invoke('settings:save', s) as Promise<void>,
+  },
+
   timer: {
     list: () =>
       ipcRenderer.invoke('timer:list') as Promise<unknown[]>,

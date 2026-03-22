@@ -10,6 +10,7 @@ import { registerTimerIpc } from './ipc/timer';
 import { registerPortsIpc } from './ipc/ports';
 import { registerProcessesIpc } from './ipc/processes';
 import { registerEnvIpc } from './ipc/env';
+import { registerSettingsIpc } from './ipc/settings';
 
 if (started) {
   app.quit();

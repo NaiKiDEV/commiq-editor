@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, RotateCw, X as XIcon } from 'lucide-react';
 import { useBrowserSession, useBrowserActions } from '../hooks/use-browser';
 import { useWorkspaceActions } from '../hooks/use-workspace';
 import { persistenceReady } from '../stores';
+import { useSettings } from '../contexts/settings';
 import { Button } from './ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 
@@ -26,6 +27,7 @@ export function BrowserPanel({ sessionId, panelId, isActive }: BrowserPanelProps
   const { open, navigate, back, forward, reload, updateNavigation, updateTitle, updateLoading } =
     useBrowserActions();
   const { updatePanelTitle } = useWorkspaceActions();
+  const { settings } = useSettings();
   const [urlInput, setUrlInput] = useState('');
 
   useEffect(() => {
@@ -33,9 +35,10 @@ export function BrowserPanel({ sessionId, panelId, isActive }: BrowserPanelProps
     createdRef.current = true;
 
     persistenceReady.then((browserUrls) => {
-      const restoredUrl = browserUrls?.[sessionId] ?? 'about:blank';
-      open(sessionId, panelId, restoredUrl);
-      if (restoredUrl !== 'about:blank') setUrlInput(restoredUrl);
+      const restoredUrl = browserUrls?.[sessionId];
+      const initialUrl = restoredUrl ?? settings.browser.defaultUrl;
+      open(sessionId, panelId, initialUrl);
+      if (initialUrl !== 'about:blank') setUrlInput(initialUrl);
     });
 
     const removeNav = window.electronAPI.browser.onNavigated(sessionId, (info) => {

@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { useTerminalActions } from '../hooks/use-terminal';
 import { useWorkspaceActions } from '../hooks/use-workspace';
+import { useSettings } from '../contexts/settings';
 
 type TerminalPanelProps = {
   sessionId: string;
@@ -13,19 +14,21 @@ type TerminalPanelProps = {
 export function TerminalPanel({ sessionId, panelId }: TerminalPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
   const spawnedRef = useRef(false);
   const { spawn, resize, markExited } = useTerminalActions();
   const { closePanel, updatePanelTitle } = useWorkspaceActions();
+  const { settings } = useSettings();
 
   useEffect(() => {
     if (!containerRef.current || terminalRef.current) return;
 
     const terminal = new Terminal({
       cursorBlink: true,
-      cursorStyle: 'bar',
-      fontSize: 13,
+      cursorStyle: settings.terminal.cursorStyle,
+      fontSize: settings.terminal.fontSize,
       lineHeight: 1.2,
-      fontFamily: "'CommitMono NF', 'CommitMono NF Mono', Menlo, Monaco, monospace",
+      fontFamily: settings.terminal.fontFamily,
       theme: {
         background: '#0a0a0a',
         foreground: '#e5e5e5',
@@ -54,6 +57,7 @@ export function TerminalPanel({ sessionId, panelId }: TerminalPanelProps) {
     });
 
     const fitAddon = new FitAddon();
+    fitAddonRef.current = fitAddon;
     terminal.loadAddon(fitAddon);
 
     terminal.open(containerRef.current);
@@ -116,8 +120,19 @@ export function TerminalPanel({ sessionId, panelId }: TerminalPanelProps) {
       removeExitListener();
       terminal.dispose();
       terminalRef.current = null;
+      fitAddonRef.current = null;
     };
   }, [sessionId, panelId]);
+
+  useEffect(() => {
+    if (!terminalRef.current) return;
+    const t = terminalRef.current;
+    t.options.cursorStyle = settings.terminal.cursorStyle;
+    t.options.fontSize = settings.terminal.fontSize;
+    t.options.fontFamily = settings.terminal.fontFamily;
+    t.options.scrollback = settings.terminal.scrollback;
+    fitAddonRef.current?.fit();
+  }, [settings.terminal]);
 
   return (
     <div

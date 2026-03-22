@@ -5,6 +5,7 @@ import {
   Plus,
   Pencil,
   Trash2,
+  Settings2,
 } from 'lucide-react';
 import {
   useWorkspaces,
@@ -24,7 +25,7 @@ import {
 import { cn } from '@/lib/utils';
 import { getVisiblePanelIds } from '../lib/layout';
 
-export function TitleBar() {
+export function TitleBar({ onSettingsOpen }: { onSettingsOpen?: () => void }) {
   const workspaces = useWorkspaces();
   const activeWorkspace = useActiveWorkspace();
   const panels = usePanels();
@@ -161,8 +162,15 @@ export function TitleBar() {
         )}
       </div>
 
+      {/* Settings button — right-aligned before traffic light spacer */}
+      <div className="ml-auto" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        <Button variant="ghost" size="icon-xs" onClick={onSettingsOpen}>
+          <Settings2 className="size-3.5" />
+        </Button>
+      </div>
+
       {/* Spacer for Windows title bar overlay controls */}
-      <div className="w-[138px] shrink-0 ml-auto" />
+      <div className="w-[138px] shrink-0" />
     </div>
   );
 }
