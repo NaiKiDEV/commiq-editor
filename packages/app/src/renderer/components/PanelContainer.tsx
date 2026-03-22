@@ -5,6 +5,7 @@ import { TerminalPanel } from './TerminalPanel';
 import { BrowserPanel } from './BrowserPanel';
 import { NotesPanel } from './NotesPanel';
 import { WorkflowPanel } from './WorkflowPanel';
+import { TimerPanel } from './TimerPanel';
 import { getVisiblePanelIds } from '../lib/layout';
 import type { Panel } from '../stores/workspace';
 
@@ -46,6 +47,7 @@ function PanelContent({
       )}
       {panel.type === 'notes' && <NotesPanel panelId={panel.id} />}
       {panel.type === 'workflow' && <WorkflowPanel panelId={panel.id} />}
+      {panel.type === 'timer' && <TimerPanel panelId={panel.id} />}
     </div>
   );
 }

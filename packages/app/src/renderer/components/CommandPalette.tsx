@@ -9,6 +9,7 @@ import {
   Rows2,
   Layers,
   Plus,
+  Timer,
 } from 'lucide-react';
 import {
   CommandDialog,
@@ -36,6 +37,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === 'terminal') return <TerminalSquare />;
   if (type === 'browser') return <Globe />;
   if (type === 'workflow') return <Zap />;
+  if (type === 'timer') return <Timer />;
   return <NotepadText />;
 }
 
@@ -148,6 +150,10 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(function CommandP
           <CommandItem onSelect={() => runAction(() => createTab('workflow', 'Workflows'))}>
             <Zap />
             <span>New Workflow Tab</span>
+          </CommandItem>
+          <CommandItem onSelect={() => runAction(() => createTab('timer', 'Timers'))}>
+            <Timer />
+            <span>New Timer Tab</span>
           </CommandItem>
         </CommandGroup>
 

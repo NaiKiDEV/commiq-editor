@@ -18,7 +18,7 @@ import {
 
 // ── Types ──────────────────────────────────────────────────────────────
 
-export type PanelType = 'terminal' | 'browser' | 'notes' | 'app' | 'workflow';
+export type PanelType = 'terminal' | 'browser' | 'notes' | 'app' | 'workflow' | 'timer';
 
 export type Panel = {
   id: string;

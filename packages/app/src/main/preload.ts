@@ -71,6 +71,17 @@ const electronAPI = {
       ipcRenderer.invoke('workflow:delete', id, scope, workspaceId) as Promise<void>,
   },
 
+  timer: {
+    list: () =>
+      ipcRenderer.invoke('timer:list') as Promise<unknown[]>,
+
+    save: (timer: unknown) =>
+      ipcRenderer.invoke('timer:save', timer) as Promise<void>,
+
+    delete: (id: string) =>
+      ipcRenderer.invoke('timer:delete', id) as Promise<void>,
+  },
+
   browser: {
     create: (sessionId: string, url: string) =>
       ipcRenderer.invoke('browser:create', sessionId, url) as Promise<{ id: string }>,

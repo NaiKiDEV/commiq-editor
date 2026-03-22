@@ -6,6 +6,7 @@ import { registerBrowserIpc, destroyAllViews } from './ipc/browser';
 import { registerNotesIpc } from './ipc/notes';
 import { registerWorkspaceIpc } from './ipc/workspace';
 import { registerWorkflowIpc } from './ipc/workflow';
+import { registerTimerIpc } from './ipc/timer';
 
 if (started) {
   app.quit();
@@ -17,6 +18,7 @@ registerTerminalIpc();
 registerNotesIpc();
 registerWorkspaceIpc();
 registerWorkflowIpc();
+registerTimerIpc();
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
