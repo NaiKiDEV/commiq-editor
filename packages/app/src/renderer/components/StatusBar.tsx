@@ -1,5 +1,11 @@
-import { TerminalSquare, Globe, NotepadText, Columns2 } from 'lucide-react';
-import { usePanels, useActivePanel } from '../hooks/use-workspace';
+import { TerminalSquare, Globe, NotepadText, Columns2, Layers } from 'lucide-react';
+import {
+  usePanels,
+  useActivePanel,
+  useActiveWorkspace,
+  useTabs,
+  useActiveTab,
+} from '../hooks/use-workspace';
 
 function PanelIcon({ type }: { type: string }) {
   switch (type) {
@@ -13,9 +19,20 @@ function PanelIcon({ type }: { type: string }) {
 export function StatusBar() {
   const panels = usePanels();
   const activePanel = useActivePanel();
+  const activeWorkspace = useActiveWorkspace();
+  const tabs = useTabs();
+  const activeTab = useActiveTab();
 
   return (
     <div className="flex items-center h-6 px-3 bg-card border-t border-border text-[11px] text-muted-foreground select-none shrink-0 gap-3">
+      {/* Workspace name */}
+      {activeWorkspace && (
+        <div className="flex items-center gap-1">
+          <Layers className="size-3" />
+          <span className="truncate max-w-32">{activeWorkspace.name}</span>
+        </div>
+      )}
+
       {/* Active panel indicator */}
       {activePanel && (
         <div className="flex items-center gap-1.5">
@@ -27,7 +44,14 @@ export function StatusBar() {
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Pane count */}
+      {/* Tab count */}
+      {tabs.length > 1 && (
+        <span>
+          {tabs.length} tabs
+        </span>
+      )}
+
+      {/* Pane count within active tab */}
       {panels.length > 1 && (
         <div className="flex items-center gap-1">
           <Columns2 className="size-3" />

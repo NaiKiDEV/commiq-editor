@@ -52,6 +52,25 @@ const electronAPI = {
       ipcRenderer.invoke('notes:delete', id) as Promise<void>,
   },
 
+  workspace: {
+    load: () =>
+      ipcRenderer.invoke('workspace:load') as Promise<unknown>,
+
+    save: (state: unknown) =>
+      ipcRenderer.invoke('workspace:save', state) as Promise<void>,
+  },
+
+  workflow: {
+    list: (workspaceId: string) =>
+      ipcRenderer.invoke('workflow:list', workspaceId) as Promise<Array<{ id: string; name: string; scope: 'workspace' | 'global'; commands: Array<{ id: string; name: string; command: string }> }>>,
+
+    save: (workflow: { id: string; name: string; scope: 'workspace' | 'global'; commands: Array<{ id: string; name: string; command: string }> }, workspaceId: string) =>
+      ipcRenderer.invoke('workflow:save', workflow, workspaceId) as Promise<void>,
+
+    delete: (id: string, scope: 'workspace' | 'global', workspaceId: string) =>
+      ipcRenderer.invoke('workflow:delete', id, scope, workspaceId) as Promise<void>,
+  },
+
   browser: {
     create: (sessionId: string, url: string) =>
       ipcRenderer.invoke('browser:create', sessionId, url) as Promise<{ id: string }>,

@@ -58,14 +58,11 @@ export function TerminalPanel({ sessionId, panelId }: TerminalPanelProps) {
 
     terminal.open(containerRef.current);
 
-    // WebGL renderer for better performance
     try {
       const webglAddon = new WebglAddon();
       webglAddon.onContextLoss(() => webglAddon.dispose());
       terminal.loadAddon(webglAddon);
-    } catch {
-      // WebGL not available, falls back to canvas
-    }
+    } catch {}
 
     fitAddon.fit();
     terminalRef.current = terminal;
@@ -78,23 +75,19 @@ export function TerminalPanel({ sessionId, panelId }: TerminalPanelProps) {
       return true;
     });
 
-    // Title tracking: shell escape sequences update tab title
     terminal.onTitleChange((title) => {
       updatePanelTitle(panelId, title);
     });
 
-    // Data plane: keystrokes → PTY (direct IPC, bypasses commiq)
     terminal.onData((data) => {
       window.electronAPI.terminal.write(sessionId, data);
     });
 
-    // Data plane: PTY output → xterm (direct IPC, bypasses commiq)
     const removeDataListener = window.electronAPI.terminal.onData(
       sessionId,
       (data) => terminal.write(data),
     );
 
-    // Control plane: PTY exit → mark exited + auto-close tab
     const removeExitListener = window.electronAPI.terminal.onExit(
       sessionId,
       (exitCode) => {
@@ -103,14 +96,15 @@ export function TerminalPanel({ sessionId, panelId }: TerminalPanelProps) {
       },
     );
 
-    // Spawn the PTY (control plane via commiq)
     if (!spawnedRef.current) {
       spawnedRef.current = true;
       spawn(sessionId, panelId);
     }
 
-    // Resize handling
-    const resizeObserver = new ResizeObserver(() => {
+    // Resize handling — skip when hidden (display:none → 0×0) to avoid scroll shift
+    const resizeObserver = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      if (width === 0 || height === 0) return;
       fitAddon.fit();
       resize(sessionId, terminal.cols, terminal.rows);
     });

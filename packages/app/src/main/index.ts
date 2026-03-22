@@ -4,16 +4,19 @@ import started from 'electron-squirrel-startup';
 import { registerTerminalIpc, killAllSessions } from './ipc/terminal';
 import { registerBrowserIpc, destroyAllViews } from './ipc/browser';
 import { registerNotesIpc } from './ipc/notes';
+import { registerWorkspaceIpc } from './ipc/workspace';
+import { registerWorkflowIpc } from './ipc/workflow';
 
 if (started) {
   app.quit();
 }
 
-// Remove default menu
 Menu.setApplicationMenu(null);
 
 registerTerminalIpc();
 registerNotesIpc();
+registerWorkspaceIpc();
+registerWorkflowIpc();
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({

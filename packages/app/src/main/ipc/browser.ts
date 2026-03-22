@@ -12,61 +12,77 @@ export function registerBrowserIpc(mainWindow: BrowserWindow): void {
 
     mainWindow.contentView.addChildView(view);
 
-    // Start hidden (zero size) until bounds are set
     view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
 
     const wc = view.webContents;
 
-    // Forward navigation events to renderer
-    const sender = _event.sender;
+    // Use mainWindowRef.webContents for all event forwarding — the captured
+    // _event.sender can go stale after Vite HMR reloads, causing events to
+    // silently drop.
+    const send = (channel: string, ...args: unknown[]) => {
+      if (mainWindowRef && !mainWindowRef.isDestroyed()) {
+        mainWindowRef.webContents.send(channel, ...args);
+      }
+    };
 
     wc.on('page-title-updated', (_e, title) => {
-      if (!sender.isDestroyed()) {
-        sender.send(`browser:title:${sessionId}`, title);
-      }
+      send(`browser:title:${sessionId}`, title);
     });
 
     wc.on('did-navigate', (_e, url) => {
-      if (!sender.isDestroyed()) {
-        sender.send(`browser:navigated:${sessionId}`, {
-          url,
-          canGoBack: wc.canGoBack(),
-          canGoForward: wc.canGoForward(),
-        });
-      }
+      send(`browser:navigated:${sessionId}`, {
+        url,
+        canGoBack: wc.canGoBack(),
+        canGoForward: wc.canGoForward(),
+      });
     });
 
     wc.on('did-navigate-in-page', (_e, url) => {
-      if (!sender.isDestroyed()) {
-        sender.send(`browser:navigated:${sessionId}`, {
-          url,
-          canGoBack: wc.canGoBack(),
-          canGoForward: wc.canGoForward(),
-        });
-      }
+      send(`browser:navigated:${sessionId}`, {
+        url,
+        canGoBack: wc.canGoBack(),
+        canGoForward: wc.canGoForward(),
+      });
+    });
+
+    wc.on('did-finish-load', () => {
+      send(`browser:navigated:${sessionId}`, {
+        url: wc.getURL(),
+        canGoBack: wc.canGoBack(),
+        canGoForward: wc.canGoForward(),
+      });
     });
 
     wc.on('did-start-loading', () => {
-      if (!sender.isDestroyed()) {
-        sender.send(`browser:loading:${sessionId}`, true);
-      }
+      send(`browser:loading:${sessionId}`, true);
     });
 
     wc.on('did-stop-loading', () => {
-      if (!sender.isDestroyed()) {
-        sender.send(`browser:loading:${sessionId}`, false);
-      }
+      send(`browser:loading:${sessionId}`, false);
     });
 
-    // Intercept app-level shortcuts from the embedded page and forward to renderer
     wc.on('before-input-event', (e, input) => {
       if (input.type !== 'keyDown') return;
       const ctrl = input.control || input.meta;
-      if (ctrl && input.key.toLowerCase() === 'k') {
+      if (!ctrl) return;
+
+      const key = input.key.toLowerCase();
+
+      if (key === 'k') {
         e.preventDefault();
-        if (!sender.isDestroyed()) {
-          sender.send('app:shortcut', 'toggle-command-palette');
-        }
+        send('app:shortcut', 'toggle-command-palette');
+      } else if (key === 'tab') {
+        e.preventDefault();
+        send('app:shortcut', input.shift ? 'prev-tab' : 'next-tab');
+      } else if (key === 'w') {
+        e.preventDefault();
+        send('app:shortcut', 'close-tab');
+      } else if (key === 'n') {
+        e.preventDefault();
+        send('app:shortcut', 'new-tab');
+      } else if (key >= '1' && key <= '9') {
+        e.preventDefault();
+        send('app:shortcut', `activate-tab-${key}`);
       }
     });
 

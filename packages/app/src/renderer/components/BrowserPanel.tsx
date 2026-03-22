@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { ArrowLeft, ArrowRight, RotateCw, X as XIcon } from 'lucide-react';
 import { useBrowserSession, useBrowserActions } from '../hooks/use-browser';
 import { useWorkspaceActions } from '../hooks/use-workspace';
+import { persistenceReady } from '../stores';
 import { Button } from './ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 
@@ -27,12 +28,15 @@ export function BrowserPanel({ sessionId, panelId, isActive }: BrowserPanelProps
   const { updatePanelTitle } = useWorkspaceActions();
   const [urlInput, setUrlInput] = useState('');
 
-  // Create the WebContentsView on mount
   useEffect(() => {
     if (createdRef.current) return;
     createdRef.current = true;
 
-    open(sessionId, panelId, 'about:blank');
+    persistenceReady.then((browserUrls) => {
+      const restoredUrl = browserUrls?.[sessionId] ?? 'about:blank';
+      open(sessionId, panelId, restoredUrl);
+      if (restoredUrl !== 'about:blank') setUrlInput(restoredUrl);
+    });
 
     const removeNav = window.electronAPI.browser.onNavigated(sessionId, (info) => {
       updateNavigation(sessionId, info.url, info.canGoBack, info.canGoForward);
@@ -55,7 +59,6 @@ export function BrowserPanel({ sessionId, panelId, isActive }: BrowserPanelProps
     };
   }, [sessionId, panelId]);
 
-  // Position the WebContentsView overlay to match our viewport div
   useEffect(() => {
     if (!viewportRef.current) return;
 
@@ -77,7 +80,6 @@ export function BrowserPanel({ sessionId, panelId, isActive }: BrowserPanelProps
     return () => resizeObserver.disconnect();
   }, [sessionId]);
 
-  // Show/hide WebContentsView when tab is activated/backgrounded
   useEffect(() => {
     if (isActive) {
       window.electronAPI.browser.show(sessionId);
@@ -168,7 +170,6 @@ export function BrowserPanel({ sessionId, panelId, isActive }: BrowserPanelProps
         />
       </div>
 
-      {/* Viewport — WebContentsView is positioned over this div by main process */}
       <div ref={viewportRef} className="flex-1" />
     </div>
   );

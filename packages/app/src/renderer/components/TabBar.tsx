@@ -1,7 +1,16 @@
-import { TerminalSquare, Globe, NotepadText, X, Plus } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
+  TerminalSquare,
+  Globe,
+  NotepadText,
+  Zap,
+  X,
+  Plus,
+} from 'lucide-react';
+import {
+  useTabs,
+  useActiveTabId,
   usePanels,
-  useActivePanelId,
   useLayout,
   useWorkspaceActions,
 } from '../hooks/use-workspace';
@@ -18,95 +27,361 @@ import {
   TooltipTrigger,
 } from './ui/tooltip';
 import { cn } from '@/lib/utils';
-import { useCallback } from 'react';
 import { getVisiblePanelIds } from '../lib/layout';
+import type { PanelType } from '../stores/workspace';
+import { isRenamingTabRef } from './Shell';
 
-type TabBarProps = {
-  onNewTerminal: () => void;
-  onNewBrowser: () => void;
-  onNewNotes: () => void;
-  onClosePanel: (id: string) => void;
-};
+function TabIcon({ type }: { type: PanelType }) {
+  switch (type) {
+    case 'terminal':
+      return <TerminalSquare className="size-3" />;
+    case 'browser':
+      return <Globe className="size-3" />;
+    case 'notes':
+      return <NotepadText className="size-3" />;
+    case 'workflow':
+      return <Zap className="size-3" />;
+    default:
+      return <TerminalSquare className="size-3" />;
+  }
+}
 
-export function TabBar({ onNewTerminal, onNewBrowser, onNewNotes, onClosePanel }: TabBarProps) {
+export function TabBar() {
+  const tabs = useTabs();
+  const activeTabId = useActiveTabId();
   const panels = usePanels();
-  const activePanelId = useActivePanelId();
   const layout = useLayout();
-  const { activatePanel } = useWorkspaceActions();
+  const { createTab, closeTab, activateTab, renameTab, closeOtherTabs, closeTabsToRight, reorderTab } = useWorkspaceActions();
 
-  const handleMenuOpenChange = useCallback((open: boolean) => {
-    if (open) {
-      window.electronAPI.browser.hideAll();
-    } else {
-      const visibleIds = getVisiblePanelIds(layout);
-      for (const panel of panels) {
-        if (panel.type === 'browser' && visibleIds.has(panel.id)) {
-          window.electronAPI.browser.showSession(panel.id);
-        }
+  const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+
+  const [contextMenu, setContextMenu] = useState<{
+    tabId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const [dragState, setDragState] = useState<{
+    tabId: string;
+    startX: number;
+    currentX: number;
+    tabWidths: number[];
+    tabOffsets: number[];
+  } | null>(null);
+  const tabStripRef = useRef<HTMLDivElement>(null);
+
+  const tabsRef = useRef(tabs);
+  tabsRef.current = tabs;
+  const panelsRef = useRef(panels);
+  panelsRef.current = panels;
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
+
+  const startRename = (tabId: string, currentName: string) => {
+    setRenamingTabId(tabId);
+    setRenameValue(currentName);
+    isRenamingTabRef.current = true;
+  };
+
+  const commitRename = () => {
+    if (renamingTabId && renameValue.trim()) {
+      renameTab(renamingTabId, renameValue.trim());
+    }
+    setRenamingTabId(null);
+    isRenamingTabRef.current = false;
+  };
+
+  const cancelRename = () => {
+    setRenamingTabId(null);
+    isRenamingTabRef.current = false;
+  };
+
+  const openContextMenu = (e: React.MouseEvent, tabId: string) => {
+    e.preventDefault();
+    window.electronAPI.browser.hideAll();
+    setContextMenu({ tabId, x: e.clientX, y: e.clientY });
+  };
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+    const visibleIds = getVisiblePanelIds(layout);
+    for (const panel of panels) {
+      if (panel.type === 'browser' && visibleIds.has(panel.id)) {
+        window.electronAPI.browser.showSession(panel.id);
       }
     }
   }, [panels, layout]);
 
+  const runContextAction = (action: () => void) => {
+    action();
+    closeContextMenu();
+  };
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleClick = () => closeContextMenu();
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeContextMenu();
+    };
+    window.addEventListener('click', handleClick);
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      window.removeEventListener('click', handleClick);
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [contextMenu, closeContextMenu]);
+
+  const handleMenuOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) {
+        window.electronAPI.browser.hideAll();
+      } else {
+        const visibleIds = getVisiblePanelIds(layout);
+        for (const panel of panels) {
+          if (panel.type === 'browser' && visibleIds.has(panel.id)) {
+            window.electronAPI.browser.showSession(panel.id);
+          }
+        }
+      }
+    },
+    [panels, layout],
+  );
+
+  const handleMouseDown = (e: React.MouseEvent, tabId: string) => {
+    if (e.button !== 0 || renamingTabId) return;
+
+    const startX = e.clientX;
+    const tabElements = tabStripRef.current?.children;
+    if (!tabElements) return;
+
+    const tabWidths: number[] = [];
+    const tabOffsets: number[] = [];
+    for (let i = 0; i < tabElements.length; i++) {
+      const rect = (tabElements[i] as HTMLElement).getBoundingClientRect();
+      tabWidths.push(rect.width);
+      tabOffsets.push(rect.left);
+    }
+
+    let dragging = false;
+    let currentX = startX;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!dragging && Math.abs(moveEvent.clientX - startX) < 5) return;
+
+      if (!dragging) {
+        dragging = true;
+        window.electronAPI.browser.hideAll();
+      }
+
+      currentX = moveEvent.clientX;
+
+      setDragState({
+        tabId,
+        startX,
+        currentX,
+        tabWidths,
+        tabOffsets,
+      });
+    };
+
+    const handleMouseUp = () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+
+      if (dragging) {
+        const currentTabs = tabsRef.current;
+        const fromIdx = currentTabs.findIndex((t) => t.id === tabId);
+        const deltaX = currentX - startX;
+        const dragCenter = tabOffsets[fromIdx] + tabWidths[fromIdx] / 2 + deltaX;
+
+        let toIdx = 0;
+        for (let i = 0; i < tabOffsets.length; i++) {
+          if (dragCenter > tabOffsets[i] + tabWidths[i] / 2) {
+            toIdx = i + 1;
+          }
+        }
+        if (toIdx > fromIdx) toIdx--;
+        if (toIdx !== fromIdx) {
+          reorderTab(tabId, toIdx);
+        }
+
+        const currentLayout = layoutRef.current;
+        const currentPanels = panelsRef.current;
+        const visibleIds = getVisiblePanelIds(currentLayout);
+        for (const panel of currentPanels) {
+          if (panel.type === 'browser' && visibleIds.has(panel.id)) {
+            window.electronAPI.browser.showSession(panel.id);
+          }
+        }
+      }
+
+      setDragState(null);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
   return (
     <div className="flex items-center h-8 bg-card/50 border-b border-border select-none shrink-0">
-      <div className="flex items-center overflow-x-auto flex-1 min-w-0">
-        {panels.map((panel) => (
-          <button
-            key={panel.id}
-            className={cn(
-              'group flex items-center gap-1.5 px-3 h-8 text-xs border-r border-border whitespace-nowrap transition-colors',
-              panel.id === activePanelId
-                ? 'bg-background text-foreground'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-            )}
-            onClick={() => activatePanel(panel.id)}
-          >
-            {panel.type === 'terminal' ? (
-              <TerminalSquare className="size-3" />
-            ) : panel.type === 'browser' ? (
-              <Globe className="size-3" />
-            ) : (
-              <NotepadText className="size-3" />
-            )}
-            <span className="max-w-32 truncate">{panel.title}</span>
-            <span
-              className="ml-0.5 rounded-sm p-0.5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground hover:bg-muted"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClosePanel(panel.id);
-              }}
+      {/* Tab strip */}
+      <div ref={tabStripRef} className="flex items-center overflow-x-auto flex-1 min-w-0">
+        {tabs.map((tab) => {
+          const primaryPanel = tab.panels[0];
+          const panelType = primaryPanel?.type ?? 'terminal';
+
+          return (
+            <button
+              key={tab.id}
+              className={cn(
+                'group flex items-center gap-1.5 px-3 h-8 text-xs border-r border-border whitespace-nowrap transition-colors',
+                tab.id === activeTabId
+                  ? 'bg-background text-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+              )}
+              onClick={() => activateTab(tab.id)}
+              onContextMenu={(e) => openContextMenu(e, tab.id)}
+              onMouseDown={(e) => handleMouseDown(e, tab.id)}
+              style={
+                dragState?.tabId === tab.id
+                  ? {
+                      transform: `translateX(${dragState.currentX - dragState.startX}px)`,
+                      zIndex: 50,
+                      opacity: 0.8,
+                      position: 'relative' as const,
+                    }
+                  : undefined
+              }
             >
-              <X className="size-3" />
-            </span>
-          </button>
-        ))}
+              <TabIcon type={panelType} />
+              {renamingTabId === tab.id ? (
+                <input
+                  type="text"
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onBlur={commitRename}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitRename();
+                    if (e.key === 'Escape') cancelRename();
+                    e.stopPropagation();
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  autoFocus
+                  className="w-24 h-4 px-1 text-xs bg-background border border-ring rounded-sm outline-none"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <span
+                  className="max-w-32 truncate"
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    startRename(tab.id, tab.name);
+                  }}
+                >
+                  {tab.name}
+                </span>
+              )}
+              {tab.panels.length > 1 && (
+                <span className="text-[10px] text-muted-foreground">
+                  ({tab.panels.length})
+                </span>
+              )}
+              <span
+                className="ml-0.5 rounded-sm p-0.5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground hover:bg-muted"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeTab(tab.id);
+                }}
+              >
+                <X className="size-3" />
+              </span>
+            </button>
+          );
+        })}
       </div>
+
+      {/* New tab button */}
       <div className="flex items-center px-1 shrink-0">
         <DropdownMenu onOpenChange={handleMenuOpenChange}>
           <Tooltip>
             <DropdownMenuTrigger
-              render={<TooltipTrigger render={<Button variant="ghost" size="icon-xs" />} />}
+              render={
+                <TooltipTrigger
+                  render={<Button variant="ghost" size="icon-xs" />}
+                />
+              }
             >
               <Plus className="size-3.5" />
             </DropdownMenuTrigger>
             <TooltipContent side="bottom">New Tab</TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onNewTerminal}>
+            <DropdownMenuItem onClick={() => createTab('terminal', 'Terminal')}>
               <TerminalSquare />
               Terminal
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onNewBrowser}>
+            <DropdownMenuItem onClick={() => createTab('browser', 'Browser')}>
               <Globe />
               Browser
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onNewNotes}>
+            <DropdownMenuItem onClick={() => createTab('notes', 'Notes')}>
               <NotepadText />
               Notes
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab('workflow', 'Workflows')}>
+              <Zap />
+              Workflows
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {contextMenu && (
+        <div
+          className="fixed z-50 min-w-48 bg-popover border border-border rounded-md shadow-lg py-1 text-xs"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="w-full px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground"
+            onClick={() => {
+              const tab = tabs.find((t) => t.id === contextMenu.tabId);
+              if (tab) {
+                closeContextMenu();
+                startRename(tab.id, tab.name);
+              }
+            }}
+          >
+            Rename Tab
+          </button>
+          <button
+            className="w-full px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground"
+            onClick={() => runContextAction(() => closeTab(contextMenu.tabId))}
+          >
+            Close Tab
+          </button>
+          {tabs.length > 1 && (
+            <>
+              <div className="h-px bg-border my-1" />
+              <button
+                className="w-full px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground"
+                onClick={() => runContextAction(() => closeOtherTabs(contextMenu.tabId))}
+              >
+                Close Other Tabs
+              </button>
+              {tabs.findIndex((t) => t.id === contextMenu.tabId) < tabs.length - 1 && (
+                <button
+                  className="w-full px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => runContextAction(() => closeTabsToRight(contextMenu.tabId))}
+                >
+                  Close Tabs to the Right
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
