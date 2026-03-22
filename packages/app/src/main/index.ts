@@ -7,6 +7,9 @@ import { registerNotesIpc } from './ipc/notes';
 import { registerWorkspaceIpc } from './ipc/workspace';
 import { registerWorkflowIpc } from './ipc/workflow';
 import { registerTimerIpc } from './ipc/timer';
+import { registerPortsIpc } from './ipc/ports';
+import { registerProcessesIpc } from './ipc/processes';
+import { registerEnvIpc } from './ipc/env';
 
 if (started) {
   app.quit();
@@ -19,6 +22,9 @@ registerNotesIpc();
 registerWorkspaceIpc();
 registerWorkflowIpc();
 registerTimerIpc();
+registerPortsIpc();
+registerProcessesIpc();
+registerEnvIpc();
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({

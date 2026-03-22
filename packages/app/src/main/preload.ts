@@ -71,6 +71,27 @@ const electronAPI = {
       ipcRenderer.invoke('workflow:delete', id, scope, workspaceId) as Promise<void>,
   },
 
+  process: {
+    list: () =>
+      ipcRenderer.invoke('process:list') as Promise<unknown[]>,
+
+    kill: (pid: number) =>
+      ipcRenderer.invoke('process:kill', pid) as Promise<{ success: boolean; error?: string }>,
+  },
+
+  ports: {
+    list: () =>
+      ipcRenderer.invoke('ports:list') as Promise<unknown[]>,
+
+    kill: (pid: number) =>
+      ipcRenderer.invoke('ports:kill', pid) as Promise<{ success: boolean; error?: string }>,
+  },
+
+  env: {
+    list: () =>
+      ipcRenderer.invoke('env:list') as Promise<Array<{ name: string; value: string }>>,
+  },
+
   timer: {
     list: () =>
       ipcRenderer.invoke('timer:list') as Promise<unknown[]>,

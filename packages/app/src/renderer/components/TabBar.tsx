@@ -6,6 +6,10 @@ import {
   Zap,
   X,
   Plus,
+  Timer,
+  Network,
+  Cpu,
+  KeyRound,
 } from 'lucide-react';
 import {
   useTabs,
@@ -41,6 +45,14 @@ function TabIcon({ type }: { type: PanelType }) {
       return <NotepadText className="size-3" />;
     case 'workflow':
       return <Zap className="size-3" />;
+    case 'timer':
+      return <Timer className="size-3" />;
+    case 'ports':
+      return <Network className="size-3" />;
+    case 'process':
+      return <Cpu className="size-3" />;
+    case 'env':
+      return <KeyRound className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -316,7 +328,7 @@ export function TabBar() {
             </DropdownMenuTrigger>
             <TooltipContent side="bottom">New Tab</TooltipContent>
           </Tooltip>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="min-w-48">
             <DropdownMenuItem onClick={() => createTab('terminal', 'Terminal')}>
               <TerminalSquare />
               Terminal
@@ -332,6 +344,22 @@ export function TabBar() {
             <DropdownMenuItem onClick={() => createTab('workflow', 'Workflows')}>
               <Zap />
               Workflows
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab('timer', 'Timers')}>
+              <Timer />
+              Timers
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab('ports', 'Port Monitor')}>
+              <Network />
+              Port Monitor
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab('process', 'Process Monitor')}>
+              <Cpu />
+              Process Monitor
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab('env', 'Environment')}>
+              <KeyRound />
+              Environment
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Timer, ChevronDown, Trash2, Play, Pause, RotateCcw } from 'lucide-react';
+import { ChevronDown, Trash2, Play, Pause, RotateCcw } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -287,10 +287,9 @@ export function TimerPanel({ panelId: _panelId }: { panelId: string }) {
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border">
         <div className="flex items-center gap-2">
-          <Timer className="size-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Timers</span>
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Timers</span>
         </div>
         <div className="relative" ref={menuRef}>
           <button

@@ -10,6 +10,9 @@ import {
   Layers,
   Plus,
   Timer,
+  Network,
+  Cpu,
+  KeyRound,
 } from 'lucide-react';
 import {
   CommandDialog,
@@ -38,6 +41,9 @@ function PanelIcon({ type }: { type: string }) {
   if (type === 'browser') return <Globe />;
   if (type === 'workflow') return <Zap />;
   if (type === 'timer') return <Timer />;
+  if (type === 'ports') return <Network />;
+  if (type === 'process') return <Cpu />;
+  if (type === 'env') return <KeyRound />;
   return <NotepadText />;
 }
 
@@ -154,6 +160,18 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(function CommandP
           <CommandItem onSelect={() => runAction(() => createTab('timer', 'Timers'))}>
             <Timer />
             <span>New Timer Tab</span>
+          </CommandItem>
+          <CommandItem onSelect={() => runAction(() => createTab('ports', 'Port Monitor'))}>
+            <Network />
+            <span>New Port Monitor Tab</span>
+          </CommandItem>
+          <CommandItem onSelect={() => runAction(() => createTab('process', 'Process Monitor'))}>
+            <Cpu />
+            <span>New Process Monitor Tab</span>
+          </CommandItem>
+          <CommandItem onSelect={() => runAction(() => createTab('env', 'Environment'))}>
+            <KeyRound />
+            <span>New Environment Tab</span>
           </CommandItem>
         </CommandGroup>
 
