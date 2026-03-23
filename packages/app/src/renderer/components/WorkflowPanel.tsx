@@ -967,14 +967,17 @@ function WorkflowListItem({
   const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       className={cn(
-        "w-full flex items-start gap-2 px-3 py-2 text-left transition-colors",
+        "w-full flex items-start gap-2 px-3 py-2 text-left transition-colors cursor-pointer",
         isActive
           ? "bg-muted text-foreground"
           : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
       )}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -1002,6 +1005,6 @@ function WorkflowListItem({
           <Play className="size-3.5" />
         </Button>
       )}
-    </button>
+    </div>
   );
 }

@@ -26,6 +26,7 @@ registerTimerIpc();
 registerPortsIpc();
 registerProcessesIpc();
 registerEnvIpc();
+registerSettingsIpc();
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({

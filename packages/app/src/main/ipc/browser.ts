@@ -160,10 +160,17 @@ export function registerBrowserIpc(mainWindow: BrowserWindow): void {
 
 function destroyView(sessionId: string): void {
   const view = views.get(sessionId);
-  if (view && mainWindowRef) {
-    mainWindowRef.contentView.removeChildView(view);
-    view.webContents.close();
-    views.delete(sessionId);
+  if (!view) return;
+  views.delete(sessionId);
+  try {
+    if (mainWindowRef && !mainWindowRef.isDestroyed()) {
+      mainWindowRef.contentView.removeChildView(view);
+    }
+    if (!view.webContents.isDestroyed()) {
+      view.webContents.close();
+    }
+  } catch {
+    // view already destroyed during shutdown
   }
 }
 
