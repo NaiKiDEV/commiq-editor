@@ -28,7 +28,8 @@ export const TerminalExited = createEvent<{ id: string; exitCode: number }>('ter
 
 export type TerminalDeps = {
   ipc: {
-    spawn: (sessionId: string, cwd?: string) => Promise<{ pid: number }>;
+    getShells: () => Promise<string[]>;
+    spawn: (sessionId: string, cwd?: string, shell?: string) => Promise<{ pid: number }>;
     kill: (sessionId: string) => Promise<void>;
     resize: (sessionId: string, cols: number, rows: number) => void;
   };
@@ -41,13 +42,14 @@ export function createTerminalStore(deps: TerminalDeps) {
     .addCommandHandler(
       'terminal:spawn',
       async (ctx, cmd) => {
-        const { sessionId, panelId, cwd } = cmd.data as {
+        const { sessionId, panelId, cwd, shell } = cmd.data as {
           sessionId: string;
           panelId: string;
           cwd?: string;
+          shell?: string;
         };
 
-        const { pid } = await ctx.deps.ipc.spawn(sessionId, cwd);
+        const { pid } = await ctx.deps.ipc.spawn(sessionId, cwd, shell);
 
         const session: TerminalSession = {
           id: sessionId,
@@ -95,8 +97,8 @@ export function createTerminalStore(deps: TerminalDeps) {
   return sealStore(_store);
 }
 
-export const spawnTerminal = (sessionId: string, panelId: string, cwd?: string) =>
-  createCommand('terminal:spawn', { sessionId, panelId, cwd });
+export const spawnTerminal = (sessionId: string, panelId: string, cwd?: string, shell?: string) =>
+  createCommand('terminal:spawn', { sessionId, panelId, cwd, shell });
 
 export const killTerminal = (id: string) =>
   createCommand('terminal:kill', { id });

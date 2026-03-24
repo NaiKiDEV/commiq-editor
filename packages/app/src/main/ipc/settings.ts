@@ -8,6 +8,7 @@ type AppSettings = {
     fontSize: number;
     cursorStyle: 'block' | 'underline' | 'bar';
     scrollback: number;
+    shell: string;
   };
   browser: {
     defaultUrl: string;
@@ -20,6 +21,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     fontSize: 13,
     cursorStyle: 'bar',
     scrollback: 1000,
+    shell: '',
   },
   browser: {
     defaultUrl: 'https://www.google.com',

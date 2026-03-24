@@ -20,8 +20,11 @@ const electronAPI = {
   },
 
   terminal: {
-    spawn: (sessionId: string, cwd?: string) =>
-      ipcRenderer.invoke("terminal:spawn", sessionId, cwd) as Promise<{
+    getShells: () =>
+      ipcRenderer.invoke("terminal:getShells") as Promise<string[]>,
+
+    spawn: (sessionId: string, cwd?: string, shell?: string) =>
+      ipcRenderer.invoke("terminal:spawn", sessionId, cwd, shell) as Promise<{
         pid: number;
       }>,
 

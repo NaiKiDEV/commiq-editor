@@ -1,6 +1,7 @@
 import { ipcMain, type WebContents } from 'electron';
 import * as pty from 'node-pty';
 import os from 'node:os';
+import fs from 'node:fs';
 
 const sessions = new Map<string, pty.IPty>();
 
@@ -11,10 +12,44 @@ function getDefaultShell(): string {
   return process.env.SHELL || '/bin/bash';
 }
 
+function getAvailableShells(): string[] {
+  if (process.platform === 'win32') {
+    const candidates = [
+      { name: 'PowerShell 7', path: 'pwsh.exe' },
+      { name: 'PowerShell 5', path: 'powershell.exe' },
+      { name: 'Command Prompt', path: 'cmd.exe' },
+    ];
+    // Check for Git Bash
+    const gitBashPaths = [
+      'C:\\Program Files\\Git\\bin\\bash.exe',
+      'C:\\Program Files (x86)\\Git\\bin\\bash.exe',
+    ];
+    for (const p of gitBashPaths) {
+      if (fs.existsSync(p)) candidates.push({ name: 'Git Bash', path: p });
+    }
+    // Check for WSL
+    const wslPath = 'C:\\Windows\\System32\\wsl.exe';
+    if (fs.existsSync(wslPath)) candidates.push({ name: 'WSL', path: wslPath });
+    return candidates.map((c) => c.path);
+  }
+
+  // macOS / Linux: read /etc/shells
+  try {
+    const lines = fs.readFileSync('/etc/shells', 'utf-8').split('\n');
+    return lines
+      .map((l) => l.trim())
+      .filter((l) => l.startsWith('/') && fs.existsSync(l));
+  } catch {
+    return [getDefaultShell()];
+  }
+}
+
 export function registerTerminalIpc(): void {
-  ipcMain.handle('terminal:spawn', (event, sessionId: string, cwd?: string) => {
-    const shell = getDefaultShell();
-    const ptyProcess = pty.spawn(shell, [], {
+  ipcMain.handle('terminal:getShells', () => getAvailableShells());
+
+  ipcMain.handle('terminal:spawn', (event, sessionId: string, cwd?: string, shell?: string) => {
+    const resolvedShell = shell || getDefaultShell();
+    const ptyProcess = pty.spawn(resolvedShell, [], {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,

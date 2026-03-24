@@ -102,7 +102,7 @@ export function TerminalPanel({ sessionId, panelId }: TerminalPanelProps) {
 
     if (!spawnedRef.current) {
       spawnedRef.current = true;
-      spawn(sessionId, panelId);
+      spawn(sessionId, panelId, undefined, settings.terminal.shell || undefined);
     }
 
     // Resize handling — skip when hidden (display:none → 0×0) to avoid scroll shift

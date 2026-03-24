@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings2, TerminalSquare, Globe } from 'lucide-react';
 import { Dialog, DialogContent } from '@/renderer/components/ui/dialog';
 import { useSettings } from '@/renderer/contexts/settings';
@@ -66,6 +66,11 @@ function GeneralTab() {
 function TerminalTab() {
   const { settings, updateSettings } = useSettings();
   const { terminal } = settings;
+  const [availableShells, setAvailableShells] = useState<string[]>([]);
+
+  useEffect(() => {
+    window.electronAPI.terminal.getShells().then(setAvailableShells).catch(() => {});
+  }, []);
 
   return (
     <div>
@@ -103,6 +108,19 @@ function TerminalTab() {
           <option value="block">Block</option>
           <option value="underline">Underline</option>
           <option value="bar">Bar</option>
+        </select>
+      </div>
+      <div className="flex items-center justify-between py-2 border-b border-border/40">
+        <span className="text-sm text-foreground">Shell</span>
+        <select
+          value={terminal.shell}
+          onChange={(e) => updateSettings({ terminal: { shell: e.target.value } })}
+          className="w-64 h-7 px-2 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          <option value="">System default</option>
+          {availableShells.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
         </select>
       </div>
       <div className="flex items-center justify-between py-2 border-b border-border/40">

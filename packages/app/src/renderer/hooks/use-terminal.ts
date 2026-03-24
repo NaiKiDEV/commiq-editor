@@ -15,8 +15,8 @@ export function useTerminalActions() {
   const queue = useQueue(terminalStore);
 
   return {
-    spawn: (sessionId: string, panelId: string, cwd?: string) =>
-      queue(spawnTerminal(sessionId, panelId, cwd)),
+    spawn: (sessionId: string, panelId: string, cwd?: string, shell?: string) =>
+      queue(spawnTerminal(sessionId, panelId, cwd, shell)),
     kill: (id: string) => queue(killTerminal(id)),
     resize: (id: string, cols: number, rows: number) =>
       queue(resizeTerminal(id, cols, rows)),
