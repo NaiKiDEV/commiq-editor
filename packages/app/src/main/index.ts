@@ -29,17 +29,20 @@ registerEnvIpc();
 registerSettingsIpc();
 
 const createWindow = () => {
+  const isMac = process.platform === 'darwin';
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 800,
     minHeight: 600,
     titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#1a1a1a',
-      symbolColor: '#e5e5e5',
-      height: 36,
-    },
+    ...(isMac ? {} : {
+      titleBarOverlay: {
+        color: '#1a1a1a',
+        symbolColor: '#e5e5e5',
+        height: 36,
+      },
+    }),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

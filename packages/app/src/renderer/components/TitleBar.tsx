@@ -66,11 +66,16 @@ export function TitleBar({ onSettingsOpen }: { onSettingsOpen?: () => void }) {
     setEditName('');
   };
 
+  const isMac = window.electronAPI.platform === 'darwin';
+
   return (
     <div
       className="flex items-center h-9 bg-card border-b border-border select-none shrink-0"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
+      {/* Spacer for macOS traffic lights (left side) */}
+      {isMac && <div className="w-[70px] shrink-0" />}
+
       <span className="px-3 text-xs font-medium text-muted-foreground tracking-wide">
         Commiq Editor
       </span>
@@ -169,8 +174,8 @@ export function TitleBar({ onSettingsOpen }: { onSettingsOpen?: () => void }) {
         </Button>
       </div>
 
-      {/* Spacer for Windows title bar overlay controls */}
-      <div className="w-[138px] shrink-0" />
+      {/* Spacer for Windows/Linux title bar overlay controls (right side) */}
+      {!isMac && <div className="w-[138px] shrink-0" />}
     </div>
   );
 }
