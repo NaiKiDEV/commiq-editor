@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, forwardRef, useImperativeHandle } fro
 import {
   TerminalSquare,
   Globe,
+  Globe2,
   NotepadText,
   Zap,
   X,
@@ -44,6 +45,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === 'ports') return <Network />;
   if (type === 'process') return <Cpu />;
   if (type === 'env') return <KeyRound />;
+  if (type === 'http') return <Globe2 />;
   return <NotepadText />;
 }
 
@@ -173,6 +175,10 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(function CommandP
             <KeyRound />
             <span>New Environment Tab</span>
           </CommandItem>
+          <CommandItem onSelect={() => runAction(() => createTab('http', 'HTTP Client'))}>
+            <Globe2 />
+            <span>New HTTP Client Tab</span>
+          </CommandItem>
         </CommandGroup>
 
         {/* Split */}
@@ -209,6 +215,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(function CommandP
             <CommandItem onSelect={() => runAction(() => splitPanel('vertical', 'workflow', 'Workflows'))}>
               <Rows2 />
               <span>Split Down: Workflows</span>
+            </CommandItem>
+            <CommandItem onSelect={() => runAction(() => splitPanel('horizontal', 'http', 'HTTP Client'))}>
+              <Columns2 />
+              <span>Split Right: HTTP Client</span>
+            </CommandItem>
+            <CommandItem onSelect={() => runAction(() => splitPanel('vertical', 'http', 'HTTP Client'))}>
+              <Rows2 />
+              <span>Split Down: HTTP Client</span>
             </CommandItem>
           </CommandGroup>
         )}

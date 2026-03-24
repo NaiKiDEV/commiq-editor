@@ -11,6 +11,7 @@ import { registerPortsIpc } from './ipc/ports';
 import { registerProcessesIpc } from './ipc/processes';
 import { registerEnvIpc } from './ipc/env';
 import { registerSettingsIpc } from './ipc/settings';
+import { registerHttpIpc } from './ipc/http';
 
 if (started) {
   app.quit();
@@ -27,6 +28,7 @@ registerPortsIpc();
 registerProcessesIpc();
 registerEnvIpc();
 registerSettingsIpc();
+registerHttpIpc();
 
 const createWindow = () => {
   const isMac = process.platform === 'darwin';

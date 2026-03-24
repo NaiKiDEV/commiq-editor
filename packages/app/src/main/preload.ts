@@ -188,6 +188,60 @@ const electronAPI = {
       ipcRenderer.invoke("timer:delete", id) as Promise<void>,
   },
 
+  http: {
+    collectionsList: (workspaceId: string) =>
+      ipcRenderer.invoke('http:collections:list', workspaceId) as Promise<
+        Array<{ id: string; name: string; scope: 'workspace' | 'global'; workspaceId: string | null }>
+      >,
+
+    collectionsCreate: (workspaceId: string, name: string, scope: 'workspace' | 'global') =>
+      ipcRenderer.invoke('http:collections:create', workspaceId, name, scope) as Promise<{
+        id: string; name: string; scope: 'workspace' | 'global'; workspaceId: string | null;
+      }>,
+
+    collectionsDelete: (id: string) =>
+      ipcRenderer.invoke('http:collections:delete', id) as Promise<void>,
+
+    requestsList: (workspaceId: string) =>
+      ipcRenderer.invoke('http:requests:list', workspaceId) as Promise<
+        Array<{
+          id: string; collectionId: string | null; workspaceId: string | null;
+          name: string; method: string; url: string;
+          headers: { key: string; value: string; enabled: boolean }[];
+          body: { type: 'none' | 'json' | 'text'; content: string };
+        }>
+      >,
+
+    requestsSave: (request: {
+      id: string; collectionId: string | null; workspaceId: string | null;
+      name: string; method: string; url: string;
+      headers: { key: string; value: string; enabled: boolean }[];
+      body: { type: 'none' | 'json' | 'text'; content: string };
+    }) =>
+      ipcRenderer.invoke('http:requests:save', request) as Promise<typeof request>,
+
+    requestsDelete: (id: string) =>
+      ipcRenderer.invoke('http:requests:delete', id) as Promise<void>,
+
+    request: (request: {
+      id: string; collectionId: string | null; workspaceId: string | null;
+      name: string; method: string; url: string;
+      headers: { key: string; value: string; enabled: boolean }[];
+      body: { type: 'none' | 'json' | 'text'; content: string };
+    }) =>
+      ipcRenderer.invoke('http:request', request) as Promise<
+        | { status: number; statusText: string; headers: Record<string, string>; body: string; timing: { start: number; end: number; duration: number } }
+        | { error: string }
+        | { cancelled: true }
+      >,
+
+    requestCancel: (requestId: string) =>
+      ipcRenderer.invoke('http:request:cancel', requestId) as Promise<void>,
+
+    importPostman: (workspaceId: string, json: string) =>
+      ipcRenderer.invoke('http:import-postman', workspaceId, json) as Promise<{ imported: number; skipped: number }>,
+  },
+
   browser: {
     create: (sessionId: string, url: string) =>
       ipcRenderer.invoke("browser:create", sessionId, url) as Promise<{
