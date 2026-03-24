@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useEvent } from '@naikidev/commiq-react';
+import { useEffect, useRef, useState } from 'react';
 import { TooltipProvider } from './ui/tooltip';
 import { TitleBar } from './TitleBar';
 import { TabBar } from './TabBar';
@@ -9,58 +8,11 @@ import { CommandPalette } from './CommandPalette';
 import type { CommandPaletteHandle } from './CommandPalette';
 import { SettingsProvider } from '../contexts/settings';
 import { SettingsModal } from './SettingsModal';
-import { useTerminalActions } from '../hooks/use-terminal';
-import { useBrowserActions } from '../hooks/use-browser';
-import {
-  workspaceStore,
-  PanelClosed,
-  WorkspaceSwitched,
-  TabActivated,
-} from '../stores/workspace';
 import { useTabs, useActiveTabId, useWorkspaceActions } from '../hooks/use-workspace';
 
 export const isRenamingTabRef = { current: false };
 
 export function Shell() {
-  const { kill: killTerminal } = useTerminalActions();
-  const { close: closeBrowser } = useBrowserActions();
-
-  useEvent(
-    workspaceStore,
-    PanelClosed,
-    useCallback(
-      (event) => {
-        const { id } = event.data;
-        killTerminal(id);
-        closeBrowser(id);
-      },
-      [killTerminal, closeBrowser],
-    ),
-  );
-
-  useEvent(
-    workspaceStore,
-    WorkspaceSwitched,
-    useCallback((event) => {
-      const { toPanelIds } = event.data;
-      window.electronAPI.browser.hideAll();
-      for (const id of toPanelIds) {
-        window.electronAPI.browser.showSession(id);
-      }
-    }, []),
-  );
-
-  useEvent(
-    workspaceStore,
-    TabActivated,
-    useCallback((event) => {
-      window.electronAPI.browser.hideAll();
-      for (const id of event.data.browserPanelIds) {
-        window.electronAPI.browser.showSession(id);
-      }
-    }, []),
-  );
-
   const tabs = useTabs();
   const activeTabId = useActiveTabId();
   const { activateTab, closeTab } = useWorkspaceActions();

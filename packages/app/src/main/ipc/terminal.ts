@@ -19,7 +19,6 @@ function getAvailableShells(): string[] {
       { name: 'PowerShell 5', path: 'powershell.exe' },
       { name: 'Command Prompt', path: 'cmd.exe' },
     ];
-    // Check for Git Bash
     const gitBashPaths = [
       'C:\\Program Files\\Git\\bin\\bash.exe',
       'C:\\Program Files (x86)\\Git\\bin\\bash.exe',
@@ -27,13 +26,11 @@ function getAvailableShells(): string[] {
     for (const p of gitBashPaths) {
       if (fs.existsSync(p)) candidates.push({ name: 'Git Bash', path: p });
     }
-    // Check for WSL
     const wslPath = 'C:\\Windows\\System32\\wsl.exe';
     if (fs.existsSync(wslPath)) candidates.push({ name: 'WSL', path: wslPath });
     return candidates.map((c) => c.path);
   }
 
-  // macOS / Linux: read /etc/shells
   try {
     const lines = fs.readFileSync('/etc/shells', 'utf-8').split('\n');
     return lines

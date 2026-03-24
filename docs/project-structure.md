@@ -10,29 +10,57 @@ commiq-editor/
       src/
         main/                     # Main process (Node.js)
           index.ts                # Entry point, window creation
+          preload.ts              # Context bridge (renderer <-> main)
           ipc/                    # IPC handler modules
             terminal.ts           # PTY spawn/write/resize/kill
-            browser.ts            # BrowserView lifecycle
-          preload.ts              # Context bridge (renderer ↔ main)
+            browser.ts            # WebContentsView lifecycle
+            workspace.ts          # Panel registry & layout persistence
+            settings.ts           # App configuration persistence
+            env.ts                # Environment variables
+            processes.ts          # Process monitoring
+            ports.ts              # Port monitoring
+            timer.ts              # Timer functionality
+            workflow.ts           # Workflow panel management
+            notes.ts              # Notes panel management
         renderer/                 # Renderer process (React)
           stores/                 # Commiq stores
-            workspace.ts          # Panel/tab state
-            terminal.ts           # Terminal session state
-            browser.ts            # Browser session state
-            bus.ts                # Event bus wiring
-          components/             # React components
-            Shell.tsx             # Root layout
-            TabBar.tsx            # Tab strip
-            PanelContainer.tsx    # Renders active panel by type
-            TerminalPanel.tsx     # xterm.js wrapper
-            BrowserPanel.tsx      # Webview wrapper
-          hooks/                  # React hooks (commiq bindings)
-            use-workspace.ts
-            use-terminal.ts
-            use-browser.ts
-          App.tsx                 # Root component
+            workspace.ts          # Panel/tab/workspace state
+            terminal.ts           # Terminal session state (factory — uses withInjector)
+            browser.ts            # Browser session state (factory — uses withInjector)
+            bus.ts                # Event bus wiring + cross-store coordination
+            effects.ts            # Side effects (browser visibility, etc.)
+            index.ts              # Store instantiation + exports
+          hooks/                  # React hooks (commiq domain hooks)
+            use-workspace.ts      # Workspace/tab/panel selectors & actions
+            use-terminal.ts       # Terminal session selectors & actions
+            use-browser.ts        # Browser session selectors & actions
+          components/             # React UI components
+            Shell.tsx             # Root layout + keyboard shortcuts
+            TitleBar.tsx          # Window title bar
+            TabBar.tsx            # Tab strip (drag, rename, context menu)
+            PanelContainer.tsx    # Panel rendering + layout slot measurement
+            LayoutRenderer.tsx    # Recursive split layout renderer
+            ResizeDivider.tsx     # Draggable split divider
+            TerminalPanel.tsx     # xterm.js wrapper (data plane)
+            BrowserPanel.tsx      # WebContentsView wrapper (data plane)
+            NotesPanel.tsx        # Text editor panel
+            WorkflowPanel.tsx     # Workflow builder/runner
+            TimerPanel.tsx        # Timer panel
+            PortMonitorPanel.tsx  # Port monitor panel
+            ProcessMonitorPanel.tsx # Process monitor panel
+            EnvVarsPanel.tsx      # Environment variables viewer
+            StatusBar.tsx         # Bottom status bar
+            CommandPalette.tsx    # Command palette (cmdk)
+            SettingsModal.tsx     # Settings UI
+            ui/                   # shadcn/ui (Base UI) components
+          contexts/
+            settings.tsx          # Settings context provider
+          lib/
+            layout.ts             # Layout tree algorithms
+            persistence.ts        # Workspace state persistence
+          App.tsx                 # Root component (CommiqProvider)
           index.tsx               # Entry point
-          index.html              # HTML shell
+          electron.d.ts           # TypeScript definitions for IPC
       forge.config.ts             # Electron Forge config
       vite.main.config.ts         # Vite config for main process
       vite.preload.config.ts      # Vite config for preload
@@ -52,7 +80,12 @@ commiq-editor/
 ## Key Conventions
 
 - Stores are created and sealed in their respective files under `stores/`
+- Stores that need IPC use `withInjector` and export factory functions (e.g., `createTerminalStore`)
+- Cross-store coordination is wired in `stores/bus.ts` via the event bus
+- Side effects triggered by events are handled in `stores/effects.ts` via `@naikidev/commiq-effects`
 - Hooks wrap commiq's `useSelector`, `useQueue`, `useEvent` for each store
-- Components are pure UI — all logic flows through commiq commands and state
+- Components are pure UI — all domain logic flows through commiq commands and state
+- Data plane streams (PTY data, keyboard input) bypass commiq and use direct IPC
 - IPC handlers in `main/ipc/` map 1:1 to operations exposed via preload
-- The event bus is wired in `stores/bus.ts` and connected at app startup
+
+See [architecture.md](architecture.md) for design rationale and [commiq-patterns.md](commiq-patterns.md) for usage patterns.

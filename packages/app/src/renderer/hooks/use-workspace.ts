@@ -57,7 +57,6 @@ function selectAllPanels(s: { workspaces: Workspace[] }): Panel[] {
   return _cachedAllPanels;
 }
 
-// ── Workspace selectors ────────────────────────────────────────────────
 
 export function useWorkspaces() {
   return useSelector(workspaceStore, (s) => s.workspaces);
@@ -71,7 +70,6 @@ export function useActiveWorkspace() {
   return useSelector(workspaceStore, (s) => getActiveWorkspace(s));
 }
 
-// ── Tab selectors ──────────────────────────────────────────────────────
 
 export function useTabs() {
   return useSelector(workspaceStore, (s) => {
@@ -91,7 +89,6 @@ export function useActiveTab() {
   return useSelector(workspaceStore, (s) => getActiveTab(s));
 }
 
-// ── Panel selectors ────────────────────────────────────────────────────
 
 /** All panels across all workspaces — for stable rendering (never unmount) */
 export function useAllPanels() {
@@ -127,7 +124,6 @@ export function useLayout() {
   });
 }
 
-// ── Actions ────────────────────────────────────────────────────────────
 
 export function useWorkspaceActions() {
   const queue = useQueue(workspaceStore);

@@ -16,8 +16,6 @@ import {
   getVisiblePanelIds,
 } from '../lib/layout';
 
-// ── Types ──────────────────────────────────────────────────────────────
-
 export type PanelType = 'terminal' | 'browser' | 'notes' | 'app' | 'workflow' | 'timer' | 'ports' | 'process' | 'env';
 
 export type Panel = {
@@ -46,8 +44,6 @@ export type EditorState = {
   workspaces: Workspace[];
   activeWorkspaceId: string | null;
 };
-
-// ── Helpers ────────────────────────────────────────────────────────────
 
 function getActiveWorkspace(state: EditorState): Workspace | null {
   return state.workspaces.find((w) => w.id === state.activeWorkspaceId) ?? null;
@@ -95,8 +91,6 @@ function getAllPanelIds(ws: Workspace): string[] {
   return ws.tabs.flatMap((t) => t.panels.map((p) => p.id));
 }
 
-// ── Events ─────────────────────────────────────────────────────────────
-
 export const PanelOpened = createEvent<Panel>('panel:opened');
 export const PanelClosed = createEvent<{ id: string }>('panel:closed');
 export const PanelActivated = createEvent<{ id: string }>('panel:activated');
@@ -113,7 +107,6 @@ export const WorkspaceSwitched = createEvent<{
   toPanelIds: string[];
 }>('workspace:switched');
 
-// ── Initial state ──────────────────────────────────────────────────────
 
 const defaultWorkspace: Workspace = {
   id: crypto.randomUUID(),
@@ -127,12 +120,10 @@ const initialState: EditorState = {
   activeWorkspaceId: defaultWorkspace.id,
 };
 
-// ── Store ──────────────────────────────────────────────────────────────
 
 const _store = createStore(initialState)
   .useExtension(withPatch<EditorState>())
 
-  // ── Workspace commands ─────────────────────────────────────────────
 
   .addCommandHandler('workspace:hydrate', (ctx, cmd) => {
     const state = cmd.data as EditorState;
@@ -256,7 +247,6 @@ const _store = createStore(initialState)
     }
   })
 
-  // ── Tab commands ───────────────────────────────────────────────────
 
   .addCommandHandler('tab:create', (ctx, cmd) => {
     const { panel, tabName, transient, background } = cmd.data as { panel: Panel; tabName?: string; transient?: boolean; background?: boolean };
@@ -440,7 +430,6 @@ const _store = createStore(initialState)
     }
   })
 
-  // ── Panel commands (scoped to active tab) ──────────────────────────
 
   .addCommandHandler('panel:open', (ctx, cmd) => {
     const panel = cmd.data as Panel;
@@ -528,7 +517,6 @@ const _store = createStore(initialState)
     })));
   })
 
-  // ── Layout commands (scoped to active tab) ─────────────────────────
 
   .addCommandHandler('layout:split', (ctx, cmd) => {
     const { direction, newPanel } = cmd.data as {
@@ -569,7 +557,6 @@ const _store = createStore(initialState)
 
 export const workspaceStore = sealStore(_store);
 
-// ── Command factories ──────────────────────────────────────────────────
 
 // Hydrate
 export const hydrateWorkspace = (state: EditorState) =>

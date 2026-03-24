@@ -67,11 +67,14 @@ Multi-store design connected via commiq's event bus.
 Owns panel registry and layout state.
 
 ```typescript
-type WorkspaceState = {
-  panels: Panel[]
-  activePanelId: string | null
-  layout: LayoutConfig
+// Simplified — see stores/workspace.ts for the full EditorState type
+type EditorState = {
+  workspaces: Workspace[]
+  activeWorkspaceId: string | null
 }
+
+type Workspace = { id: string; name: string; tabs: Tab[]; activeTabId: string | null }
+type Tab = { id: string; title: string; panels: Panel[]; layout: LayoutNode }
 ```
 
 - Commands: `panel:open`, `panel:close`, `panel:activate`, `panel:move`
@@ -126,9 +129,26 @@ type BrowserSession = {
 
 Stores communicate through commiq's event bus without direct coupling:
 
-- `terminal:spawn` → workspace opens a terminal panel
-- `panel:close` → terminal store kills the associated PTY
-- `browser:open` → workspace opens a browser panel
+- `PanelClosed` event → terminal store kills the associated PTY session
+- `PanelClosed` event → browser store destroys the associated WebContentsView
+
+## Effects Layer
+
+Side effects that respond to store events but are not store-to-store command routing use `@naikidev/commiq-effects`:
+
+```typescript
+const workspaceEffects = createEffects(workspaceStore);
+
+workspaceEffects.on(TabActivated, (data) => {
+  // Browser visibility is a side effect, not a store command
+  window.electronAPI.browser.hideAll();
+  for (const id of data.browserPanelIds) {
+    window.electronAPI.browser.showSession(id);
+  }
+});
+```
+
+See `stores/effects.ts` for the full setup. See [commiq-patterns.md](commiq-patterns.md) for when to use effects vs. event bus vs. useEvent.
 
 ## IPC Design
 
@@ -151,25 +171,11 @@ Commiq's `withInjector` extension bridges the IPC boundary for control plane ope
 
 ```typescript
 const terminalStore = createTerminalStore({
-  ipc: window.electronAPI  // injected via preload
+  ipc: window.electronAPI.terminal  // injected via preload
 })
 ```
 
 This keeps stores testable — inject mocks in tests, real IPC in production.
-
-## Side Effects
-
-Commiq's effects plugin handles subscriptions and async coordination:
-
-```typescript
-effects.on(TerminalSpawned, (data, ctx) => {
-  // Set up direct IPC data channel (bypasses commiq)
-  window.electronAPI.onTerminalData(data.sessionId, (output) => {
-    // Forward PTY output directly to xterm.js instance
-    xtermInstances.get(data.sessionId)?.write(output)
-  })
-})
-```
 
 ## WebContentsView Positioning
 
@@ -189,9 +195,8 @@ Every tab is a panel with a type. This makes the layout system agnostic to conte
 ```typescript
 type Panel = {
   id: string
-  type: 'terminal' | 'browser' | 'app'
+  type: 'terminal' | 'browser' | 'notes' | 'workflow' | 'timer' | 'ports' | 'process' | 'env' | 'app'
   title: string
-  state: 'active' | 'backgrounded'
 }
 ```
 

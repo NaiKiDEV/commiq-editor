@@ -40,7 +40,6 @@ export function NotesPanel({ panelId: _panelId }: NotesPanelProps) {
 
   const activeNote = notes.find((n) => n.id === activeNoteId) ?? null;
 
-  // Load notes on mount
   useEffect(() => {
     window.electronAPI.notes.list().then((list) => {
       setNotes(list);

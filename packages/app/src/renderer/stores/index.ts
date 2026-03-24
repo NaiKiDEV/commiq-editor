@@ -1,7 +1,8 @@
-import { createEventBus } from '@naikidev/commiq';
 import { workspaceStore } from './workspace';
 import { createTerminalStore } from './terminal';
 import { createBrowserStore } from './browser';
+import { initBus } from './bus';
+import { initEffects } from './effects';
 import { loadPersistedState, initPersistence } from '../lib/persistence';
 
 export const terminalStore = createTerminalStore({
@@ -12,10 +13,8 @@ export const browserStore = createBrowserStore({
   ipc: window.electronAPI.browser,
 });
 
-export const eventBus = createEventBus();
-eventBus.connect(workspaceStore);
-eventBus.connect(terminalStore);
-eventBus.connect(browserStore);
+initBus(workspaceStore, terminalStore, browserStore);
+initEffects(workspaceStore);
 
 export const persistenceReady: Promise<Record<string, string> | null> =
   loadPersistedState(workspaceStore).then((browserUrls) => {

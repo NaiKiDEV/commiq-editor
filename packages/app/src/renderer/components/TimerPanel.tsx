@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Trash2, Play, Pause, RotateCcw } from 'lucide-react';
 
-// ── Types ──────────────────────────────────────────────────────────────
 
 type TimerType = 'countdown' | 'stopwatch' | 'pomodoro' | 'interval';
 type TimerStatus = 'idle' | 'running' | 'paused' | 'done';
@@ -47,7 +46,6 @@ function makeTimer(type: TimerType): TimerData {
   return base; // stopwatch
 }
 
-// ── Formatting helpers ─────────────────────────────────────────────────
 
 function parseMmSs(value: string): number | null {
   const m = value.match(/^(\d{1,3}):(\d{2})$/);
@@ -85,7 +83,6 @@ function formatStopwatchTime(totalSeconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
 }
 
-// ── Notifications ──────────────────────────────────────────────────────
 
 function notify(title: string, body: string): void {
   try {
@@ -93,7 +90,6 @@ function notify(title: string, body: string): void {
   } catch { /* notifications may be blocked */ }
 }
 
-// ── Reload reconciliation ──────────────────────────────────────────────
 
 function reconcileTimer(timer: TimerData): TimerData {
   if (timer.status !== 'running' || timer.startedAt === null) return timer;
@@ -166,7 +162,6 @@ function reconcileTimer(timer: TimerData): TimerData {
   return timer;
 }
 
-// ── checkDone ──────────────────────────────────────────────────────────
 
 function checkDone(
   timer: TimerData,
@@ -227,7 +222,6 @@ function checkDone(
   // Stopwatch: never done automatically
 }
 
-// ── TimerPanel ──────────────────────────────────────────────────────────
 
 export function TimerPanel({ panelId: _panelId }: { panelId: string }) {
   const [timers, setTimers] = useState<TimerData[]>([]);
@@ -248,7 +242,6 @@ export function TimerPanel({ panelId: _panelId }: { panelId: string }) {
     });
   }, []);
 
-  // Close menu on outside click
   useEffect(() => {
     if (!menuOpen) return;
     const handler = (e: MouseEvent) => {
@@ -338,7 +331,6 @@ export function TimerPanel({ panelId: _panelId }: { panelId: string }) {
   );
 }
 
-// ── TimerCard ──────────────────────────────────────────────────────────
 
 function TimerCard({
   timer,
@@ -367,7 +359,6 @@ function TimerCard({
     }
   }, [isIdle, timer.durationSeconds, timer.workSeconds, timer.breakSeconds, timer.repeatCount]);
 
-  // Live elapsed (seconds)
   const [elapsed, setElapsed] = useState<number>(() => {
     if (timer.status === 'running' && timer.startedAt !== null) {
       return timer.accumulatedSeconds + (Date.now() - timer.startedAt) / 1000;
@@ -381,7 +372,6 @@ function TimerCard({
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
-  // Tick interval
   useEffect(() => {
     if (timer.status !== 'running') return;
     const interval = setInterval(
@@ -407,7 +397,6 @@ function TimerCard({
     }
   }, [timer.status, timer.accumulatedSeconds, timer.startedAt]);
 
-  // Done pulse
   const [isPulsing, setIsPulsing] = useState(false);
   const prevStatusRef = useRef(timer.status);
 
@@ -420,7 +409,6 @@ function TimerCard({
     prevStatusRef.current = timer.status;
   }, [timer.status]);
 
-  // Pomodoro phase flash
   const [isFlashing, setIsFlashing] = useState(false);
   const prevPhaseRef = useRef(timer.pomodoroPhase);
 

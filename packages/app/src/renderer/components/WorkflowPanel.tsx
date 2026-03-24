@@ -75,7 +75,6 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
     (w) => w.scope === "workspace"
   );
 
-  // Load workflows on mount / when workspaceId changes
   useEffect(() => {
     if (!workspaceId) return;
     window.electronAPI.workflow.list(workspaceId).then((list) => {
@@ -156,7 +155,6 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
       const target = workflows.find((w) => w.id === id);
       if (!target || target.scope === newScope) return;
 
-      // Delete from old scope, save to new scope
       await window.electronAPI.workflow.delete(id, target.scope, workspaceId);
       const updated = { ...target, scope: newScope };
       await window.electronAPI.workflow.save(updated, workspaceId);
@@ -286,7 +284,6 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
     (workflow: Workflow, stepIndex: number) => {
       const cmd = workflow.commands[stepIndex];
       if (!cmd || !cmd.command.trim()) {
-        // Skip empty commands, advance to next
         setRunState((prev) => {
           if (!prev) return prev;
           const newStatuses = [...prev.stepStatuses];
@@ -486,7 +483,6 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
       setWorkflows((prev) => [...prev, workflow]);
       setActiveWorkflowId(workflow.id);
     } catch {
-      // Invalid file — silently ignore
     }
   }, [workspaceId]);
 

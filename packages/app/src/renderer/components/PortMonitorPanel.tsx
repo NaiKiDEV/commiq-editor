@@ -56,7 +56,6 @@ export function PortMonitorPanel({ panelId: _panelId }: { panelId: string }) {
     };
   }, [autoRefresh, fetchPorts, intervalSecs]);
 
-  // Initial load on mount
   useEffect(() => {
     fetchPorts();
   }, [fetchPorts]);
@@ -67,7 +66,6 @@ export function PortMonitorPanel({ panelId: _panelId }: { panelId: string }) {
 
   const handleKillConfirm = async (pid: number) => {
     setConfirmingPid(null);
-    // Optimistically remove the row
     setEntries((prev) => prev.filter((e) => e.pid !== pid));
     const result = await window.electronAPI.ports.kill(pid);
     if (!result.success) {
@@ -76,7 +74,6 @@ export function PortMonitorPanel({ panelId: _panelId }: { panelId: string }) {
     fetchPorts();
   };
 
-  // Client-side filtering — does not trigger a new fetch
   const filtered = entries.filter((e) => {
     if (stateFilter === 'listening' && e.state !== 'LISTEN' && e.state !== 'LISTENING') return false;
     if (!filter) return true;

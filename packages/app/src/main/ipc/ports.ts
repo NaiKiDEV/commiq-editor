@@ -19,7 +19,6 @@ async function listPortsWindows(): Promise<PortEntry[]> {
     execAsync('tasklist /FO CSV /NH').then((r) => r.stdout),
   ]);
 
-  // Build pid → processName map from tasklist CSV: "chrome.exe","1234","Console","1","50,000 K"
   const pidToName = new Map<number, string>();
   for (const line of tasklistOut.split('\n')) {
     const trimmed = line.trim();
@@ -38,8 +37,6 @@ async function listPortsWindows(): Promise<PortEntry[]> {
     if (proto !== 'TCP' && proto !== 'UDP') continue;
 
     const localAddr = parts[1] ?? '';
-    // Extract port: take everything after the last colon
-    // Handles "0.0.0.0:80", "127.0.0.1:443", "[::]:80", "[::1]:443"
     const lastColon = localAddr.lastIndexOf(':');
     if (lastColon === -1) continue;
     const localPort = parseInt(localAddr.slice(lastColon + 1), 10);
@@ -93,7 +90,6 @@ async function listPortsUnix(): Promise<PortEntry[]> {
       const stateMatch = line.match(/\(([A-Z_]+)\)\s*$/);
       const state = stateMatch ? stateMatch[1] : '';
 
-      // Local address is the part before "->"
       const addrPart = namePart.split('->')[0];
       const lastColon = addrPart.lastIndexOf(':');
       if (lastColon === -1) continue;

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { RefreshCw, X, Check, Skull, ChevronUp, ChevronDown } from 'lucide-react';
 
-// ── Types ──────────────────────────────────────────────────────────────
 
 type ProcessEntry = {
   pid: number;
@@ -21,7 +20,6 @@ type SortDir = 'asc' | 'desc';
 const INTERVALS = [1, 3, 5, 10] as const;
 type IntervalValue = typeof INTERVALS[number];
 
-// ── Helpers ────────────────────────────────────────────────────────────
 
 function formatRelativeTime(isoString: string): string {
   if (!isoString) return '—';
@@ -50,7 +48,6 @@ function sortEntries(entries: ProcessEntry[], key: SortKey, dir: SortDir): Proce
   });
 }
 
-// ── Component ──────────────────────────────────────────────────────────
 
 export function ProcessMonitorPanel({ panelId: _panelId }: { panelId: string }) {
   const [entries, setEntries] = useState<ProcessEntry[]>([]);
@@ -89,7 +86,6 @@ export function ProcessMonitorPanel({ panelId: _panelId }: { panelId: string }) 
     }
   }, []);
 
-  // Reset sample count when Live is toggled off
   useEffect(() => {
     if (!live) setLiveSampleCount(0);
   }, [live]);
@@ -104,7 +100,6 @@ export function ProcessMonitorPanel({ panelId: _panelId }: { panelId: string }) 
     };
   }, [live, fetchProcesses, intervalSecs]);
 
-  // Initial load on mount
   useEffect(() => {
     fetchProcesses();
   }, [fetchProcesses]);
@@ -296,7 +291,6 @@ export function ProcessMonitorPanel({ panelId: _panelId }: { panelId: string }) 
   );
 }
 
-// ── SortableHeader ─────────────────────────────────────────────────────
 
 function SortableHeader({
   label,

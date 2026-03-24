@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import { RefreshCw, X, ChevronRight } from 'lucide-react';
 
-// ── Types ──────────────────────────────────────────────────────────────
 
 type EnvEntry = { name: string; value: string };
 
@@ -18,7 +17,6 @@ function splitPath(value: string): string[] {
   return value.split(delimiter).filter((p) => p.trim() !== '');
 }
 
-// ── Component ──────────────────────────────────────────────────────────
 
 export function EnvVarsPanel({ panelId: _panelId }: { panelId: string }) {
   const [entries, setEntries] = useState<EnvEntry[]>([]);
