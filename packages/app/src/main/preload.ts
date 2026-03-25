@@ -166,6 +166,7 @@ const electronAPI = {
           scrollback: number;
         };
         browser: { defaultUrl: string };
+        whiteboard: { mcpPort: number };
       }>,
     save: (s: {
       terminal: {
@@ -175,6 +176,7 @@ const electronAPI = {
         scrollback: number;
       };
       browser: { defaultUrl: string };
+      whiteboard: { mcpPort: number };
     }) => ipcRenderer.invoke("settings:save", s) as Promise<void>,
   },
 
@@ -240,6 +242,53 @@ const electronAPI = {
 
     importPostman: (workspaceId: string, json: string) =>
       ipcRenderer.invoke('http:import-postman', workspaceId, json) as Promise<{ imported: number; skipped: number }>,
+  },
+
+  whiteboard: {
+    listBoards: () =>
+      ipcRenderer.invoke('whiteboard:list-boards'),
+    getBoard: (boardId: string) =>
+      ipcRenderer.invoke('whiteboard:get-board', boardId),
+    createBoard: (name: string, workspaceId: string | null) =>
+      ipcRenderer.invoke('whiteboard:create-board', name, workspaceId),
+    deleteBoard: (boardId: string) =>
+      ipcRenderer.invoke('whiteboard:delete-board', boardId),
+    updateBoard: (boardId: string, patch: Record<string, unknown>) =>
+      ipcRenderer.invoke('whiteboard:update-board', boardId, patch),
+    createSticky: (boardId: string, data: Record<string, unknown>) =>
+      ipcRenderer.invoke('whiteboard:create-sticky', boardId, data),
+    updateSticky: (boardId: string, stickyId: string, patch: Record<string, unknown>) =>
+      ipcRenderer.invoke('whiteboard:update-sticky', boardId, stickyId, patch),
+    deleteSticky: (boardId: string, stickyId: string) =>
+      ipcRenderer.invoke('whiteboard:delete-sticky', boardId, stickyId),
+    createFrame: (boardId: string, data: Record<string, unknown>) =>
+      ipcRenderer.invoke('whiteboard:create-frame', boardId, data),
+    updateFrame: (boardId: string, frameId: string, patch: Record<string, unknown>) =>
+      ipcRenderer.invoke('whiteboard:update-frame', boardId, frameId, patch),
+    deleteFrame: (boardId: string, frameId: string) =>
+      ipcRenderer.invoke('whiteboard:delete-frame', boardId, frameId),
+    connect: (boardId: string, fromStickyId: string, toStickyId: string, label?: string) =>
+      ipcRenderer.invoke('whiteboard:connect', boardId, fromStickyId, toStickyId, label),
+    updateConnection: (boardId: string, connectionId: string, patch: Record<string, unknown>) =>
+      ipcRenderer.invoke('whiteboard:update-connection', boardId, connectionId, patch),
+    disconnect: (boardId: string, connectionId: string) =>
+      ipcRenderer.invoke('whiteboard:disconnect', boardId, connectionId),
+    onBoardChanged: (callback: (board: unknown) => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, board: unknown) => callback(board);
+      ipcRenderer.on('whiteboard:board-changed', listener);
+      return () => ipcRenderer.removeListener('whiteboard:board-changed', listener);
+    },
+    onBoardDeleted: (callback: (boardId: string) => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, boardId: string) => callback(boardId);
+      ipcRenderer.on('whiteboard:board-deleted', listener);
+      return () => ipcRenderer.removeListener('whiteboard:board-deleted', listener);
+    },
+    startMcpServer: (port: number) =>
+      ipcRenderer.invoke('whiteboard:start-mcp-server', port),
+    stopMcpServer: () =>
+      ipcRenderer.invoke('whiteboard:stop-mcp-server'),
+    getMcpStatus: () =>
+      ipcRenderer.invoke('whiteboard:mcp-status'),
   },
 
   browser: {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings2, TerminalSquare, Globe } from 'lucide-react';
+import { Settings2, TerminalSquare, Globe, LayoutDashboard } from 'lucide-react';
 import { Dialog, DialogContent } from '@/renderer/components/ui/dialog';
 import { useSettings } from '@/renderer/contexts/settings';
 import { cn } from '@/lib/utils';
@@ -8,6 +8,7 @@ const tabs = [
   { id: 'general', label: 'General', icon: Settings2 },
   { id: 'terminal', label: 'Terminal', icon: TerminalSquare },
   { id: 'browser', label: 'Browser', icon: Globe },
+  { id: 'whiteboard', label: 'Whiteboard', icon: LayoutDashboard },
 ] as const;
 
 type TabId = (typeof tabs)[number]['id'];
@@ -161,6 +162,29 @@ function BrowserTab() {
   );
 }
 
+function WhiteboardTab() {
+  const { settings, updateSettings } = useSettings();
+
+  return (
+    <div>
+      <div className="flex items-center justify-between py-2 border-b border-border/40">
+        <span className="text-sm text-foreground">MCP Server Port</span>
+        <input
+          type="number"
+          min={1024}
+          max={65535}
+          value={settings.whiteboard.mcpPort}
+          onChange={(e) => updateSettings({ whiteboard: { mcpPort: Number(e.target.value) } })}
+          className="w-28 h-7 px-2 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">
+        Port for the MCP SSE server (default: 3100). Restart the MCP server after changing.
+      </p>
+    </div>
+  );
+}
+
 export function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [activeTab, setActiveTab] = useState<TabId>('general');
 
@@ -197,6 +221,7 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
           {activeTab === 'general' && <GeneralTab />}
           {activeTab === 'terminal' && <TerminalTab />}
           {activeTab === 'browser' && <BrowserTab />}
+          {activeTab === 'whiteboard' && <WhiteboardTab />}
         </div>
       </DialogContent>
     </Dialog>

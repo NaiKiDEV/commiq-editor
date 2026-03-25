@@ -12,6 +12,8 @@ import { registerProcessesIpc } from './ipc/processes';
 import { registerEnvIpc } from './ipc/env';
 import { registerSettingsIpc } from './ipc/settings';
 import { registerHttpIpc } from './ipc/http';
+import { registerWhiteboardIpc, registerWhiteboardPush } from './ipc/whiteboard';
+import { whiteboardState } from './whiteboard/state';
 
 if (started) {
   app.quit();
@@ -29,6 +31,7 @@ registerProcessesIpc();
 registerEnvIpc();
 registerSettingsIpc();
 registerHttpIpc();
+registerWhiteboardIpc();
 
 const createWindow = () => {
   const isMac = process.platform === 'darwin';
@@ -53,6 +56,7 @@ const createWindow = () => {
   });
 
   registerBrowserIpc(mainWindow);
+  registerWhiteboardPush(mainWindow);
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
@@ -64,6 +68,10 @@ const createWindow = () => {
 };
 
 app.on('ready', createWindow);
+
+app.on('before-quit', () => {
+  whiteboardState.flushAll();
+});
 
 app.on('window-all-closed', () => {
   killAllSessions();

@@ -14,6 +14,7 @@ import {
   Network,
   Cpu,
   KeyRound,
+  LayoutDashboard,
 } from 'lucide-react';
 import {
   CommandDialog,
@@ -46,6 +47,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === 'process') return <Cpu />;
   if (type === 'env') return <KeyRound />;
   if (type === 'http') return <Globe2 />;
+  if (type === 'whiteboard') return <LayoutDashboard />;
   return <NotepadText />;
 }
 
@@ -179,6 +181,10 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(function CommandP
             <Globe2 />
             <span>New HTTP Client Tab</span>
           </CommandItem>
+          <CommandItem onSelect={() => runAction(() => createTab('whiteboard', 'Canvas'))}>
+            <LayoutDashboard />
+            <span>New Whiteboard Tab</span>
+          </CommandItem>
         </CommandGroup>
 
         {/* Split */}
@@ -223,6 +229,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(function CommandP
             <CommandItem onSelect={() => runAction(() => splitPanel('vertical', 'http', 'HTTP Client'))}>
               <Rows2 />
               <span>Split Down: HTTP Client</span>
+            </CommandItem>
+            <CommandItem onSelect={() => runAction(() => splitPanel('horizontal', 'whiteboard', 'Canvas'))}>
+              <Columns2 />
+              <span>Split Right: Whiteboard</span>
+            </CommandItem>
+            <CommandItem onSelect={() => runAction(() => splitPanel('vertical', 'whiteboard', 'Canvas'))}>
+              <Rows2 />
+              <span>Split Down: Whiteboard</span>
             </CommandItem>
           </CommandGroup>
         )}

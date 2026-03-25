@@ -13,6 +13,9 @@ export type AppSettings = {
   browser: {
     defaultUrl: string;
   };
+  whiteboard: {
+    mcpPort: number;
+  };
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -25,6 +28,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   browser: {
     defaultUrl: 'https://www.google.com',
+  },
+  whiteboard: {
+    mcpPort: 3100,
   },
 };
 
