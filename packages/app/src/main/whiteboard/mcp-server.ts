@@ -38,6 +38,19 @@ function createConfiguredMcpServer(): McpServer {
     );
   }
 
+  function formatConnectionGraph(board: ReturnType<typeof whiteboardState.getBoard>): string {
+    if (!board || board.connections.length === 0) return "";
+    const lines = board.connections.map((conn) => {
+      const from = board.stickies.find((s) => s.id === conn.fromStickyId);
+      const to = board.stickies.find((s) => s.id === conn.toStickyId);
+      const fromText = from?.text ? `"${from.text}"` : `(sticky ${conn.fromStickyId})`;
+      const toText = to?.text ? `"${to.text}"` : `(sticky ${conn.toStickyId})`;
+      const labelPart = conn.label ? ` [${conn.label}]` : "";
+      return `  ${fromText} → ${toText}${labelPart}`;
+    });
+    return "\n\nConnection graph:\n" + lines.join("\n");
+  }
+
   // --- Board tools ---
 
   mcp.tool("list_boards", "List all whiteboard boards", {}, async () => {
@@ -59,9 +72,10 @@ function createConfiguredMcpServer(): McpServer {
           isError: true,
         };
       const meanings = formatColorMeanings(board.colorMeanings);
+      const graph = formatConnectionGraph(board);
       return {
         content: [
-          { type: "text", text: JSON.stringify(board, null, 2) + meanings },
+          { type: "text", text: JSON.stringify(board, null, 2) + meanings + graph },
         ],
       };
     },
@@ -522,11 +536,20 @@ function createConfiguredMcpServer(): McpServer {
       const board = whiteboardState.getBoard(boardId as string);
       if (!board)
         return { contents: [{ uri: uri.href, text: "Board not found" }] };
+      const enriched = board.connections.map((conn) => {
+        const from = board.stickies.find((s) => s.id === conn.fromStickyId);
+        const to = board.stickies.find((s) => s.id === conn.toStickyId);
+        return {
+          ...conn,
+          fromStickyText: from?.text ?? null,
+          toStickyText: to?.text ?? null,
+        };
+      });
       return {
         contents: [
           {
             uri: uri.href,
-            text: JSON.stringify(board.connections, null, 2),
+            text: JSON.stringify(enriched, null, 2),
             mimeType: "application/json",
           },
         ],

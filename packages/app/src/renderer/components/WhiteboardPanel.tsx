@@ -1280,6 +1280,7 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
       zIndex: 50,
       borderRadius: 8 * stageScale,
       fontFamily: "'Inter Variable', 'Inter', system-ui, sans-serif",
+      fontWeight: 500,
       lineHeight: "1.4",
       color: "#1e293b",
     };
@@ -1544,6 +1545,7 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
                   height={sticky.height - 20}
                   fontSize={14}
                   fontFamily="'Inter Variable', 'Inter', system-ui, sans-serif"
+                  fontStyle="500"
                   fill={sticky.text ? "#1e293b" : "#94a3b8"}
                   wrap="word"
                   ellipsis
@@ -1731,19 +1733,6 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         >
           <Maximize size={16} />
         </button>
-        <div className="w-px h-5 bg-white/10 mx-1" />
-        <button
-          onClick={() => setShowColorLegend((p) => !p)}
-          className={cn(
-            "p-1.5 rounded-md transition-colors",
-            showColorLegend
-              ? "bg-purple-500/30 text-purple-300"
-              : "text-white/60 hover:text-white/90 hover:bg-white/10",
-          )}
-          title="Color Legend"
-        >
-          <Palette size={16} />
-        </button>
       </div>
 
       {/* --- Board Menu (top-left) --- */}
@@ -1867,55 +1856,9 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         </button>
       </div>
 
-      {/* --- Color Legend Panel --- */}
-      {showColorLegend && (
-        <div
-          className="absolute top-14 left-1/2 -translate-x-1/2 z-20 bg-[#1e1e2e]/95 backdrop-blur border border-white/10 rounded-lg shadow-xl p-3 min-w-[280px]"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-white/80 font-medium flex items-center gap-1.5">
-              <Palette size={14} />
-              Color Legend
-            </span>
-            <button
-              onClick={() => setShowColorLegend(false)}
-              className="text-white/40 hover:text-white/80"
-            >
-              <X size={14} />
-            </button>
-          </div>
-          <div className="space-y-1.5">
-            {ALL_COLORS.map((color) => (
-              <div key={color} className="flex items-center gap-2">
-                <div
-                  className="w-5 h-5 rounded-full shrink-0 border border-white/10"
-                  style={{ background: STICKY_COLORS[color] }}
-                />
-                <input
-                  className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80 outline-none focus:border-white/30 placeholder:text-white/25"
-                  placeholder="No meaning set"
-                  value={board?.colorMeanings?.[color] ?? ""}
-                  onChange={(e) => {
-                    if (!activeBoardId || !board) return;
-                    const newMeanings = { ...(board.colorMeanings ?? {}) };
-                    if (e.target.value) {
-                      newMeanings[color] = e.target.value;
-                    } else {
-                      delete newMeanings[color];
-                    }
-                    window.electronAPI.whiteboard.updateBoard(activeBoardId, {
-                      colorMeanings: newMeanings,
-                    });
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Color Legend Panel moved to bottom-right */}
 
-      {/* --- Shortcuts panel (bottom-right) --- */}
+      {/* --- Shortcuts + Legend panel (bottom-right) --- */}
       <div className="absolute bottom-3 right-3 z-10 flex flex-col items-end gap-1">
         {showShortcuts && (
           <div className="bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg px-3 py-2.5 shadow-xl">
@@ -1929,39 +1872,68 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
             </div>
           </div>
         )}
-        {board?.colorMeanings &&
-          Object.values(board.colorMeanings).some(Boolean) && (
-            <div className="bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg px-3 py-2 shadow-xl">
-              <div className="text-[11px] text-white/50 space-y-0.5">
-                {ALL_COLORS.filter((c) => board.colorMeanings?.[c]).map(
-                  (color) => (
-                    <div key={color} className="flex items-center gap-1.5">
-                      <div
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ background: STICKY_COLORS[color] }}
-                      />
-                      <span className="text-white/50">
-                        {board.colorMeanings![color]}
-                      </span>
-                    </div>
-                  ),
-                )}
-              </div>
+        {showColorLegend && (
+          <div
+            className="bg-[#1e1e2e]/95 backdrop-blur border border-white/10 rounded-lg shadow-xl p-3 min-w-70"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-1.5">
+              {ALL_COLORS.map((color) => (
+                <div key={color} className="flex items-center gap-2">
+                  <div
+                    className="w-5 h-5 rounded-full shrink-0 border border-white/10"
+                    style={{ background: STICKY_COLORS[color] }}
+                  />
+                  <input
+                    className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80 outline-none focus:border-white/30 placeholder:text-white/25"
+                    placeholder="No meaning set"
+                    value={board?.colorMeanings?.[color] ?? ""}
+                    onChange={(e) => {
+                      if (!activeBoardId || !board) return;
+                      const newMeanings = { ...(board.colorMeanings ?? {}) };
+                      if (e.target.value) {
+                        newMeanings[color] = e.target.value;
+                      } else {
+                        delete newMeanings[color];
+                      }
+                      window.electronAPI.whiteboard.updateBoard(activeBoardId, {
+                        colorMeanings: newMeanings,
+                      });
+                    }}
+                  />
+                </div>
+              ))}
             </div>
-          )}
-        <button
-          onClick={() => setShowShortcuts((p) => !p)}
-          className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg text-sm shadow-xl transition-colors",
-            showShortcuts
-              ? "text-blue-300 border-blue-500/30"
-              : "text-white/50 hover:text-white/80",
-          )}
-          title="Keyboard shortcuts"
-        >
-          <Keyboard size={14} />
-          Shortcuts
-        </button>
+          </div>
+        )}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowColorLegend((p) => !p)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg text-sm shadow-xl transition-colors",
+              showColorLegend
+                ? "text-purple-300 border-purple-500/30"
+                : "text-white/50 hover:text-white/80",
+            )}
+            title="Color Legend"
+          >
+            <Palette size={14} />
+            Legend
+          </button>
+          <button
+            onClick={() => setShowShortcuts((p) => !p)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg text-sm shadow-xl transition-colors",
+              showShortcuts
+                ? "text-blue-300 border-blue-500/30"
+                : "text-white/50 hover:text-white/80",
+            )}
+            title="Keyboard shortcuts"
+          >
+            <Keyboard size={14} />
+            Shortcuts
+          </button>
+        </div>
       </div>
 
       {/* --- Sticky Context Menu --- */}
