@@ -3,6 +3,7 @@ import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
+import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
@@ -10,15 +11,27 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    asarUnpack: ['**/*.node'],
   },
   rebuildConfig: {},
+  hooks: {
+    packageAfterCopy: async (_forgeConfig, buildPath) => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+      const src = path.join(__dirname, '..', '..', 'node_modules', 'node-pty');
+      const dest = path.join(buildPath, 'node_modules', 'node-pty');
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.cpSync(src, dest, { recursive: true, verbatimSymlinks: false });
+    },
+  },
   makers: [
-    new MakerSquirrel({}),
+    new MakerSquirrel({ name: 'CommiqEditor' }),
     new MakerZIP({}, ['darwin']),
     new MakerRpm({}),
     new MakerDeb({}),
   ],
   plugins: [
+    new AutoUnpackNativesPlugin({}),
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
       // If you are familiar with Vite configuration, it will look really familiar.

@@ -1,0 +1,62 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    env:
+      GYP_MSVS_VERSION: '2022'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Make
+        run: pnpm make
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: commiq-editor-windows
+          path: packages/app/out/make/squirrel.windows/x64/
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Make
+        run: pnpm make
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: commiq-editor-macos
+          path: packages/app/out/make/zip/darwin/
