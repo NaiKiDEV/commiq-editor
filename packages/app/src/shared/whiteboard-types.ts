@@ -1,4 +1,4 @@
-export type StickyColor = 'yellow' | 'blue' | 'green' | 'pink' | 'purple';
+export type StickyColor = "yellow" | "blue" | "green" | "pink" | "purple" | "orange" | "red";
 
 export type Board = {
   id: string;
@@ -8,6 +8,7 @@ export type Board = {
   frames: Frame[];
   connections: Connection[];
   viewport: { x: number; y: number; zoom: number };
+  colorMeanings?: Partial<Record<StickyColor, string>>;
   createdAt: string;
   updatedAt: string;
 };

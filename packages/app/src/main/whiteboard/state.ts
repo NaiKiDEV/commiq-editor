@@ -1,8 +1,8 @@
-import { EventEmitter } from 'events';
-import { app } from 'electron';
-import * as fs from 'fs';
-import * as path from 'path';
-import { randomUUID } from 'crypto';
+import { EventEmitter } from "events";
+import { app } from "electron";
+import * as fs from "fs";
+import * as path from "path";
+import { randomUUID } from "crypto";
 import type {
   Board,
   BoardSummary,
@@ -10,7 +10,7 @@ import type {
   Frame,
   Connection,
   StickyColor,
-} from '../../shared/whiteboard-types';
+} from "../../shared/whiteboard-types";
 
 const SAVE_DEBOUNCE_MS = 1500;
 const VIEWPORT_SAVE_DEBOUNCE_MS = 3000;
@@ -23,7 +23,7 @@ export class WhiteboardStateManager extends EventEmitter {
 
   constructor() {
     super();
-    this.storageDir = path.join(app.getPath('userData'), 'whiteboard');
+    this.storageDir = path.join(app.getPath("userData"), "whiteboard");
     if (!fs.existsSync(this.storageDir)) {
       fs.mkdirSync(this.storageDir, { recursive: true });
     }
@@ -63,7 +63,7 @@ export class WhiteboardStateManager extends EventEmitter {
     };
     this.boards.set(board.id, board);
     this.scheduleSave(board.id);
-    this.emit('board-changed', board);
+    this.emit("board-changed", board);
     return board;
   }
 
@@ -73,8 +73,22 @@ export class WhiteboardStateManager extends EventEmitter {
     this.boards.delete(boardId);
     const filePath = this.boardFilePath(boardId);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    this.emit('board-deleted', boardId);
+    this.emit("board-deleted", boardId);
     return true;
+  }
+
+  importBoard(data: Board): Board {
+    const now = new Date().toISOString();
+    const board: Board = {
+      ...data,
+      id: randomUUID(),
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.boards.set(board.id, board);
+    this.scheduleSave(board.id);
+    this.emit("board-changed", board);
+    return board;
   }
 
   updateBoard(
@@ -82,21 +96,26 @@ export class WhiteboardStateManager extends EventEmitter {
     patch: {
       name?: string;
       viewport?: { x: number; y: number; zoom: number };
+      colorMeanings?: Partial<Record<StickyColor, string>>;
     },
   ): Board | null {
     const board = this.boards.get(boardId);
     if (!board) return null;
     const isViewportOnly =
-      patch.viewport !== undefined && patch.name === undefined;
+      patch.viewport !== undefined &&
+      patch.name === undefined &&
+      patch.colorMeanings === undefined;
     if (patch.name !== undefined) board.name = patch.name;
     if (patch.viewport !== undefined) board.viewport = patch.viewport;
+    if (patch.colorMeanings !== undefined)
+      board.colorMeanings = patch.colorMeanings;
     if (isViewportOnly) {
       this.scheduleViewportSave(boardId);
     } else {
       board.updatedAt = new Date().toISOString();
       this.scheduleSave(boardId);
     }
-    this.emit('board-changed', board);
+    this.emit("board-changed", board);
     return board;
   }
 
@@ -123,17 +142,32 @@ export class WhiteboardStateManager extends EventEmitter {
       y: data.y ?? this.autoPositionY(board),
       width: data.width ?? 200,
       height: data.height ?? 150,
-      text: data.text ?? '',
-      color: data.color ?? 'yellow',
+      text: data.text ?? "",
+      color: data.color ?? "yellow",
       frameId: null,
       metadata: data.metadata ?? {},
       createdAt: now,
       updatedAt: now,
     };
+    // Auto-detect frame containment
+    const centerX = sticky.x + sticky.width / 2;
+    const centerY = sticky.y + sticky.height / 2;
+    for (const frame of board.frames) {
+      if (
+        centerX >= frame.x &&
+        centerX <= frame.x + frame.width &&
+        centerY >= frame.y &&
+        centerY <= frame.y + frame.height
+      ) {
+        sticky.frameId = frame.id;
+        break;
+      }
+    }
+
     board.stickies.push(sticky);
     board.updatedAt = now;
     this.scheduleSave(boardId);
-    this.emit('board-changed', board);
+    this.emit("board-changed", board);
     return sticky;
   }
 
@@ -143,14 +177,14 @@ export class WhiteboardStateManager extends EventEmitter {
     patch: Partial<
       Pick<
         Sticky,
-        | 'x'
-        | 'y'
-        | 'width'
-        | 'height'
-        | 'text'
-        | 'color'
-        | 'frameId'
-        | 'metadata'
+        | "x"
+        | "y"
+        | "width"
+        | "height"
+        | "text"
+        | "color"
+        | "frameId"
+        | "metadata"
       >
     >,
   ): Sticky | null {
@@ -161,7 +195,7 @@ export class WhiteboardStateManager extends EventEmitter {
     Object.assign(sticky, patch, { updatedAt: new Date().toISOString() });
     board.updatedAt = sticky.updatedAt;
     this.scheduleSave(boardId);
-    this.emit('board-changed', board);
+    this.emit("board-changed", board);
     return sticky;
   }
 
@@ -176,7 +210,7 @@ export class WhiteboardStateManager extends EventEmitter {
     );
     board.updatedAt = new Date().toISOString();
     this.scheduleSave(boardId);
-    this.emit('board-changed', board);
+    this.emit("board-changed", board);
     return true;
   }
 
@@ -203,14 +237,14 @@ export class WhiteboardStateManager extends EventEmitter {
       width: data.width,
       height: data.height,
       label: data.label,
-      color: data.color ?? '#e2e8f0',
+      color: data.color ?? "#e2e8f0",
       createdAt: now,
       updatedAt: now,
     };
     board.frames.push(frame);
     board.updatedAt = now;
     this.scheduleSave(boardId);
-    this.emit('board-changed', board);
+    this.emit("board-changed", board);
     return frame;
   }
 
@@ -218,7 +252,7 @@ export class WhiteboardStateManager extends EventEmitter {
     boardId: string,
     frameId: string,
     patch: Partial<
-      Pick<Frame, 'x' | 'y' | 'width' | 'height' | 'label' | 'color'>
+      Pick<Frame, "x" | "y" | "width" | "height" | "label" | "color">
     >,
   ): Frame | null {
     const board = this.boards.get(boardId);
@@ -228,7 +262,7 @@ export class WhiteboardStateManager extends EventEmitter {
     Object.assign(frame, patch, { updatedAt: new Date().toISOString() });
     board.updatedAt = frame.updatedAt;
     this.scheduleSave(boardId);
-    this.emit('board-changed', board);
+    this.emit("board-changed", board);
     return frame;
   }
 
@@ -243,7 +277,7 @@ export class WhiteboardStateManager extends EventEmitter {
     }
     board.updatedAt = new Date().toISOString();
     this.scheduleSave(boardId);
-    this.emit('board-changed', board);
+    this.emit("board-changed", board);
     return true;
   }
 
@@ -274,7 +308,7 @@ export class WhiteboardStateManager extends EventEmitter {
     board.connections.push(connection);
     board.updatedAt = now;
     this.scheduleSave(boardId);
-    this.emit('board-changed', board);
+    this.emit("board-changed", board);
     return connection;
   }
 
@@ -291,7 +325,7 @@ export class WhiteboardStateManager extends EventEmitter {
     connection.updatedAt = new Date().toISOString();
     board.updatedAt = connection.updatedAt;
     this.scheduleSave(boardId);
-    this.emit('board-changed', board);
+    this.emit("board-changed", board);
     return connection;
   }
 
@@ -303,7 +337,7 @@ export class WhiteboardStateManager extends EventEmitter {
     board.connections.splice(idx, 1);
     board.updatedAt = new Date().toISOString();
     this.scheduleSave(boardId);
-    this.emit('board-changed', board);
+    this.emit("board-changed", board);
     return true;
   }
 
@@ -357,19 +391,16 @@ export class WhiteboardStateManager extends EventEmitter {
     fs.writeFileSync(
       this.boardFilePath(boardId),
       JSON.stringify(board, null, 2),
-      'utf-8',
+      "utf-8",
     );
   }
 
   private loadAll(): void {
     if (!fs.existsSync(this.storageDir)) return;
     for (const file of fs.readdirSync(this.storageDir)) {
-      if (!file.endsWith('.json')) continue;
+      if (!file.endsWith(".json")) continue;
       try {
-        const raw = fs.readFileSync(
-          path.join(this.storageDir, file),
-          'utf-8',
-        );
+        const raw = fs.readFileSync(path.join(this.storageDir, file), "utf-8");
         const board: Board = JSON.parse(raw);
         this.boards.set(board.id, board);
       } catch {

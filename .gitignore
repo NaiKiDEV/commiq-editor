@@ -4,4 +4,5 @@ dist/
 .vite/
 *.log
 .claude
+.vscode
 **/superpowers

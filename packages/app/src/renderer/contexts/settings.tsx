@@ -64,7 +64,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    window.electronAPI.settings.load().then(setSettings).catch(() => {/* keep defaults */});
+    window.electronAPI.settings.load()
+      .then((loaded) => setSettings(deepMerge(DEFAULT_SETTINGS, loaded as DeepPartial<AppSettings>)))
+      .catch(() => {/* keep defaults */});
   }, []);
 
   const updateSettings = (patch: DeepPartial<AppSettings>) => {

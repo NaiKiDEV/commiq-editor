@@ -192,103 +192,173 @@ const electronAPI = {
 
   http: {
     collectionsList: (workspaceId: string) =>
-      ipcRenderer.invoke('http:collections:list', workspaceId) as Promise<
-        Array<{ id: string; name: string; scope: 'workspace' | 'global'; workspaceId: string | null }>
+      ipcRenderer.invoke("http:collections:list", workspaceId) as Promise<
+        Array<{
+          id: string;
+          name: string;
+          scope: "workspace" | "global";
+          workspaceId: string | null;
+        }>
       >,
 
-    collectionsCreate: (workspaceId: string, name: string, scope: 'workspace' | 'global') =>
-      ipcRenderer.invoke('http:collections:create', workspaceId, name, scope) as Promise<{
-        id: string; name: string; scope: 'workspace' | 'global'; workspaceId: string | null;
+    collectionsCreate: (
+      workspaceId: string,
+      name: string,
+      scope: "workspace" | "global",
+    ) =>
+      ipcRenderer.invoke(
+        "http:collections:create",
+        workspaceId,
+        name,
+        scope,
+      ) as Promise<{
+        id: string;
+        name: string;
+        scope: "workspace" | "global";
+        workspaceId: string | null;
       }>,
 
     collectionsDelete: (id: string) =>
-      ipcRenderer.invoke('http:collections:delete', id) as Promise<void>,
+      ipcRenderer.invoke("http:collections:delete", id) as Promise<void>,
 
     requestsList: (workspaceId: string) =>
-      ipcRenderer.invoke('http:requests:list', workspaceId) as Promise<
+      ipcRenderer.invoke("http:requests:list", workspaceId) as Promise<
         Array<{
-          id: string; collectionId: string | null; workspaceId: string | null;
-          name: string; method: string; url: string;
+          id: string;
+          collectionId: string | null;
+          workspaceId: string | null;
+          name: string;
+          method: string;
+          url: string;
           headers: { key: string; value: string; enabled: boolean }[];
-          body: { type: 'none' | 'json' | 'text'; content: string };
+          body: { type: "none" | "json" | "text"; content: string };
         }>
       >,
 
     requestsSave: (request: {
-      id: string; collectionId: string | null; workspaceId: string | null;
-      name: string; method: string; url: string;
+      id: string;
+      collectionId: string | null;
+      workspaceId: string | null;
+      name: string;
+      method: string;
+      url: string;
       headers: { key: string; value: string; enabled: boolean }[];
-      body: { type: 'none' | 'json' | 'text'; content: string };
+      body: { type: "none" | "json" | "text"; content: string };
     }) =>
-      ipcRenderer.invoke('http:requests:save', request) as Promise<typeof request>,
+      ipcRenderer.invoke("http:requests:save", request) as Promise<
+        typeof request
+      >,
 
     requestsDelete: (id: string) =>
-      ipcRenderer.invoke('http:requests:delete', id) as Promise<void>,
+      ipcRenderer.invoke("http:requests:delete", id) as Promise<void>,
 
     request: (request: {
-      id: string; collectionId: string | null; workspaceId: string | null;
-      name: string; method: string; url: string;
+      id: string;
+      collectionId: string | null;
+      workspaceId: string | null;
+      name: string;
+      method: string;
+      url: string;
       headers: { key: string; value: string; enabled: boolean }[];
-      body: { type: 'none' | 'json' | 'text'; content: string };
+      body: { type: "none" | "json" | "text"; content: string };
     }) =>
-      ipcRenderer.invoke('http:request', request) as Promise<
-        | { status: number; statusText: string; headers: Record<string, string>; body: string; timing: { start: number; end: number; duration: number } }
+      ipcRenderer.invoke("http:request", request) as Promise<
+        | {
+            status: number;
+            statusText: string;
+            headers: Record<string, string>;
+            body: string;
+            timing: { start: number; end: number; duration: number };
+          }
         | { error: string }
         | { cancelled: true }
       >,
 
     requestCancel: (requestId: string) =>
-      ipcRenderer.invoke('http:request:cancel', requestId) as Promise<void>,
+      ipcRenderer.invoke("http:request:cancel", requestId) as Promise<void>,
 
     importPostman: (workspaceId: string, json: string) =>
-      ipcRenderer.invoke('http:import-postman', workspaceId, json) as Promise<{ imported: number; skipped: number }>,
+      ipcRenderer.invoke("http:import-postman", workspaceId, json) as Promise<{
+        imported: number;
+        skipped: number;
+      }>,
   },
 
   whiteboard: {
-    listBoards: () =>
-      ipcRenderer.invoke('whiteboard:list-boards'),
+    listBoards: () => ipcRenderer.invoke("whiteboard:list-boards"),
     getBoard: (boardId: string) =>
-      ipcRenderer.invoke('whiteboard:get-board', boardId),
+      ipcRenderer.invoke("whiteboard:get-board", boardId),
     createBoard: (name: string, workspaceId: string | null) =>
-      ipcRenderer.invoke('whiteboard:create-board', name, workspaceId),
+      ipcRenderer.invoke("whiteboard:create-board", name, workspaceId),
     deleteBoard: (boardId: string) =>
-      ipcRenderer.invoke('whiteboard:delete-board', boardId),
+      ipcRenderer.invoke("whiteboard:delete-board", boardId),
+    importBoard: (data: Record<string, unknown>) =>
+      ipcRenderer.invoke("whiteboard:import-board", data),
     updateBoard: (boardId: string, patch: Record<string, unknown>) =>
-      ipcRenderer.invoke('whiteboard:update-board', boardId, patch),
+      ipcRenderer.invoke("whiteboard:update-board", boardId, patch),
     createSticky: (boardId: string, data: Record<string, unknown>) =>
-      ipcRenderer.invoke('whiteboard:create-sticky', boardId, data),
-    updateSticky: (boardId: string, stickyId: string, patch: Record<string, unknown>) =>
-      ipcRenderer.invoke('whiteboard:update-sticky', boardId, stickyId, patch),
+      ipcRenderer.invoke("whiteboard:create-sticky", boardId, data),
+    updateSticky: (
+      boardId: string,
+      stickyId: string,
+      patch: Record<string, unknown>,
+    ) =>
+      ipcRenderer.invoke("whiteboard:update-sticky", boardId, stickyId, patch),
     deleteSticky: (boardId: string, stickyId: string) =>
-      ipcRenderer.invoke('whiteboard:delete-sticky', boardId, stickyId),
+      ipcRenderer.invoke("whiteboard:delete-sticky", boardId, stickyId),
     createFrame: (boardId: string, data: Record<string, unknown>) =>
-      ipcRenderer.invoke('whiteboard:create-frame', boardId, data),
-    updateFrame: (boardId: string, frameId: string, patch: Record<string, unknown>) =>
-      ipcRenderer.invoke('whiteboard:update-frame', boardId, frameId, patch),
+      ipcRenderer.invoke("whiteboard:create-frame", boardId, data),
+    updateFrame: (
+      boardId: string,
+      frameId: string,
+      patch: Record<string, unknown>,
+    ) => ipcRenderer.invoke("whiteboard:update-frame", boardId, frameId, patch),
     deleteFrame: (boardId: string, frameId: string) =>
-      ipcRenderer.invoke('whiteboard:delete-frame', boardId, frameId),
-    connect: (boardId: string, fromStickyId: string, toStickyId: string, label?: string) =>
-      ipcRenderer.invoke('whiteboard:connect', boardId, fromStickyId, toStickyId, label),
-    updateConnection: (boardId: string, connectionId: string, patch: Record<string, unknown>) =>
-      ipcRenderer.invoke('whiteboard:update-connection', boardId, connectionId, patch),
+      ipcRenderer.invoke("whiteboard:delete-frame", boardId, frameId),
+    connect: (
+      boardId: string,
+      fromStickyId: string,
+      toStickyId: string,
+      label?: string,
+    ) =>
+      ipcRenderer.invoke(
+        "whiteboard:connect",
+        boardId,
+        fromStickyId,
+        toStickyId,
+        label,
+      ),
+    updateConnection: (
+      boardId: string,
+      connectionId: string,
+      patch: Record<string, unknown>,
+    ) =>
+      ipcRenderer.invoke(
+        "whiteboard:update-connection",
+        boardId,
+        connectionId,
+        patch,
+      ),
     disconnect: (boardId: string, connectionId: string) =>
-      ipcRenderer.invoke('whiteboard:disconnect', boardId, connectionId),
+      ipcRenderer.invoke("whiteboard:disconnect", boardId, connectionId),
     onBoardChanged: (callback: (board: unknown) => void) => {
-      const listener = (_e: Electron.IpcRendererEvent, board: unknown) => callback(board);
-      ipcRenderer.on('whiteboard:board-changed', listener);
-      return () => ipcRenderer.removeListener('whiteboard:board-changed', listener);
+      const listener = (_e: Electron.IpcRendererEvent, board: unknown) =>
+        callback(board);
+      ipcRenderer.on("whiteboard:board-changed", listener);
+      return () =>
+        ipcRenderer.removeListener("whiteboard:board-changed", listener);
     },
     onBoardDeleted: (callback: (boardId: string) => void) => {
-      const listener = (_e: Electron.IpcRendererEvent, boardId: string) => callback(boardId);
-      ipcRenderer.on('whiteboard:board-deleted', listener);
-      return () => ipcRenderer.removeListener('whiteboard:board-deleted', listener);
+      const listener = (_e: Electron.IpcRendererEvent, boardId: string) =>
+        callback(boardId);
+      ipcRenderer.on("whiteboard:board-deleted", listener);
+      return () =>
+        ipcRenderer.removeListener("whiteboard:board-deleted", listener);
     },
     startMcpServer: (port: number) =>
-      ipcRenderer.invoke('whiteboard:start-mcp-server', port),
-    stopMcpServer: () =>
-      ipcRenderer.invoke('whiteboard:stop-mcp-server'),
-    getMcpStatus: () =>
-      ipcRenderer.invoke('whiteboard:mcp-status'),
+      ipcRenderer.invoke("whiteboard:start-mcp-server", port),
+    stopMcpServer: () => ipcRenderer.invoke("whiteboard:stop-mcp-server"),
+    getMcpStatus: () => ipcRenderer.invoke("whiteboard:mcp-status"),
   },
 
   browser: {

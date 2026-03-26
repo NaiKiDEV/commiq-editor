@@ -1,46 +1,87 @@
-# Connecting to the MCP server from Claude Code
+# Commiq Editor
 
-1. Start the MCP server in Commiq
+## Running locally
 
-Open Settings → Whiteboard tab, note the port (default 3100), then click the MCP button (top-right of the whiteboard panel) to start the server.
+**Prerequisites:** Node.js, [pnpm](https://pnpm.io/installation)
 
-1. Add it to Claude Code's MCP config
+```bash
+# Install dependencies (run from repo root)
+pnpm install
 
-Run this in your terminal (one-time setup):
+# Start the app
+pnpm dev
+```
 
-claude mcp add commiq-whiteboard --transport sse <http://127.0.0.1:3100/sse>
+This launches the Electron app via `electron-forge`. The renderer hot-reloads on changes; the main process restarts automatically.
 
-Or manually add to ~/.claude/claude_desktop_config.json (or your project's .claude/mcp.json):
+---
+
+## Connecting to the Commiq MCP server
+
+## Prerequisites
+
+Open Commiq Editor, go to **Settings → Whiteboard** tab, note the port (default `3100`), then click the **MCP button** (top-right of the whiteboard panel) to start the server. The button turns green when it's running.
+
+The MCP server must be running whenever you want an LLM to interact with it. It stops when Commiq closes.
+
+---
+
+## VS Code Copilot
+
+1. **Config file** — a `.vscode/mcp.json` is already included in this repo:
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "commiq-whiteboard": {
-      "transport": "sse",
-      "url": "http://127.0.0.1:3100/sse"
+      "type": "http",
+      "url": "http://127.0.0.1:3100/mcp"
     }
   }
 }
 ```
 
-1. Verify it's connected
+2. **Start the server** in Commiq (see Prerequisites above).
 
-In a Claude Code session:
+3. **Use it** — open a Copilot Chat session and ask things like:
 
+   > Create a sticky on the board with text "Fix auth bug", color pink
+
+   Copilot will call `list_boards` to find the board ID, then `create_sticky` to place it. You can also ask it to:
+   - Group stickies into frames
+   - Connect stickies with labeled arrows
+   - Read the current board state via resources (`board://{boardId}/stickies`)
+   - Set color meanings (`set_color_meaning`)
+
+---
+
+## Claude Code
+
+1. **Add it to Claude Code's MCP config** — run this in your terminal (one-time setup):
+
+```bash
+claude mcp add --transport http commiq-whiteboard http://127.0.0.1:3100/mcp --scope project
+```
+
+Or manually add to your project's `.mcp.json` (already included in this repo):
+
+```json
+{
+  "mcpServers": {
+    "commiq-whiteboard": {
+      "type": "http",
+      "url": "http://127.0.0.1:3100/mcp"
+    }
+  }
+}
+```
+
+2. **Verify it's connected** — in a Claude Code session run:
+
+```text
 /mcp
+```
 
-You should see commiq-whiteboard listed as connected with its tools.
+You should see `commiq-whiteboard` listed as connected with its tools.
 
-1. Use it
-
-Once connected, Claude Code can call tools like:
-
-Create a sticky on the board with text "Fix auth bug", color pink
-
-Claude will use list_boards to find the board ID, then create_sticky to place it. You can also ask it to:
-
-- Group stickies into frames
-- Connect stickies with labeled arrows
-- Read the current board state via resources (board://{boardId}/stickies)
-
-Note: The MCP server must be running (green button in the panel) whenever you want Claude Code to interact with it. It stops when Commiq closes.
+3. **Use it** — same capabilities as Copilot above.

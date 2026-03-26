@@ -1,42 +1,45 @@
-import { useState, useEffect } from 'react';
-import { Settings2, TerminalSquare, Globe, LayoutDashboard } from 'lucide-react';
-import { Dialog, DialogContent } from '@/renderer/components/ui/dialog';
-import { useSettings } from '@/renderer/contexts/settings';
-import { cn } from '@/lib/utils';
+import { useState, useEffect } from "react";
+import {
+  Settings2,
+  TerminalSquare,
+  Globe,
+  LayoutDashboard,
+} from "lucide-react";
+import { Dialog, DialogContent } from "@/renderer/components/ui/dialog";
+import { useSettings } from "@/renderer/contexts/settings";
+import { cn } from "@/lib/utils";
 
 const tabs = [
-  { id: 'general', label: 'General', icon: Settings2 },
-  { id: 'terminal', label: 'Terminal', icon: TerminalSquare },
-  { id: 'browser', label: 'Browser', icon: Globe },
-  { id: 'whiteboard', label: 'Whiteboard', icon: LayoutDashboard },
+  { id: "general", label: "General", icon: Settings2 },
+  { id: "terminal", label: "Terminal", icon: TerminalSquare },
+  { id: "browser", label: "Browser", icon: Globe },
+  { id: "whiteboard", label: "Whiteboard", icon: LayoutDashboard },
 ] as const;
 
-type TabId = (typeof tabs)[number]['id'];
+type TabId = (typeof tabs)[number]["id"];
 
 function GeneralTab() {
   const shortcuts = [
     {
-      group: 'Navigation',
+      group: "Navigation",
       items: [
-        { label: 'Next tab', key: 'Ctrl+Tab' },
-        { label: 'Previous tab', key: 'Ctrl+Shift+Tab' },
-        { label: 'Jump to tab 1–8', key: 'Ctrl+1–8' },
-        { label: 'Jump to last tab', key: 'Ctrl+9' },
+        { label: "Next tab", key: "Ctrl+Tab" },
+        { label: "Previous tab", key: "Ctrl+Shift+Tab" },
+        { label: "Jump to tab 1–8", key: "Ctrl+1–8" },
+        { label: "Jump to last tab", key: "Ctrl+9" },
       ],
     },
     {
-      group: 'Tabs',
+      group: "Tabs",
       items: [
-        { label: 'Close tab', key: 'Ctrl+W' },
-        { label: 'Open command palette', key: 'Ctrl+N' },
-        { label: 'Toggle command palette', key: 'Ctrl+K' },
+        { label: "Close tab", key: "Ctrl+W" },
+        { label: "Open command palette", key: "Ctrl+N" },
+        { label: "Toggle command palette", key: "Ctrl+K" },
       ],
     },
     {
-      group: 'App',
-      items: [
-        { label: 'Open settings', key: 'Ctrl+,' },
-      ],
+      group: "App",
+      items: [{ label: "Open settings", key: "Ctrl+," }],
     },
   ];
 
@@ -70,7 +73,10 @@ function TerminalTab() {
   const [availableShells, setAvailableShells] = useState<string[]>([]);
 
   useEffect(() => {
-    window.electronAPI.terminal.getShells().then(setAvailableShells).catch(() => {});
+    window.electronAPI.terminal
+      .getShells()
+      .then(setAvailableShells)
+      .catch(() => {});
   }, []);
 
   return (
@@ -80,7 +86,9 @@ function TerminalTab() {
         <input
           type="text"
           value={terminal.fontFamily}
-          onChange={(e) => updateSettings({ terminal: { fontFamily: e.target.value } })}
+          onChange={(e) =>
+            updateSettings({ terminal: { fontFamily: e.target.value } })
+          }
           className="w-64 h-7 px-2 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
         />
       </div>
@@ -91,7 +99,9 @@ function TerminalTab() {
           min={8}
           max={32}
           value={terminal.fontSize}
-          onChange={(e) => updateSettings({ terminal: { fontSize: Number(e.target.value) } })}
+          onChange={(e) =>
+            updateSettings({ terminal: { fontSize: Number(e.target.value) } })
+          }
           className="w-20 h-7 px-2 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
         />
       </div>
@@ -101,7 +111,9 @@ function TerminalTab() {
           value={terminal.cursorStyle}
           onChange={(e) =>
             updateSettings({
-              terminal: { cursorStyle: e.target.value as 'block' | 'underline' | 'bar' },
+              terminal: {
+                cursorStyle: e.target.value as "block" | "underline" | "bar",
+              },
             })
           }
           className="h-7 px-2 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
@@ -115,12 +127,16 @@ function TerminalTab() {
         <span className="text-sm text-foreground">Shell</span>
         <select
           value={terminal.shell}
-          onChange={(e) => updateSettings({ terminal: { shell: e.target.value } })}
+          onChange={(e) =>
+            updateSettings({ terminal: { shell: e.target.value } })
+          }
           className="w-64 h-7 px-2 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
         >
           <option value="">System default</option>
           {availableShells.map((s) => (
-            <option key={s} value={s}>{s}</option>
+            <option key={s} value={s}>
+              {s}
+            </option>
           ))}
         </select>
       </div>
@@ -131,7 +147,9 @@ function TerminalTab() {
           min={100}
           max={50000}
           value={terminal.scrollback}
-          onChange={(e) => updateSettings({ terminal: { scrollback: Number(e.target.value) } })}
+          onChange={(e) =>
+            updateSettings({ terminal: { scrollback: Number(e.target.value) } })
+          }
           className="w-28 h-7 px-2 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
         />
       </div>
@@ -151,7 +169,9 @@ function BrowserTab() {
         <input
           type="text"
           value={settings.browser.defaultUrl}
-          onChange={(e) => updateSettings({ browser: { defaultUrl: e.target.value } })}
+          onChange={(e) =>
+            updateSettings({ browser: { defaultUrl: e.target.value } })
+          }
           className="w-full h-7 px-2 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
         />
         <p className="text-xs text-muted-foreground mt-1">
@@ -174,22 +194,36 @@ function WhiteboardTab() {
           min={1024}
           max={65535}
           value={settings.whiteboard.mcpPort}
-          onChange={(e) => updateSettings({ whiteboard: { mcpPort: Number(e.target.value) } })}
+          onChange={(e) =>
+            updateSettings({ whiteboard: { mcpPort: Number(e.target.value) } })
+          }
           className="w-28 h-7 px-2 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
         />
       </div>
       <p className="text-xs text-muted-foreground mt-1">
-        Port for the MCP SSE server (default: 3100). Restart the MCP server after changing.
+        Port for the MCP Stream/SSE-based server (default: 3100). Restart the
+        MCP server after changing.
       </p>
     </div>
   );
 }
 
-export function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [activeTab, setActiveTab] = useState<TabId>('general');
+export function SettingsModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<TabId>("general");
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent
         showCloseButton={false}
         className="flex p-0 overflow-hidden w-full sm:max-w-2xl h-[500px]"
@@ -203,10 +237,10 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
             <button
               key={tab.id}
               className={cn(
-                'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors w-full text-left',
+                "flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors w-full text-left",
                 activeTab === tab.id
-                  ? 'bg-muted text-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
               )}
               onClick={() => setActiveTab(tab.id)}
             >
@@ -218,10 +252,10 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
 
         {/* Right content pane */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
-          {activeTab === 'general' && <GeneralTab />}
-          {activeTab === 'terminal' && <TerminalTab />}
-          {activeTab === 'browser' && <BrowserTab />}
-          {activeTab === 'whiteboard' && <WhiteboardTab />}
+          {activeTab === "general" && <GeneralTab />}
+          {activeTab === "terminal" && <TerminalTab />}
+          {activeTab === "browser" && <BrowserTab />}
+          {activeTab === "whiteboard" && <WhiteboardTab />}
         </div>
       </DialogContent>
     </Dialog>

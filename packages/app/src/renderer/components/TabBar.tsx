@@ -1,7 +1,8 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   TerminalSquare,
   Globe,
+  Globe2,
   NotepadText,
   Zap,
   X,
@@ -10,49 +11,50 @@ import {
   Network,
   Cpu,
   KeyRound,
-} from 'lucide-react';
+  LayoutDashboard,
+} from "lucide-react";
 import {
   useTabs,
   useActiveTabId,
   usePanels,
   useLayout,
   useWorkspaceActions,
-} from '../hooks/use-workspace';
-import { Button } from './ui/button';
+} from "../hooks/use-workspace";
+import { Button } from "./ui/button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from './ui/dropdown-menu';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from './ui/tooltip';
-import { cn } from '@/lib/utils';
-import { getVisiblePanelIds } from '../lib/layout';
-import type { PanelType } from '../stores/workspace';
-import { isRenamingTabRef } from './Shell';
+} from "./ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { cn } from "@/lib/utils";
+import { getVisiblePanelIds } from "../lib/layout";
+import type { PanelType } from "../stores/workspace";
+import { isRenamingTabRef } from "./Shell";
 
 function TabIcon({ type }: { type: PanelType }) {
   switch (type) {
-    case 'terminal':
+    case "terminal":
       return <TerminalSquare className="size-3" />;
-    case 'browser':
+    case "browser":
       return <Globe className="size-3" />;
-    case 'notes':
+    case "notes":
       return <NotepadText className="size-3" />;
-    case 'workflow':
+    case "workflow":
       return <Zap className="size-3" />;
-    case 'timer':
+    case "timer":
       return <Timer className="size-3" />;
-    case 'ports':
+    case "ports":
       return <Network className="size-3" />;
-    case 'process':
+    case "process":
       return <Cpu className="size-3" />;
-    case 'env':
+    case "env":
       return <KeyRound className="size-3" />;
+    case "http":
+      return <Globe2 className="size-3" />;
+    case "whiteboard":
+      return <LayoutDashboard className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -63,10 +65,18 @@ export function TabBar() {
   const activeTabId = useActiveTabId();
   const panels = usePanels();
   const layout = useLayout();
-  const { createTab, closeTab, activateTab, renameTab, closeOtherTabs, closeTabsToRight, reorderTab } = useWorkspaceActions();
+  const {
+    createTab,
+    closeTab,
+    activateTab,
+    renameTab,
+    closeOtherTabs,
+    closeTabsToRight,
+    reorderTab,
+  } = useWorkspaceActions();
 
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState('');
+  const [renameValue, setRenameValue] = useState("");
 
   const [contextMenu, setContextMenu] = useState<{
     tabId: string;
@@ -119,7 +129,7 @@ export function TabBar() {
     setContextMenu(null);
     const visibleIds = getVisiblePanelIds(layout);
     for (const panel of panels) {
-      if (panel.type === 'browser' && visibleIds.has(panel.id)) {
+      if (panel.type === "browser" && visibleIds.has(panel.id)) {
         window.electronAPI.browser.showSession(panel.id);
       }
     }
@@ -134,13 +144,13 @@ export function TabBar() {
     if (!contextMenu) return;
     const handleClick = () => closeContextMenu();
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeContextMenu();
+      if (e.key === "Escape") closeContextMenu();
     };
-    window.addEventListener('click', handleClick);
-    window.addEventListener('keydown', handleKey);
+    window.addEventListener("click", handleClick);
+    window.addEventListener("keydown", handleKey);
     return () => {
-      window.removeEventListener('click', handleClick);
-      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener("click", handleClick);
+      window.removeEventListener("keydown", handleKey);
     };
   }, [contextMenu, closeContextMenu]);
 
@@ -151,7 +161,7 @@ export function TabBar() {
       } else {
         const visibleIds = getVisiblePanelIds(layout);
         for (const panel of panels) {
-          if (panel.type === 'browser' && visibleIds.has(panel.id)) {
+          if (panel.type === "browser" && visibleIds.has(panel.id)) {
             window.electronAPI.browser.showSession(panel.id);
           }
         }
@@ -198,14 +208,15 @@ export function TabBar() {
     };
 
     const handleMouseUp = () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
 
       if (dragging) {
         const currentTabs = tabsRef.current;
         const fromIdx = currentTabs.findIndex((t) => t.id === tabId);
         const deltaX = currentX - startX;
-        const dragCenter = tabOffsets[fromIdx] + tabWidths[fromIdx] / 2 + deltaX;
+        const dragCenter =
+          tabOffsets[fromIdx] + tabWidths[fromIdx] / 2 + deltaX;
 
         let toIdx = 0;
         for (let i = 0; i < tabOffsets.length; i++) {
@@ -222,7 +233,7 @@ export function TabBar() {
         const currentPanels = panelsRef.current;
         const visibleIds = getVisiblePanelIds(currentLayout);
         for (const panel of currentPanels) {
-          if (panel.type === 'browser' && visibleIds.has(panel.id)) {
+          if (panel.type === "browser" && visibleIds.has(panel.id)) {
             window.electronAPI.browser.showSession(panel.id);
           }
         }
@@ -231,26 +242,29 @@ export function TabBar() {
       setDragState(null);
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
   };
 
   return (
     <div className="flex items-center h-8 bg-card/50 border-b border-border select-none shrink-0">
       {/* Tab strip */}
-      <div ref={tabStripRef} className="flex items-center overflow-x-auto flex-1 min-w-0">
+      <div
+        ref={tabStripRef}
+        className="flex items-center overflow-x-auto flex-1 min-w-0"
+      >
         {tabs.map((tab) => {
           const primaryPanel = tab.panels[0];
-          const panelType = primaryPanel?.type ?? 'terminal';
+          const panelType = primaryPanel?.type ?? "terminal";
 
           return (
             <button
               key={tab.id}
               className={cn(
-                'group flex items-center gap-1.5 px-3 h-8 text-xs border-r border-border whitespace-nowrap transition-colors',
+                "group flex items-center gap-1.5 px-3 h-8 text-xs border-r border-border whitespace-nowrap transition-colors",
                 tab.id === activeTabId
-                  ? 'bg-background text-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                  ? "bg-background text-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
               )}
               onClick={() => activateTab(tab.id)}
               onContextMenu={(e) => openContextMenu(e, tab.id)}
@@ -261,7 +275,7 @@ export function TabBar() {
                       transform: `translateX(${dragState.currentX - dragState.startX}px)`,
                       zIndex: 50,
                       opacity: 0.8,
-                      position: 'relative' as const,
+                      position: "relative" as const,
                     }
                   : undefined
               }
@@ -274,8 +288,8 @@ export function TabBar() {
                   onChange={(e) => setRenameValue(e.target.value)}
                   onBlur={commitRename}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') commitRename();
-                    if (e.key === 'Escape') cancelRename();
+                    if (e.key === "Enter") commitRename();
+                    if (e.key === "Escape") cancelRename();
                     e.stopPropagation();
                   }}
                   onFocus={(e) => e.target.select()}
@@ -329,37 +343,53 @@ export function TabBar() {
             <TooltipContent side="bottom">New Tab</TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end" className="min-w-48">
-            <DropdownMenuItem onClick={() => createTab('terminal', 'Terminal')}>
+            <DropdownMenuItem onClick={() => createTab("terminal", "Terminal")}>
               <TerminalSquare />
               Terminal
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab('browser', 'Browser')}>
+            <DropdownMenuItem onClick={() => createTab("browser", "Browser")}>
               <Globe />
               Browser
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab('notes', 'Notes')}>
+            <DropdownMenuItem onClick={() => createTab("notes", "Notes")}>
               <NotepadText />
               Notes
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab('workflow', 'Workflows')}>
+            <DropdownMenuItem
+              onClick={() => createTab("workflow", "Workflows")}
+            >
               <Zap />
               Workflows
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab('timer', 'Timers')}>
+            <DropdownMenuItem onClick={() => createTab("timer", "Timers")}>
               <Timer />
               Timers
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab('ports', 'Port Monitor')}>
+            <DropdownMenuItem
+              onClick={() => createTab("ports", "Port Monitor")}
+            >
               <Network />
               Port Monitor
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab('process', 'Process Monitor')}>
+            <DropdownMenuItem
+              onClick={() => createTab("process", "Process Monitor")}
+            >
               <Cpu />
               Process Monitor
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab('env', 'Environment')}>
+            <DropdownMenuItem onClick={() => createTab("env", "Environment")}>
               <KeyRound />
               Environment
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab("http", "HTTP Client")}>
+              <Globe2 />
+              HTTP Client
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => createTab("whiteboard", "Whiteboard")}
+            >
+              <LayoutDashboard />
+              Whiteboard
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -394,14 +424,19 @@ export function TabBar() {
               <div className="h-px bg-border my-1" />
               <button
                 className="w-full px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground"
-                onClick={() => runContextAction(() => closeOtherTabs(contextMenu.tabId))}
+                onClick={() =>
+                  runContextAction(() => closeOtherTabs(contextMenu.tabId))
+                }
               >
                 Close Other Tabs
               </button>
-              {tabs.findIndex((t) => t.id === contextMenu.tabId) < tabs.length - 1 && (
+              {tabs.findIndex((t) => t.id === contextMenu.tabId) <
+                tabs.length - 1 && (
                 <button
                   className="w-full px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground"
-                  onClick={() => runContextAction(() => closeTabsToRight(contextMenu.tabId))}
+                  onClick={() =>
+                    runContextAction(() => closeTabsToRight(contextMenu.tabId))
+                  }
                 >
                   Close Tabs to the Right
                 </button>

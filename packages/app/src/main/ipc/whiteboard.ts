@@ -1,43 +1,49 @@
-import { ipcMain, BrowserWindow } from 'electron';
-import { whiteboardState } from '../whiteboard/state';
-import type { StickyColor } from '../../shared/whiteboard-types';
+import { ipcMain, BrowserWindow } from "electron";
+import { whiteboardState } from "../whiteboard/state";
+import type { StickyColor, Sticky, Frame } from "../../shared/whiteboard-types";
 import {
   startMcpServer,
   stopMcpServer,
   getMcpStatus,
-} from '../whiteboard/mcp-server';
+} from "../whiteboard/mcp-server";
 
 export function registerWhiteboardIpc(): void {
   // Board CRUD
-  ipcMain.handle('whiteboard:list-boards', () =>
-    whiteboardState.listBoards(),
-  );
-  ipcMain.handle('whiteboard:get-board', (_e, boardId: string) =>
+  ipcMain.handle("whiteboard:list-boards", () => whiteboardState.listBoards());
+  ipcMain.handle("whiteboard:get-board", (_e, boardId: string) =>
     whiteboardState.getBoard(boardId),
   );
   ipcMain.handle(
-    'whiteboard:create-board',
+    "whiteboard:create-board",
     (_e, name: string, workspaceId: string | null) =>
       whiteboardState.createBoard(name, workspaceId),
   );
-  ipcMain.handle('whiteboard:delete-board', (_e, boardId: string) =>
+  ipcMain.handle("whiteboard:delete-board", (_e, boardId: string) =>
     whiteboardState.deleteBoard(boardId),
   );
   ipcMain.handle(
-    'whiteboard:update-board',
+    "whiteboard:import-board",
+    (_e, data: import("../../shared/whiteboard-types").Board) =>
+      whiteboardState.importBoard(data),
+  );
+  ipcMain.handle(
+    "whiteboard:update-board",
     (
       _e,
       boardId: string,
       patch: {
         name?: string;
         viewport?: { x: number; y: number; zoom: number };
+        colorMeanings?: Partial<
+          Record<import("../../shared/whiteboard-types").StickyColor, string>
+        >;
       },
     ) => whiteboardState.updateBoard(boardId, patch),
   );
 
   // Sticky CRUD
   ipcMain.handle(
-    'whiteboard:create-sticky',
+    "whiteboard:create-sticky",
     (
       _e,
       boardId: string,
@@ -53,23 +59,35 @@ export function registerWhiteboardIpc(): void {
     ) => whiteboardState.createSticky(boardId, data),
   );
   ipcMain.handle(
-    'whiteboard:update-sticky',
+    "whiteboard:update-sticky",
     (
       _e,
       boardId: string,
       stickyId: string,
-      patch: Record<string, unknown>,
+      patch: Partial<
+        Pick<
+          Sticky,
+          | "x"
+          | "y"
+          | "width"
+          | "height"
+          | "text"
+          | "color"
+          | "frameId"
+          | "metadata"
+        >
+      >,
     ) => whiteboardState.updateSticky(boardId, stickyId, patch),
   );
   ipcMain.handle(
-    'whiteboard:delete-sticky',
+    "whiteboard:delete-sticky",
     (_e, boardId: string, stickyId: string) =>
       whiteboardState.deleteSticky(boardId, stickyId),
   );
 
   // Frame CRUD
   ipcMain.handle(
-    'whiteboard:create-frame',
+    "whiteboard:create-frame",
     (
       _e,
       boardId: string,
@@ -84,23 +102,25 @@ export function registerWhiteboardIpc(): void {
     ) => whiteboardState.createFrame(boardId, data),
   );
   ipcMain.handle(
-    'whiteboard:update-frame',
+    "whiteboard:update-frame",
     (
       _e,
       boardId: string,
       frameId: string,
-      patch: Record<string, unknown>,
+      patch: Partial<
+        Pick<Frame, "x" | "y" | "width" | "height" | "label" | "color">
+      >,
     ) => whiteboardState.updateFrame(boardId, frameId, patch),
   );
   ipcMain.handle(
-    'whiteboard:delete-frame',
+    "whiteboard:delete-frame",
     (_e, boardId: string, frameId: string) =>
       whiteboardState.deleteFrame(boardId, frameId),
   );
 
   // Connection CRUD
   ipcMain.handle(
-    'whiteboard:connect',
+    "whiteboard:connect",
     (
       _e,
       boardId: string,
@@ -110,33 +130,29 @@ export function registerWhiteboardIpc(): void {
     ) => whiteboardState.connect(boardId, fromStickyId, toStickyId, label),
   );
   ipcMain.handle(
-    'whiteboard:update-connection',
-    (
-      _e,
-      boardId: string,
-      connectionId: string,
-      patch: { label?: string },
-    ) => whiteboardState.updateConnection(boardId, connectionId, patch),
+    "whiteboard:update-connection",
+    (_e, boardId: string, connectionId: string, patch: { label?: string }) =>
+      whiteboardState.updateConnection(boardId, connectionId, patch),
   );
   ipcMain.handle(
-    'whiteboard:disconnect',
+    "whiteboard:disconnect",
     (_e, boardId: string, connectionId: string) =>
       whiteboardState.disconnect(boardId, connectionId),
   );
 
   // MCP server
-  ipcMain.handle('whiteboard:start-mcp-server', (_e, port: number) =>
+  ipcMain.handle("whiteboard:start-mcp-server", (_e, port: number) =>
     startMcpServer(port),
   );
-  ipcMain.handle('whiteboard:stop-mcp-server', () => stopMcpServer());
-  ipcMain.handle('whiteboard:mcp-status', () => getMcpStatus());
+  ipcMain.handle("whiteboard:stop-mcp-server", () => stopMcpServer());
+  ipcMain.handle("whiteboard:mcp-status", () => getMcpStatus());
 }
 
 export function registerWhiteboardPush(mainWindow: BrowserWindow): void {
-  whiteboardState.on('board-changed', (board) => {
-    mainWindow.webContents.send('whiteboard:board-changed', board);
+  whiteboardState.on("board-changed", (board) => {
+    mainWindow.webContents.send("whiteboard:board-changed", board);
   });
-  whiteboardState.on('board-deleted', (boardId) => {
-    mainWindow.webContents.send('whiteboard:board-deleted', boardId);
+  whiteboardState.on("board-deleted", (boardId) => {
+    mainWindow.webContents.send("whiteboard:board-deleted", boardId);
   });
 }
