@@ -38,12 +38,16 @@ function createConfiguredMcpServer(): McpServer {
     );
   }
 
-  function formatConnectionGraph(board: ReturnType<typeof whiteboardState.getBoard>): string {
+  function formatConnectionGraph(
+    board: ReturnType<typeof whiteboardState.getBoard>,
+  ): string {
     if (!board || board.connections.length === 0) return "";
     const lines = board.connections.map((conn) => {
       const from = board.stickies.find((s) => s.id === conn.fromStickyId);
       const to = board.stickies.find((s) => s.id === conn.toStickyId);
-      const fromText = from?.text ? `"${from.text}"` : `(sticky ${conn.fromStickyId})`;
+      const fromText = from?.text
+        ? `"${from.text}"`
+        : `(sticky ${conn.fromStickyId})`;
       const toText = to?.text ? `"${to.text}"` : `(sticky ${conn.toStickyId})`;
       const labelPart = conn.label ? ` [${conn.label}]` : "";
       return `  ${fromText} → ${toText}${labelPart}`;
@@ -75,7 +79,10 @@ function createConfiguredMcpServer(): McpServer {
       const graph = formatConnectionGraph(board);
       return {
         content: [
-          { type: "text", text: JSON.stringify(board, null, 2) + meanings + graph },
+          {
+            type: "text",
+            text: JSON.stringify(board, null, 2) + meanings + graph,
+          },
         ],
       };
     },
@@ -117,7 +124,9 @@ function createConfiguredMcpServer(): McpServer {
     {
       boardId: z.string(),
       text: z.string().optional(),
-      color: z.enum(["yellow", "blue", "green", "pink", "purple", "orange", "red"]).optional(),
+      color: z
+        .enum(["yellow", "blue", "green", "pink", "purple", "orange", "red"])
+        .optional(),
       x: z.number().optional(),
       y: z.number().optional(),
       width: z.number().optional(),
@@ -148,7 +157,9 @@ function createConfiguredMcpServer(): McpServer {
       boardId: z.string(),
       stickyId: z.string(),
       text: z.string().optional(),
-      color: z.enum(["yellow", "blue", "green", "pink", "purple", "orange", "red"]).optional(),
+      color: z
+        .enum(["yellow", "blue", "green", "pink", "purple", "orange", "red"])
+        .optional(),
       x: z.number().optional(),
       y: z.number().optional(),
       width: z.number().optional(),
@@ -213,7 +224,15 @@ function createConfiguredMcpServer(): McpServer {
     "Set the semantic meaning for a sticky color on a board",
     {
       boardId: z.string(),
-      color: z.enum(["yellow", "blue", "green", "pink", "purple", "orange", "red"]),
+      color: z.enum([
+        "yellow",
+        "blue",
+        "green",
+        "pink",
+        "purple",
+        "orange",
+        "red",
+      ]),
       meaning: z.string(),
     },
     async ({ boardId, color, meaning }) => {
@@ -241,7 +260,15 @@ function createConfiguredMcpServer(): McpServer {
     "Remove the semantic meaning for a sticky color on a board",
     {
       boardId: z.string(),
-      color: z.enum(["yellow", "blue", "green", "pink", "purple", "orange", "red"]),
+      color: z.enum([
+        "yellow",
+        "blue",
+        "green",
+        "pink",
+        "purple",
+        "orange",
+        "red",
+      ]),
     },
     async ({ boardId, color }) => {
       const board = whiteboardState.getBoard(boardId);

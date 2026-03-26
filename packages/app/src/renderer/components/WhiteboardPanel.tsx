@@ -61,7 +61,15 @@ const STICKY_BORDER_COLORS: Record<StickyColor, string> = {
   red: "#ef4444",
 };
 
-const ALL_COLORS: StickyColor[] = ["yellow", "blue", "green", "pink", "purple", "orange", "red"];
+const ALL_COLORS: StickyColor[] = [
+  "yellow",
+  "blue",
+  "green",
+  "pink",
+  "purple",
+  "orange",
+  "red",
+];
 
 const FRAME_COLORS = [
   "#e2e8f0",
