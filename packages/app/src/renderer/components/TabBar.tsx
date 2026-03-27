@@ -15,6 +15,7 @@ import {
   Regex,
   FileJson2,
   ShieldCheck,
+  CalendarClock,
 } from "lucide-react";
 import {
   useTabs,
@@ -65,6 +66,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <FileJson2 className="size-3" />;
     case "encoder":
       return <ShieldCheck className="size-3" />;
+    case "cron":
+      return <CalendarClock className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -388,17 +391,17 @@ export function TabBar() {
               <Regex />
               Regex Playground
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => createTab("data", "Data Viewer")}
-            >
+            <DropdownMenuItem onClick={() => createTab("data", "Data Viewer")}>
               <FileJson2 />
               Data Viewer
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => createTab("encoder", "Encoder")}
-            >
+            <DropdownMenuItem onClick={() => createTab("encoder", "Encoder")}>
               <ShieldCheck />
-              Encoder
+              Encoder/Decoder
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab("cron", "Cron")}>
+              <CalendarClock />
+              Cron Builder
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -24,6 +24,7 @@ import {
   Regex,
   FileJson2,
   ShieldCheck,
+  CalendarClock,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -58,6 +59,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "regex") return <Regex />;
   if (type === "data") return <FileJson2 />;
   if (type === "encoder") return <ShieldCheck />;
+  if (type === "cron") return <CalendarClock />;
   return <NotepadText />;
 }
 
@@ -214,20 +216,26 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
               <span>New Regex Playground Tab</span>
             </CommandItem>
             <CommandItem
-              onSelect={() =>
-                runAction(() => createTab("data", "Data Viewer"))
-              }
+              onSelect={() => runAction(() => createTab("data", "Data Viewer"))}
             >
               <FileJson2 />
               <span>New Data Viewer Tab</span>
             </CommandItem>
             <CommandItem
               onSelect={() =>
-                runAction(() => createTab("encoder", "Encoder"))
+                runAction(() => createTab("encoder", "Encoder/Decoder"))
               }
             >
               <ShieldCheck />
-              <span>New Encoder Tab</span>
+              <span>New Encoder/Decoder Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() =>
+                runAction(() => createTab("cron", "Cron Builder"))
+              }
+            >
+              <CalendarClock />
+              <span>New Cron Builder Tab</span>
             </CommandItem>
           </CommandGroup>
 
