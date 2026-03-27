@@ -13,6 +13,7 @@ import {
   KeyRound,
   LayoutDashboard,
   Regex,
+  FileJson2,
 } from "lucide-react";
 import {
   useTabs,
@@ -59,6 +60,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <LayoutDashboard className="size-3" />;
     case "regex":
       return <Regex className="size-3" />;
+    case "data":
+      return <FileJson2 className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -381,6 +384,12 @@ export function TabBar() {
             >
               <Regex />
               Regex Playground
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => createTab("data", "Data Viewer")}
+            >
+              <FileJson2 />
+              Data Viewer
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

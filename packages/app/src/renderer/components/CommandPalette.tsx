@@ -22,6 +22,7 @@ import {
   KeyRound,
   LayoutDashboard,
   Regex,
+  FileJson2,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -54,6 +55,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "http") return <Globe2 />;
   if (type === "whiteboard") return <LayoutDashboard />;
   if (type === "regex") return <Regex />;
+  if (type === "data") return <FileJson2 />;
   return <NotepadText />;
 }
 
@@ -208,6 +210,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <Regex />
               <span>New Regex Playground Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() =>
+                runAction(() => createTab("data", "Data Viewer"))
+              }
+            >
+              <FileJson2 />
+              <span>New Data Viewer Tab</span>
             </CommandItem>
           </CommandGroup>
 
