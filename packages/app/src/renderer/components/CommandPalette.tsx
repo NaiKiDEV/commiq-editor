@@ -25,6 +25,9 @@ import {
   FileJson2,
   ShieldCheck,
   CalendarClock,
+  GitCompare,
+  Pipette,
+  Clock,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -60,6 +63,9 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "data") return <FileJson2 />;
   if (type === "encoder") return <ShieldCheck />;
   if (type === "cron") return <CalendarClock />;
+  if (type === "diff") return <GitCompare />;
+  if (type === "color") return <Pipette />;
+  if (type === "epoch") return <Clock />;
   return <NotepadText />;
 }
 
@@ -236,6 +242,24 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <CalendarClock />
               <span>New Cron Builder Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runAction(() => createTab("diff", "Diff Viewer"))}
+            >
+              <GitCompare />
+              <span>New Diff Viewer Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runAction(() => createTab("color", "Color Picker"))}
+            >
+              <Pipette />
+              <span>New Color Picker Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runAction(() => createTab("epoch", "Epoch"))}
+            >
+              <Clock />
+              <span>New Epoch / DateTime Tab</span>
             </CommandItem>
           </CommandGroup>
 

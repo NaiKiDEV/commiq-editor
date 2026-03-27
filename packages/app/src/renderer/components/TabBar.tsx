@@ -16,6 +16,9 @@ import {
   FileJson2,
   ShieldCheck,
   CalendarClock,
+  GitCompare,
+  Pipette,
+  Clock,
 } from "lucide-react";
 import {
   useTabs,
@@ -68,6 +71,12 @@ function TabIcon({ type }: { type: PanelType }) {
       return <ShieldCheck className="size-3" />;
     case "cron":
       return <CalendarClock className="size-3" />;
+    case "diff":
+      return <GitCompare className="size-3" />;
+    case "color":
+      return <Pipette className="size-3" />;
+    case "epoch":
+      return <Clock className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -402,6 +411,18 @@ export function TabBar() {
             <DropdownMenuItem onClick={() => createTab("cron", "Cron")}>
               <CalendarClock />
               Cron Builder
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab("diff", "Diff Viewer")}>
+              <GitCompare />
+              Diff Viewer
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab("color", "Color Picker")}>
+              <Pipette />
+              Color Picker
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab("epoch", "Epoch")}>
+              <Clock />
+              Epoch / DateTime
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
