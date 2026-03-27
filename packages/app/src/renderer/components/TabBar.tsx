@@ -12,6 +12,7 @@ import {
   Cpu,
   KeyRound,
   LayoutDashboard,
+  Regex,
 } from "lucide-react";
 import {
   useTabs,
@@ -56,6 +57,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <Globe2 className="size-3" />;
     case "whiteboard":
       return <LayoutDashboard className="size-3" />;
+    case "regex":
+      return <Regex className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -372,6 +375,12 @@ export function TabBar() {
             >
               <LayoutDashboard />
               Whiteboard
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => createTab("regex", "Regex Playground")}
+            >
+              <Regex />
+              Regex Playground
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

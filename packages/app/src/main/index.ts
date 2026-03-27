@@ -19,7 +19,24 @@ if (started) {
   app.quit();
 }
 
-Menu.setApplicationMenu(null);
+// Null menu removes built-in edit shortcuts (Ctrl+A, C, V, Z…) on Windows/Linux.
+// Set a hidden Edit-only menu so those shortcuts work in text fields.
+Menu.setApplicationMenu(
+  Menu.buildFromTemplate([
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+      ],
+    },
+  ]),
+);
 
 registerTerminalIpc();
 registerNotesIpc();
@@ -40,6 +57,7 @@ const createWindow = () => {
     height: 800,
     minWidth: 800,
     minHeight: 600,
+    autoHideMenuBar: true,
     titleBarStyle: 'hidden',
     ...(isMac ? {} : {
       titleBarOverlay: {

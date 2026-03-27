@@ -11,6 +11,7 @@ import { ProcessMonitorPanel } from './ProcessMonitorPanel';
 import { EnvVarsPanel } from './EnvVarsPanel';
 import { HttpClientPanel } from './HttpClientPanel';
 import { WhiteboardPanel } from './WhiteboardPanel';
+import { RegexPlaygroundPanel } from './RegexPlaygroundPanel';
 import { getVisiblePanelIds } from '../lib/layout';
 import type { Panel } from '../stores/workspace';
 
@@ -58,6 +59,7 @@ function PanelContent({
       {panel.type === 'env' && <EnvVarsPanel panelId={panel.id} />}
       {panel.type === 'http' && <HttpClientPanel panelId={panel.id} />}
       {panel.type === 'whiteboard' && <WhiteboardPanel panelId={panel.id} />}
+      {panel.type === 'regex' && <RegexPlaygroundPanel panelId={panel.id} />}
     </div>
   );
 }

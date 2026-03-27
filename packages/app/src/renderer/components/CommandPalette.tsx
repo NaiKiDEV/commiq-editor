@@ -21,6 +21,7 @@ import {
   Cpu,
   KeyRound,
   LayoutDashboard,
+  Regex,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -52,6 +53,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "env") return <KeyRound />;
   if (type === "http") return <Globe2 />;
   if (type === "whiteboard") return <LayoutDashboard />;
+  if (type === "regex") return <Regex />;
   return <NotepadText />;
 }
 
@@ -198,6 +200,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <LayoutDashboard />
               <span>New Whiteboard Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() =>
+                runAction(() => createTab("regex", "Regex Playground"))
+              }
+            >
+              <Regex />
+              <span>New Regex Playground Tab</span>
             </CommandItem>
           </CommandGroup>
 
