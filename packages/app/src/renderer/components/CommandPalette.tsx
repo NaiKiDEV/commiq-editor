@@ -33,12 +33,10 @@ import {
 import {
   usePanels,
   useTabs,
-  useLayout,
   useWorkspaces,
   useActiveWorkspace,
   useWorkspaceActions,
 } from "../hooks/use-workspace";
-import { getVisiblePanelIds } from "../lib/layout";
 
 export type CommandPaletteHandle = {
   openWithSearch: (search: string) => void;
@@ -63,7 +61,6 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
     const [search, setSearch] = useState("");
     const panels = usePanels();
     const tabs = useTabs();
-    const layout = useLayout();
     const workspaces = useWorkspaces();
     const activeWorkspace = useActiveWorkspace();
     const {
@@ -81,31 +78,15 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
       openWithSearch: (initialSearch: string) => {
         setSearch(initialSearch);
         setOpen(true);
-        window.electronAPI.browser.hideAll();
       },
     }));
 
-    const restoreVisibleBrowsers = useCallback(() => {
-      const visibleIds = getVisiblePanelIds(layout);
-      for (const panel of panels) {
-        if (panel.type === "browser" && visibleIds.has(panel.id)) {
-          window.electronAPI.browser.showSession(panel.id);
-        }
-      }
-    }, [panels, layout]);
-
     const togglePalette = useCallback(() => {
       setOpen((prev) => {
-        const next = !prev;
-        if (next) {
-          window.electronAPI.browser.hideAll();
-        } else {
-          setSearch("");
-          restoreVisibleBrowsers();
-        }
-        return next;
+        if (prev) setSearch("");
+        return !prev;
       });
-    }, [restoreVisibleBrowsers]);
+    }, []);
 
     useEffect(() => {
       const handler = (e: KeyboardEvent) => {
@@ -126,18 +107,10 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
       });
     }, [togglePalette]);
 
-    const handleOpenChange = useCallback(
-      (nextOpen: boolean) => {
-        setOpen(nextOpen);
-        if (nextOpen) {
-          window.electronAPI.browser.hideAll();
-        } else {
-          setSearch("");
-          restoreVisibleBrowsers();
-        }
-      },
-      [restoreVisibleBrowsers],
-    );
+    const handleOpenChange = useCallback((nextOpen: boolean) => {
+      setOpen(nextOpen);
+      if (!nextOpen) setSearch("");
+    }, []);
 
     const runAction = (action: () => void) => {
       action();

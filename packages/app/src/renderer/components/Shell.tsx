@@ -7,6 +7,7 @@ import { StatusBar } from './StatusBar';
 import { CommandPalette } from './CommandPalette';
 import type { CommandPaletteHandle } from './CommandPalette';
 import { SettingsProvider } from '../contexts/settings';
+import { BrowserVisibilityProvider } from '../contexts/browser-visibility';
 import { SettingsModal } from './SettingsModal';
 import { useTabs, useActiveTabId, useWorkspaceActions } from '../hooks/use-workspace';
 
@@ -102,16 +103,18 @@ export function Shell() {
 
   return (
     <SettingsProvider>
-      <TooltipProvider delay={300}>
-        <div className="flex flex-col h-screen bg-background text-foreground">
-          <TitleBar onSettingsOpen={() => setSettingsOpen(true)} />
-          <TabBar />
-          <PanelContainer />
-          <StatusBar />
-          <CommandPalette ref={commandPaletteRef} />
-          <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-        </div>
-      </TooltipProvider>
+      <BrowserVisibilityProvider>
+        <TooltipProvider delay={300}>
+          <div className="flex flex-col h-screen bg-background text-foreground">
+            <TitleBar onSettingsOpen={() => setSettingsOpen(true)} />
+            <TabBar />
+            <PanelContainer />
+            <StatusBar />
+            <CommandPalette ref={commandPaletteRef} />
+            <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+          </div>
+        </TooltipProvider>
+      </BrowserVisibilityProvider>
     </SettingsProvider>
   );
 }

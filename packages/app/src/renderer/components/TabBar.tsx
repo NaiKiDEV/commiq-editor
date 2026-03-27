@@ -20,6 +20,7 @@ import {
   useLayout,
   useWorkspaceActions,
 } from "../hooks/use-workspace";
+import { useBrowserVisibility } from "../contexts/browser-visibility";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -75,6 +76,8 @@ export function TabBar() {
     reorderTab,
   } = useWorkspaceActions();
 
+  const { pushOverlay, popOverlay } = useBrowserVisibility();
+
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
@@ -121,19 +124,14 @@ export function TabBar() {
 
   const openContextMenu = (e: React.MouseEvent, tabId: string) => {
     e.preventDefault();
-    window.electronAPI.browser.hideAll();
+    pushOverlay();
     setContextMenu({ tabId, x: e.clientX, y: e.clientY });
   };
 
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
-    const visibleIds = getVisiblePanelIds(layout);
-    for (const panel of panels) {
-      if (panel.type === "browser" && visibleIds.has(panel.id)) {
-        window.electronAPI.browser.showSession(panel.id);
-      }
-    }
-  }, [panels, layout]);
+    popOverlay();
+  }, [popOverlay]);
 
   const runContextAction = (action: () => void) => {
     action();
@@ -153,22 +151,6 @@ export function TabBar() {
       window.removeEventListener("keydown", handleKey);
     };
   }, [contextMenu, closeContextMenu]);
-
-  const handleMenuOpenChange = useCallback(
-    (open: boolean) => {
-      if (open) {
-        window.electronAPI.browser.hideAll();
-      } else {
-        const visibleIds = getVisiblePanelIds(layout);
-        for (const panel of panels) {
-          if (panel.type === "browser" && visibleIds.has(panel.id)) {
-            window.electronAPI.browser.showSession(panel.id);
-          }
-        }
-      }
-    },
-    [panels, layout],
-  );
 
   const handleMouseDown = (e: React.MouseEvent, tabId: string) => {
     if (e.button !== 0 || renamingTabId) return;
@@ -329,7 +311,7 @@ export function TabBar() {
 
       {/* New tab button */}
       <div className="flex items-center px-1 shrink-0">
-        <DropdownMenu onOpenChange={handleMenuOpenChange}>
+        <DropdownMenu>
           <Tooltip>
             <DropdownMenuTrigger
               render={

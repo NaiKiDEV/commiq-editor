@@ -11,8 +11,6 @@ import {
   useWorkspaces,
   useActiveWorkspace,
   useWorkspaceActions,
-  usePanels,
-  useLayout,
 } from '../hooks/use-workspace';
 import { Button } from './ui/button';
 import {
@@ -23,13 +21,10 @@ import {
   DropdownMenuSeparator,
 } from './ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { getVisiblePanelIds } from '../lib/layout';
 
 export function TitleBar({ onSettingsOpen }: { onSettingsOpen?: () => void }) {
   const workspaces = useWorkspaces();
   const activeWorkspace = useActiveWorkspace();
-  const panels = usePanels();
-  const layout = useLayout();
   const {
     createWorkspace,
     switchWorkspace,
@@ -39,19 +34,6 @@ export function TitleBar({ onSettingsOpen }: { onSettingsOpen?: () => void }) {
 
   const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-
-  const handleMenuOpenChange = (open: boolean) => {
-    if (open) {
-      window.electronAPI.browser.hideAll();
-    } else {
-      const visibleIds = getVisiblePanelIds(layout);
-      for (const panel of panels) {
-        if (panel.type === 'browser' && visibleIds.has(panel.id)) {
-          window.electronAPI.browser.showSession(panel.id);
-        }
-      }
-    }
-  };
 
   const handleStartRename = (id: string, currentName: string) => {
     setEditingWorkspaceId(id);
@@ -98,7 +80,7 @@ export function TitleBar({ onSettingsOpen }: { onSettingsOpen?: () => void }) {
             className="h-5 w-28 px-1 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
           />
         ) : (
-          <DropdownMenu onOpenChange={handleMenuOpenChange}>
+          <DropdownMenu>
             <DropdownMenuTrigger
               render={
                 <Button

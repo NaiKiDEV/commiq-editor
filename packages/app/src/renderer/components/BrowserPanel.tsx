@@ -30,6 +30,14 @@ export function BrowserPanel({ sessionId, panelId, isActive }: BrowserPanelProps
   const { updatePanelTitle } = useWorkspaceActions();
   const { settings } = useSettings();
   const [urlInput, setUrlInput] = useState('');
+  const [isEditingUrl, setIsEditingUrl] = useState(false);
+
+  // Keep URL input in sync with session URL when not actively editing
+  useEffect(() => {
+    if (!isEditingUrl && session?.url) {
+      setUrlInput(session.url);
+    }
+  }, [session?.url, isEditingUrl]);
 
   useEffect(() => {
     if (createdRef.current) return;
@@ -39,12 +47,10 @@ export function BrowserPanel({ sessionId, panelId, isActive }: BrowserPanelProps
       const restoredUrl = browserUrls?.[sessionId];
       const initialUrl = restoredUrl ?? settings.browser.defaultUrl;
       open(sessionId, panelId, initialUrl);
-      if (initialUrl !== 'about:blank') setUrlInput(initialUrl);
     });
 
     const removeNav = window.electronAPI.browser.onNavigated(sessionId, (info) => {
       updateNavigation(sessionId, info.url, info.canGoBack, info.canGoForward);
-      setUrlInput(info.url);
     });
 
     const removeTitle = window.electronAPI.browser.onTitleChanged(sessionId, (title) => {
@@ -108,7 +114,12 @@ export function BrowserPanel({ sessionId, panelId, isActive }: BrowserPanelProps
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
+      setIsEditingUrl(false);
       handleNavigate();
+    } else if (e.key === 'Escape') {
+      setIsEditingUrl(false);
+      if (session?.url) setUrlInput(session.url);
+      (e.target as HTMLInputElement).blur();
     }
   };
 
@@ -169,6 +180,8 @@ export function BrowserPanel({ sessionId, panelId, isActive }: BrowserPanelProps
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           onKeyDown={handleKeyDown}
+          onFocus={() => setIsEditingUrl(true)}
+          onBlur={() => setIsEditingUrl(false)}
           placeholder="Enter URL or search..."
           className="flex-1 h-6 text-xs"
         />

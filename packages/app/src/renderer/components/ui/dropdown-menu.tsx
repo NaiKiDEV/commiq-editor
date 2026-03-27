@@ -3,9 +3,33 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 
 import { cn } from "@/lib/utils"
 import { ChevronRightIcon, CheckIcon } from "lucide-react"
+import { useBrowserVisibility } from "@/renderer/contexts/browser-visibility"
 
-function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
-  return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />
+function DropdownMenu({ onOpenChange, ...props }: MenuPrimitive.Root.Props) {
+  const { pushOverlay, popOverlay } = useBrowserVisibility();
+  const isOpenRef = React.useRef(false);
+
+  // Restore browsers if menu unmounts while open
+  React.useEffect(() => {
+    return () => { if (isOpenRef.current) popOverlay(); };
+  }, [popOverlay]);
+
+  return (
+    <MenuPrimitive.Root
+      data-slot="dropdown-menu"
+      {...props}
+      onOpenChange={(open, event, reason) => {
+        if (open && !isOpenRef.current) {
+          isOpenRef.current = true;
+          pushOverlay();
+        } else if (!open && isOpenRef.current) {
+          isOpenRef.current = false;
+          popOverlay();
+        }
+        onOpenChange?.(open, event, reason);
+      }}
+    />
+  );
 }
 
 function DropdownMenuPortal({ ...props }: MenuPrimitive.Portal.Props) {

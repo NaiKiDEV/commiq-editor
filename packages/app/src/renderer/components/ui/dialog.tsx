@@ -6,9 +6,32 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { cn } from "@/lib/utils"
 import { Button } from "@/renderer/components/ui/button"
 import { XIcon } from "lucide-react"
+import { useBrowserVisibility } from "@/renderer/contexts/browser-visibility"
 
-function Dialog({ ...props }: DialogPrimitive.Root.Props) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />
+function Dialog({ open, onOpenChange, ...props }: DialogPrimitive.Root.Props) {
+  const { pushOverlay, popOverlay } = useBrowserVisibility();
+  const pushedRef = React.useRef(false);
+
+  // Watch the controlled `open` prop — onOpenChange alone won't fire when
+  // the parent sets open=true externally.
+  React.useEffect(() => {
+    if (open && !pushedRef.current) {
+      pushedRef.current = true;
+      pushOverlay();
+    } else if (!open && pushedRef.current) {
+      pushedRef.current = false;
+      popOverlay();
+    }
+  }, [open, pushOverlay, popOverlay]);
+
+  // Restore browsers if dialog unmounts while open
+  React.useEffect(() => {
+    return () => { if (pushedRef.current) popOverlay(); };
+  }, [popOverlay]);
+
+  return (
+    <DialogPrimitive.Root data-slot="dialog" open={open} onOpenChange={onOpenChange} {...props} />
+  );
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
