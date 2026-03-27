@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   Regex,
   FileJson2,
+  ShieldCheck,
 } from "lucide-react";
 import {
   useTabs,
@@ -62,6 +63,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <Regex className="size-3" />;
     case "data":
       return <FileJson2 className="size-3" />;
+    case "encoder":
+      return <ShieldCheck className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -390,6 +393,12 @@ export function TabBar() {
             >
               <FileJson2 />
               Data Viewer
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => createTab("encoder", "Encoder")}
+            >
+              <ShieldCheck />
+              Encoder
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

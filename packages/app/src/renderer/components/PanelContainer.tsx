@@ -13,6 +13,7 @@ import { HttpClientPanel } from './HttpClientPanel';
 import { WhiteboardPanel } from './WhiteboardPanel';
 import { RegexPlaygroundPanel } from './RegexPlaygroundPanel';
 import { DataViewerPanel } from './DataViewerPanel';
+import { EncoderPanel } from './EncoderPanel';
 import { getVisiblePanelIds } from '../lib/layout';
 import type { Panel } from '../stores/workspace';
 
@@ -62,6 +63,7 @@ function PanelContent({
       {panel.type === 'whiteboard' && <WhiteboardPanel panelId={panel.id} />}
       {panel.type === 'regex' && <RegexPlaygroundPanel panelId={panel.id} />}
       {panel.type === 'data' && <DataViewerPanel panelId={panel.id} />}
+      {panel.type === 'encoder' && <EncoderPanel panelId={panel.id} />}
     </div>
   );
 }

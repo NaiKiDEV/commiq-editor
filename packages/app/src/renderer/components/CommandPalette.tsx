@@ -23,6 +23,7 @@ import {
   LayoutDashboard,
   Regex,
   FileJson2,
+  ShieldCheck,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -56,6 +57,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "whiteboard") return <LayoutDashboard />;
   if (type === "regex") return <Regex />;
   if (type === "data") return <FileJson2 />;
+  if (type === "encoder") return <ShieldCheck />;
   return <NotepadText />;
 }
 
@@ -218,6 +220,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <FileJson2 />
               <span>New Data Viewer Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() =>
+                runAction(() => createTab("encoder", "Encoder"))
+              }
+            >
+              <ShieldCheck />
+              <span>New Encoder Tab</span>
             </CommandItem>
           </CommandGroup>
 
