@@ -1,5 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Trash2, Play, Pause, RotateCcw } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { ChevronDown, Trash2, Play, Pause, RotateCcw, Plus } from 'lucide-react';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 
 
 type TimerType = 'countdown' | 'stopwatch' | 'pomodoro' | 'interval';
@@ -225,8 +228,6 @@ function checkDone(
 
 export function TimerPanel({ panelId: _panelId }: { panelId: string }) {
   const [timers, setTimers] = useState<TimerData[]>([]);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load and reconcile on mount
@@ -242,25 +243,13 @@ export function TimerPanel({ panelId: _panelId }: { panelId: string }) {
     });
   }, []);
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [menuOpen]);
-
-  const addTimer = (type: TimerType) => {
+  const addTimer = useCallback((type: TimerType) => {
     const t = makeTimer(type);
     setTimers((prev) => [...prev, t]);
     window.electronAPI.timer.save(t);
-    setMenuOpen(false);
-  };
+  }, []);
 
-  const updateTimer = (updated: TimerData, debounce = false) => {
+  const updateTimer = useCallback((updated: TimerData, debounce = false) => {
     setTimers((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
     if (debounce) {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -270,42 +259,30 @@ export function TimerPanel({ panelId: _panelId }: { panelId: string }) {
     } else {
       window.electronAPI.timer.save(updated);
     }
-  };
+  }, []);
 
-  const deleteTimer = (id: string) => {
+  const deleteTimer = useCallback((id: string) => {
     setTimers((prev) => prev.filter((t) => t.id !== id));
     window.electronAPI.timer.delete(id);
-  };
+  }, []);
 
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Timers</span>
-        </div>
-        <div className="relative" ref={menuRef}>
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-md bg-muted hover:bg-muted/80 text-foreground transition-colors"
-          >
-            <span>+ Add Timer</span>
-            <ChevronDown className="size-3" />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-36 rounded-md border border-border bg-popover shadow-lg z-50 py-1">
-              {(['countdown', 'stopwatch', 'pomodoro', 'interval'] as TimerType[]).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => addTimer(type)}
-                  className="w-full text-left px-3 py-1.5 text-xs capitalize hover:bg-muted transition-colors"
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Timers</span>
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button variant="outline" size="sm" className="gap-1" />}>
+            <Plus /> Add Timer <ChevronDown className="size-3 opacity-50" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {(['countdown', 'stopwatch', 'pomodoro', 'interval'] as TimerType[]).map((type) => (
+              <DropdownMenuItem key={type} onClick={() => addTimer(type)} className="capitalize">
+                {type}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Content */}
@@ -321,7 +298,7 @@ export function TimerPanel({ panelId: _panelId }: { panelId: string }) {
                 key={timer.id}
                 timer={timer}
                 onChange={updateTimer}
-                onDelete={() => deleteTimer(timer.id)}
+                onDelete={deleteTimer}
               />
             ))}
           </div>
@@ -332,14 +309,14 @@ export function TimerPanel({ panelId: _panelId }: { panelId: string }) {
 }
 
 
-function TimerCard({
+const TimerCard = memo(function TimerCard({
   timer,
   onChange,
   onDelete,
 }: {
   timer: TimerData;
   onChange: (t: TimerData, debounce?: boolean) => void;
-  onDelete: () => void;
+  onDelete: (id: string) => void;
 }) {
   const isIdle = timer.status === 'idle';
 
@@ -522,12 +499,12 @@ function TimerCard({
     >
       {/* Header row */}
       <div className="flex items-center justify-between gap-2">
-        <input
-          className="bg-transparent text-sm font-medium outline-none border-b border-transparent hover:border-border focus:border-border flex-1 min-w-0"
+        <Input
+          className="bg-transparent border-x-0 border-t-0 border-b border-transparent hover:border-border focus-visible:border-ring focus-visible:ring-0 rounded-none px-0 h-7 text-sm font-medium flex-1 min-w-0"
           value={timer.label}
           onChange={(e) => onChange({ ...timer, label: e.target.value }, true)}
         />
-        <span className="shrink-0 text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground capitalize">
+        <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground capitalize">
           {timer.type}
         </span>
       </div>
@@ -536,8 +513,8 @@ function TimerCard({
       {isIdle && (timer.type === 'countdown' || timer.type === 'interval') && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
           <span>Duration:</span>
-          <input
-            className="w-16 bg-muted rounded px-1.5 py-0.5 font-mono text-xs text-foreground outline-none focus:ring-1 focus:ring-ring"
+          <Input
+            className="w-16 h-6 font-mono text-xs"
             value={durationInput}
             onChange={(e) => setDurationInput(e.target.value)}
             onBlur={commitDuration}
@@ -547,8 +524,8 @@ function TimerCard({
           {timer.type === 'interval' && (
             <>
               <span>Repeats:</span>
-              <input
-                className="w-10 bg-muted rounded px-1.5 py-0.5 font-mono text-xs text-foreground outline-none focus:ring-1 focus:ring-ring"
+              <Input
+                className="w-14 h-6 font-mono text-xs"
                 value={repeatInput}
                 onChange={(e) => setRepeatInput(e.target.value)}
                 onBlur={commitRepeat}
@@ -564,8 +541,8 @@ function TimerCard({
         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
           <div className="flex items-center gap-1.5">
             <span>Work:</span>
-            <input
-              className="w-16 bg-muted rounded px-1.5 py-0.5 font-mono text-xs text-foreground outline-none focus:ring-1 focus:ring-ring"
+            <Input
+              className="w-16 h-6 font-mono text-xs"
               value={workInput}
               onChange={(e) => setWorkInput(e.target.value)}
               onBlur={commitWork}
@@ -575,8 +552,8 @@ function TimerCard({
           </div>
           <div className="flex items-center gap-1.5">
             <span>Break:</span>
-            <input
-              className="w-16 bg-muted rounded px-1.5 py-0.5 font-mono text-xs text-foreground outline-none focus:ring-1 focus:ring-ring"
+            <Input
+              className="w-16 h-6 font-mono text-xs"
               value={breakInput}
               onChange={(e) => setBreakInput(e.target.value)}
               onBlur={commitBreak}
@@ -618,27 +595,27 @@ function TimerCard({
 
       {/* Controls */}
       <div className="flex items-center gap-1.5">
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={timer.status === 'running' ? pause : play}
           disabled={isDone}
-          className="flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-primary/10 hover:bg-primary/20 text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary disabled:opacity-40"
         >
-          {timer.status === 'running' ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
-        </button>
-        <button
-          onClick={reset}
-          className="flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
+          {timer.status === 'running' ? <Pause /> : <Play />}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={reset} className="gap-1">
+          <RotateCcw /> Reset
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => onDelete(timer.id)}
+          className="ml-auto text-muted-foreground hover:text-destructive hover:bg-destructive/10"
         >
-          <RotateCcw className="size-3.5" />
-          <span>Reset</span>
-        </button>
-        <button
-          onClick={onDelete}
-          className="ml-auto p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-        >
-          <Trash2 className="size-3.5" />
-        </button>
+          <Trash2 />
+        </Button>
       </div>
     </div>
   );
-}
+});

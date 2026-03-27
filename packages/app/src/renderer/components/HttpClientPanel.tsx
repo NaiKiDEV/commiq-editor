@@ -1,6 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Plus, Trash2, Globe, FolderOpen, Loader2, Upload } from 'lucide-react';
+import { Plus, Trash2, Globe, FolderOpen, Loader2, Upload, Check, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useActiveWorkspaceId } from '../hooks/use-workspace';
 
@@ -39,17 +42,18 @@ type HttpError = { error: string };
 
 const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as const;
 
+const METHOD_COLORS: Record<string, string> = {
+  GET: 'text-green-400',
+  POST: 'text-blue-400',
+  PUT: 'text-yellow-400',
+  PATCH: 'text-orange-400',
+  DELETE: 'text-red-400',
+  HEAD: 'text-purple-400',
+  OPTIONS: 'text-cyan-400',
+};
+
 function methodColor(method: string): string {
-  const colors: Record<string, string> = {
-    GET: 'text-green-400',
-    POST: 'text-blue-400',
-    PUT: 'text-yellow-400',
-    PATCH: 'text-orange-400',
-    DELETE: 'text-red-400',
-    HEAD: 'text-purple-400',
-    OPTIONS: 'text-cyan-400',
-  };
-  return colors[method] ?? 'text-muted-foreground';
+  return METHOD_COLORS[method] ?? 'text-muted-foreground';
 }
 
 type HttpClientPanelProps = { panelId: string };
@@ -68,6 +72,11 @@ export function HttpClientPanel({ panelId: _panelId }: HttpClientPanelProps) {
   const importFileRef = useRef<HTMLInputElement>(null);
 
   const activeRequest = requests.find((r) => r.id === activeRequestId) ?? null;
+
+  const handleRequestChange = useCallback((updated: HttpRequestRecord) => {
+    setRequests((prev) => prev.map((r) => r.id === updated.id ? updated : r));
+    window.electronAPI.http.requestsSave(updated);
+  }, []);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -147,19 +156,22 @@ export function HttpClientPanel({ panelId: _panelId }: HttpClientPanelProps) {
         <div className="w-56 shrink-0 border-r border-border flex flex-col">
           <div className="flex items-center justify-between px-3 py-2 border-b border-border">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Collections</span>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="icon" className="h-5 w-5" title="Import Postman" onClick={() => importFileRef.current?.click()}>
-                <Upload className="h-3 w-3" />
+            <div className="flex gap-0.5">
+              <Button variant="ghost" size="icon-xs" title="Import Postman" onClick={() => importFileRef.current?.click()}>
+                <Upload />
               </Button>
-              <Button variant="ghost" size="icon" className="h-5 w-5" title="New Collection" onClick={createCollection}>
-                <Plus className="h-3 w-3" />
+              <Button variant="ghost" size="icon-xs" title="New Collection" onClick={createCollection}>
+                <Plus />
               </Button>
               <input ref={importFileRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
             </div>
           </div>
 
           {importMessage && (
-            <div className="px-3 py-1 text-xs text-muted-foreground bg-muted/50">{importMessage}</div>
+            <div className="px-3 py-1.5 text-xs bg-muted/50 border-b border-border text-muted-foreground flex items-center gap-1.5">
+              <Check className="size-3 text-green-400 shrink-0" />
+              {importMessage}
+            </div>
           )}
 
           <div className="flex-1 overflow-y-auto py-1">
@@ -223,11 +235,17 @@ export function HttpClientPanel({ panelId: _panelId }: HttpClientPanelProps) {
             )}
 
             {collections.length === 0 && uncategorized.length === 0 && (
-              <div className="px-3 py-4 text-xs text-muted-foreground text-center">
-                No collections yet.{' '}
-                <button className="underline" onClick={createCollection}>Create one</button>
-                {' '}or{' '}
-                <button className="underline" onClick={() => importFileRef.current?.click()}>import from Postman</button>.
+              <div className="px-3 py-6 flex flex-col items-center gap-3 text-center">
+                <Globe className="size-6 opacity-30" />
+                <p className="text-xs text-muted-foreground">No collections yet</p>
+                <div className="flex flex-col gap-1.5 w-full">
+                  <Button variant="outline" size="xs" onClick={createCollection} className="w-full">
+                    <Plus /> New Collection
+                  </Button>
+                  <Button variant="ghost" size="xs" onClick={() => importFileRef.current?.click()} className="w-full">
+                    <Upload /> Import Postman
+                  </Button>
+                </div>
               </div>
             )}
           </div>
@@ -244,9 +262,12 @@ export function HttpClientPanel({ panelId: _panelId }: HttpClientPanelProps) {
         <div className="flex-1 flex flex-col min-w-0">
           {!activeRequest && (
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              <div className="text-center space-y-1">
-                <Globe className="h-8 w-8 mx-auto opacity-30" />
-                <p className="text-xs">Select or create a request</p>
+              <div className="text-center space-y-3">
+                <Globe className="size-8 mx-auto opacity-30" />
+                <p className="text-sm">Select or create a request</p>
+                <Button variant="outline" size="sm" onClick={() => createRequest(null)}>
+                  <Plus /> New Request
+                </Button>
               </div>
             </div>
           )}
@@ -261,10 +282,7 @@ export function HttpClientPanel({ panelId: _panelId }: HttpClientPanelProps) {
               isLoading={isLoading}
               setIsLoading={setIsLoading}
               setResponse={setResponse}
-              onRequestChange={(updated) => {
-                setRequests((prev) => prev.map((r) => r.id === updated.id ? updated : r));
-                window.electronAPI.http.requestsSave(updated);
-              }}
+              onRequestChange={handleRequestChange}
             />
           )}
         </div>
@@ -355,8 +373,8 @@ function RequestEditor({
     <div className="flex flex-col h-full min-h-0">
       {/* Request name */}
       <div className="px-3 pt-2 pb-1">
-        <input
-          className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground"
+        <Input
+          className="border-transparent bg-transparent focus-visible:border-transparent focus-visible:ring-0 px-0 h-7 text-sm font-medium"
           placeholder="Request name"
           value={request.name}
           onChange={(e) => update({ name: e.target.value })}
@@ -365,28 +383,34 @@ function RequestEditor({
 
       {/* URL bar */}
       <div className="flex items-center gap-2 px-3 pb-2">
-        <select
-          className="bg-muted border border-border rounded px-2 h-8 text-xs font-mono font-bold outline-none shrink-0"
-          value={request.method}
-          onChange={(e) => update({ method: e.target.value as HttpRequestRecord['method'] })}
-        >
-          {HTTP_METHODS.map((m) => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
-        <input
-          className="flex-1 bg-muted border border-border rounded px-3 h-8 text-xs font-mono outline-none focus:ring-1 focus:ring-ring"
+        <DropdownMenu>
+          <DropdownMenuTrigger render={
+            <Button variant="outline" size="default" className={cn('font-mono font-bold shrink-0 w-24 justify-between', methodColor(request.method))} />
+          }>
+            {request.method} <ChevronDown className="size-3 opacity-50" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {HTTP_METHODS.map((m) => (
+              <DropdownMenuItem key={m} onClick={() => update({ method: m })} className={methodColor(m)}>
+                <span className="font-mono font-bold">{m}</span>
+                {m === request.method && <Check className="ml-auto size-3" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Input
+          className="flex-1 text-xs font-mono"
           placeholder="https://api.example.com/endpoint"
           value={request.url}
           onChange={(e) => update({ url: e.target.value })}
           onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) sendRequest(); }}
         />
         {isLoading ? (
-          <Button size="sm" variant="ghost" className="h-8 px-3 text-xs shrink-0" onClick={cancelRequest}>
-            <Loader2 className="h-3 w-3 animate-spin mr-1" /> Cancel
+          <Button size="default" variant="ghost" className="shrink-0" onClick={cancelRequest}>
+            <Loader2 className="animate-spin" /> Cancel
           </Button>
         ) : (
-          <Button size="sm" className="h-8 px-3 text-xs shrink-0" onClick={sendRequest}>
+          <Button size="default" className="shrink-0" onClick={sendRequest}>
             Send
           </Button>
         )}
@@ -413,36 +437,42 @@ function RequestEditor({
               <div key={i} className="flex items-center gap-1">
                 <input type="checkbox" checked={h.enabled}
                   onChange={(e) => updateHeader(i, { enabled: e.target.checked })}
-                  className="h-3 w-3 shrink-0" />
-                <input className="flex-1 bg-muted rounded px-2 h-6 text-xs font-mono outline-none"
+                  className="h-3 w-3 shrink-0 accent-primary" />
+                <Input className="flex-1 h-6 text-xs font-mono"
                   placeholder="Key" value={h.key}
                   onChange={(e) => updateHeader(i, { key: e.target.value })} />
-                <input className="flex-1 bg-muted rounded px-2 h-6 text-xs font-mono outline-none"
+                <Input className="flex-1 h-6 text-xs font-mono"
                   placeholder="Value" value={h.value}
                   onChange={(e) => updateHeader(i, { value: e.target.value })} />
-                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0"
-                  onClick={() => removeHeader(i)}>
-                  <Trash2 className="h-3 w-3" />
+                <Button variant="ghost" size="icon-xs" onClick={() => removeHeader(i)}>
+                  <Trash2 />
                 </Button>
               </div>
             ))}
-            <Button variant="ghost" size="sm" className="h-6 text-xs gap-1 mt-1" onClick={addHeader}>
-              <Plus className="h-3 w-3" /> Add Header
+            <Button variant="ghost" size="xs" className="mt-1" onClick={addHeader}>
+              <Plus /> Add Header
             </Button>
           </div>
         )}
         {requestTab === 'body' && (
-          <div className="flex flex-col gap-1 h-full">
-            <select className="bg-muted border border-border rounded px-2 h-6 text-xs w-32 outline-none"
-              value={request.body.type}
-              onChange={(e) => update({ body: { ...request.body, type: e.target.value as HttpRequestBody['type'] } })}>
-              <option value="none">None</option>
-              <option value="json">JSON</option>
-              <option value="text">Text</option>
-            </select>
+          <div className="flex flex-col gap-1.5 h-full">
+            <div className="flex rounded-md border border-border overflow-hidden text-xs w-fit">
+              {(['none', 'json', 'text'] as const).map((type, i) => (
+                <button
+                  key={type}
+                  className={cn('px-2.5 py-1 capitalize transition-colors',
+                    i > 0 && 'border-l border-border',
+                    request.body.type === type ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                  )}
+                  onClick={() => update({ body: { ...request.body, type } })}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
             {request.body.type !== 'none' && (
-              <textarea
-                className="flex-1 bg-muted rounded p-2 text-xs font-mono outline-none resize-none h-20"
+              <Textarea
+                className="flex-1 bg-muted border-0 text-xs font-mono resize-none min-h-0 focus-visible:ring-0 p-2"
                 placeholder={request.body.type === 'json' ? '{\n  "key": "value"\n}' : 'Request body...'}
                 value={request.body.content}
                 onChange={(e) => update({ body: { ...request.body, content: e.target.value } })}

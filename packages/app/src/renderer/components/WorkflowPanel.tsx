@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo, memo } from "react";
 import {
   Plus, Trash2, Play, Zap, Check, Loader2, Terminal, Globe,
   GripVertical, Circle, CheckCircle2, XCircle, Square, RotateCcw, Download, Upload,
@@ -62,18 +62,27 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
   const commandListRef = useRef<HTMLDivElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
 
-  const activeWorkflow =
-    workflows.find((w) => w.id === activeWorkflowId) ?? null;
+  // Mutable ref — synced every render so stable callbacks always read current values
+  const workflowsRef = useRef(workflows);
+  workflowsRef.current = workflows;
+  const stateRef = useRef<{ activeWorkflow: Workflow | null }>({ activeWorkflow: null });
 
-  const filteredWorkflows = workflows.filter((w) =>
-    w.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const activeWorkflow = useMemo(
+    () => workflows.find((w) => w.id === activeWorkflowId) ?? null,
+    [workflows, activeWorkflowId],
   );
-  const filteredGlobalWorkflows = filteredWorkflows.filter(
-    (w) => w.scope === "global"
-  );
-  const filteredWorkspaceWorkflows = filteredWorkflows.filter(
-    (w) => w.scope === "workspace"
-  );
+  stateRef.current = { activeWorkflow };
+
+  const { filteredGlobalWorkflows, filteredWorkspaceWorkflows } = useMemo(() => {
+    const lower = searchQuery.toLowerCase();
+    const filtered = searchQuery
+      ? workflows.filter((w) => w.name.toLowerCase().includes(lower))
+      : workflows;
+    return {
+      filteredGlobalWorkflows: filtered.filter((w) => w.scope === "global"),
+      filteredWorkspaceWorkflows: filtered.filter((w) => w.scope === "workspace"),
+    };
+  }, [workflows, searchQuery]);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -123,18 +132,16 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
   const deleteWorkflow = useCallback(
     async (id: string) => {
       if (!workspaceId) return;
-      const target = workflows.find((w) => w.id === id);
+      const target = workflowsRef.current.find((w) => w.id === id);
       if (!target) return;
       await window.electronAPI.workflow.delete(id, target.scope, workspaceId);
       setWorkflows((prev) => {
         const next = prev.filter((w) => w.id !== id);
-        if (id === activeWorkflowId) {
-          setActiveWorkflowId(next[0]?.id ?? null);
-        }
+        setActiveWorkflowId((activeId) => activeId === id ? (next[0]?.id ?? null) : activeId);
         return next;
       });
     },
-    [workflows, activeWorkflowId, workspaceId],
+    [workspaceId],
   );
 
   const updateWorkflow = useCallback(
@@ -152,7 +159,7 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
   const changeScope = useCallback(
     async (id: string, newScope: "workspace" | "global") => {
       if (!workspaceId) return;
-      const target = workflows.find((w) => w.id === id);
+      const target = workflowsRef.current.find((w) => w.id === id);
       if (!target || target.scope === newScope) return;
 
       await window.electronAPI.workflow.delete(id, target.scope, workspaceId);
@@ -163,7 +170,7 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 1500);
     },
-    [workflows, workspaceId],
+    [workspaceId],
   );
 
   const addCommand = useCallback(
@@ -254,6 +261,7 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
 
+      const { activeWorkflow } = stateRef.current;
       if (activeWorkflow && commandListRef.current) {
         const cards = commandListRef.current.querySelectorAll<HTMLDivElement>("[data-cmd-card]");
         const centers: number[] = [];
@@ -278,7 +286,7 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
 
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
-  }, [activeWorkflow, reorderCommand]);
+  }, [reorderCommand]);
 
   const executeStep = useCallback(
     (workflow: Workflow, stepIndex: number) => {
@@ -399,14 +407,15 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
     signalListenersRef.current.clear();
     setRunState(null);
 
+    const { activeWorkflow } = stateRef.current;
     if (activeWorkflow) {
       setTimeout(() => startSequentialRun(activeWorkflow), 50);
     }
-  }, [activeWorkflow, startSequentialRun]);
+  }, [startSequentialRun]);
 
   const runWorkflow = useCallback(
     (workflowToRun?: Workflow) => {
-      const workflow = workflowToRun || activeWorkflow;
+      const workflow = workflowToRun || stateRef.current.activeWorkflow;
       if (!workflow) return;
 
       if (workflow.mode !== "sequential") {
@@ -430,18 +439,18 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
 
       startSequentialRun(workflow);
     },
-    [activeWorkflow, createTab, navigateBrowser, startSequentialRun],
+    [createTab, navigateBrowser, startSequentialRun],
   );
 
   const runSingleCommand = useCallback(
-    (workflow: Workflow, command: WorkflowCommand) => {
+    (workflowName: string, command: WorkflowCommand) => {
       if (!command.command.trim()) return;
       if (command.type === "browser") {
         const tabName = command.name.trim() || command.command;
         const panelId = createTab("browser", tabName, { background: true });
         setTimeout(() => navigateBrowser(panelId, command.command.trim()), 100);
       } else {
-        const tabName = command.name.trim() || `${workflow.name} - Command`;
+        const tabName = command.name.trim() || `${workflowName} - Command`;
         const panelId = createTab("terminal", tabName, { background: true });
         const removeListener = window.electronAPI.terminal.onData(panelId, () => {
           removeListener();
@@ -451,6 +460,12 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
     },
     [createTab, navigateBrowser],
   );
+
+  // Stable advance — reads active workflow from ref so it never changes identity
+  const advanceCurrentStep = useCallback(() => {
+    const { activeWorkflow } = stateRef.current;
+    if (activeWorkflow) advanceStep(activeWorkflow);
+  }, [advanceStep]);
 
   const exportWorkflow = useCallback((workflow: Workflow) => {
     const exported = { ...workflow, scope: "global" as const };
@@ -551,8 +566,8 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
                   key={workflow.id}
                   workflow={workflow}
                   isActive={workflow.id === activeWorkflowId}
-                  onClick={() => setActiveWorkflowId(workflow.id)}
-                  onPlay={() => runWorkflow(workflow)}
+                  onSelect={setActiveWorkflowId}
+                  onPlay={runWorkflow}
                 />
               ))}
             </>
@@ -571,8 +586,8 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
                   key={workflow.id}
                   workflow={workflow}
                   isActive={workflow.id === activeWorkflowId}
-                  onClick={() => setActiveWorkflowId(workflow.id)}
-                  onPlay={() => runWorkflow(workflow)}
+                  onSelect={setActiveWorkflowId}
+                  onPlay={runWorkflow}
                 />
               ))}
             </>
@@ -723,7 +738,7 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
                       cmd={cmd}
                       status={runState.stepStatuses[i] ?? "pending"}
                       isCurrentStep={runState.currentStepIndex === i}
-                      onAdvance={() => advanceStep(activeWorkflow)}
+                      onAdvance={advanceCurrentStep}
                     />
                   ))}
                   {runState.currentStepIndex >= activeWorkflow.commands.length && (
@@ -755,9 +770,11 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
                         cmd={cmd}
                         index={i}
                         workflowMode={activeWorkflow.mode}
-                        onUpdate={(data) => updateCommand(activeWorkflow.id, cmd.id, data)}
-                        onRemove={() => removeCommand(activeWorkflow.id, cmd.id)}
-                        onRun={() => runSingleCommand(activeWorkflow, cmd)}
+                        workflowId={activeWorkflow.id}
+                        workflowName={activeWorkflow.name}
+                        onUpdate={updateCommand}
+                        onRemove={removeCommand}
+                        onRun={runSingleCommand}
                         onDragStart={handleDragStart}
                         isDragging={dragState?.cmdIndex === i}
                         dragOffset={dragState?.cmdIndex === i ? dragState.currentY - dragState.startY : 0}
@@ -798,15 +815,17 @@ type CommandCardProps = {
   cmd: WorkflowCommand;
   index: number;
   workflowMode: "parallel" | "sequential";
-  onUpdate: (data: Partial<WorkflowCommand>) => void;
-  onRemove: () => void;
-  onRun: () => void;
+  workflowId: string;
+  workflowName: string;
+  onUpdate: (workflowId: string, cmdId: string, data: Partial<WorkflowCommand>) => void;
+  onRemove: (workflowId: string, cmdId: string) => void;
+  onRun: (workflowName: string, cmd: WorkflowCommand) => void;
   onDragStart: (index: number, startY: number) => void;
   isDragging: boolean;
   dragOffset: number;
 };
 
-function CommandCard({ cmd, index, workflowMode, onUpdate, onRemove, onRun, onDragStart, isDragging, dragOffset }: CommandCardProps) {
+const CommandCard = memo(function CommandCard({ cmd, index, workflowMode, workflowId, workflowName, onUpdate, onRemove, onRun, onDragStart, isDragging, dragOffset }: CommandCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -830,7 +849,7 @@ function CommandCard({ cmd, index, workflowMode, onUpdate, onRemove, onRun, onDr
       </div>
       <button
         className="shrink-0 mt-1 text-muted-foreground/60 hover:text-foreground transition-colors"
-        onClick={() => onUpdate({ type: cmd.type === "terminal" ? "browser" : "terminal" })}
+        onClick={() => onUpdate(workflowId, cmd.id, { type: cmd.type === "terminal" ? "browser" : "terminal" })}
         title={cmd.type === "terminal" ? "Terminal command (click to switch to browser)" : "Browser command (click to switch to terminal)"}
       >
         {cmd.type === "browser" ? (
@@ -843,7 +862,7 @@ function CommandCard({ cmd, index, workflowMode, onUpdate, onRemove, onRun, onDr
         <input
           type="text"
           value={cmd.name}
-          onChange={(e) => onUpdate({ name: e.target.value })}
+          onChange={(e) => onUpdate(workflowId, cmd.id, { name: e.target.value })}
           placeholder="Label (optional)"
           className="w-full bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground/50"
         />
@@ -852,7 +871,7 @@ function CommandCard({ cmd, index, workflowMode, onUpdate, onRemove, onRun, onDr
           <input
             type="text"
             value={cmd.command}
-            onChange={(e) => onUpdate({ command: e.target.value })}
+            onChange={(e) => onUpdate(workflowId, cmd.id, { command: e.target.value })}
             placeholder={cmd.type === "browser" ? "e.g., https://localhost:3000" : "e.g., npm run dev"}
             className="w-full bg-transparent text-xs font-mono text-muted-foreground outline-none placeholder:text-muted-foreground/40"
           />
@@ -861,7 +880,7 @@ function CommandCard({ cmd, index, workflowMode, onUpdate, onRemove, onRun, onDr
           <input
             type="text"
             value={cmd.signal ?? ""}
-            onChange={(e) => onUpdate({ signal: e.target.value || undefined })}
+            onChange={(e) => onUpdate(workflowId, cmd.id, { signal: e.target.value || undefined })}
             placeholder="Auto-advance signal (optional)"
             className="w-full bg-transparent text-xs font-mono text-muted-foreground/60 outline-none placeholder:text-muted-foreground/30"
           />
@@ -872,7 +891,7 @@ function CommandCard({ cmd, index, workflowMode, onUpdate, onRemove, onRun, onDr
           <Button
             variant="ghost"
             size="icon-xs"
-            onClick={onRun}
+            onClick={() => onRun(workflowName, cmd)}
             className="text-muted-foreground hover:text-foreground transition-colors"
             title="Run command"
           >
@@ -882,7 +901,7 @@ function CommandCard({ cmd, index, workflowMode, onUpdate, onRemove, onRun, onDr
         <Button
           variant="ghost"
           size="icon-xs"
-          onClick={onRemove}
+          onClick={() => onRemove(workflowId, cmd.id)}
           className="text-muted-foreground hover:text-destructive transition-colors"
         >
           <Trash2 className="size-3.5" />
@@ -890,7 +909,7 @@ function CommandCard({ cmd, index, workflowMode, onUpdate, onRemove, onRun, onDr
       </div>
     </div>
   );
-}
+});
 
 type SequentialStepCardProps = {
   cmd: WorkflowCommand;
@@ -899,7 +918,7 @@ type SequentialStepCardProps = {
   onAdvance: () => void;
 };
 
-function SequentialStepCard({ cmd, status, isCurrentStep, onAdvance }: SequentialStepCardProps) {
+const SequentialStepCard = memo(function SequentialStepCard({ cmd, status, isCurrentStep, onAdvance }: SequentialStepCardProps) {
   const statusIcon = {
     pending: <Circle className="size-3.5 text-muted-foreground/30" />,
     running: <Loader2 className="size-3.5 text-blue-500 animate-spin" />,
@@ -945,19 +964,19 @@ function SequentialStepCard({ cmd, status, isCurrentStep, onAdvance }: Sequentia
       </div>
     </div>
   );
-}
+});
 
 type WorkflowListItemProps = {
   workflow: Workflow;
   isActive: boolean;
-  onClick: () => void;
-  onPlay: () => void;
+  onSelect: (id: string) => void;
+  onPlay: (workflow: Workflow) => void;
 };
 
-function WorkflowListItem({
+const WorkflowListItem = memo(function WorkflowListItem({
   workflow,
   isActive,
-  onClick,
+  onSelect,
   onPlay,
 }: WorkflowListItemProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -972,8 +991,8 @@ function WorkflowListItem({
           ? "bg-muted text-foreground"
           : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
       )}
-      onClick={onClick}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}
+      onClick={() => onSelect(workflow.id)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(workflow.id); }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -993,7 +1012,7 @@ function WorkflowListItem({
           size="icon-xs"
           onClick={(e) => {
             e.stopPropagation();
-            onPlay();
+            onPlay(workflow);
           }}
           className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
           title="Run workflow"
@@ -1003,4 +1022,4 @@ function WorkflowListItem({
       )}
     </div>
   );
-}
+});

@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, Fragment } from 'react';
+import { useState, useEffect, useCallback, useMemo, Fragment } from 'react';
 import { RefreshCw, X, ChevronRight } from 'lucide-react';
-
+import { Input } from './ui/input';
+import { Button } from './ui/button';
 
 type EnvEntry = { name: string; value: string };
 
@@ -42,9 +43,7 @@ export function EnvVarsPanel({ panelId: _panelId }: { panelId: string }) {
     }
   }, []);
 
-  useEffect(() => {
-    fetchEnv();
-  }, [fetchEnv]);
+  useEffect(() => { fetchEnv(); }, [fetchEnv]);
 
   const copyToClipboard = async (text: string, key: string) => {
     try {
@@ -60,68 +59,58 @@ export function EnvVarsPanel({ panelId: _panelId }: { panelId: string }) {
   const togglePath = (name: string) => {
     setExpandedPaths((prev) => {
       const next = new Set(prev);
-      if (next.has(name)) {
-        next.delete(name);
-      } else {
-        next.add(name);
-      }
+      if (next.has(name)) next.delete(name); else next.add(name);
       return next;
     });
   };
 
-  const filtered = entries.filter((e) => {
-    if (!filter) return true;
+  // Memoized filter — only recomputes when entries or filter changes
+  const filtered = useMemo(() => {
+    if (!filter) return entries;
     const q = filter.toLowerCase();
-    return e.name.toLowerCase().includes(q) || e.value.toLowerCase().includes(q);
-  });
+    return entries.filter((e) => e.name.toLowerCase().includes(q) || e.value.toLowerCase().includes(q));
+  }, [entries, filter]);
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border flex-wrap">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider shrink-0">
-          Environment
-        </span>
-        <input
-          className="flex-1 min-w-32 h-7 rounded-md bg-muted px-2 text-xs outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider shrink-0">Environment</span>
+        <Input
+          className="flex-1 min-w-32 h-7 text-xs"
           placeholder="Filter by name or value..."
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
-        <button
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={() => fetchEnv()}
           disabled={loading}
-          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors"
           title="Refresh"
         >
-          <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+          <RefreshCw className={loading ? 'animate-spin' : ''} />
+        </Button>
       </div>
 
-      {/* Error bar */}
       {error && (
         <div className="px-4 py-2 text-xs text-destructive bg-destructive/10 border-b border-destructive/20 flex items-center justify-between gap-2">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="shrink-0 hover:opacity-70">
-            <X className="size-3" />
-          </button>
+          <Button variant="ghost" size="icon-xs" onClick={() => setError(null)}>
+            <X />
+          </Button>
         </div>
       )}
 
-      {/* Body */}
       <div className="flex-1 overflow-auto">
         {initialLoad && loading ? (
           <div className="flex items-center justify-center h-full text-muted-foreground">
-            <RefreshCw className="size-4 animate-spin mr-2" />
-            <span className="text-sm">Loading...</span>
+            <RefreshCw className="size-4 animate-spin mr-2" /><span className="text-sm">Loading...</span>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-            No variables found
-          </div>
+          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">No variables found</div>
         ) : (
           <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-background border-b border-border">
+            <thead className="sticky top-0 bg-background border-b border-border z-10">
               <tr className="text-muted-foreground">
                 <th className="text-left px-4 py-2 font-medium w-64">Name</th>
                 <th className="text-left px-4 py-2 font-medium">Value</th>
@@ -138,7 +127,6 @@ export function EnvVarsPanel({ panelId: _panelId }: { panelId: string }) {
                 return (
                   <Fragment key={entry.name}>
                     <tr className="border-b border-border/50 hover:bg-muted/40 transition-colors">
-                      {/* Name cell */}
                       <td
                         className={[
                           'px-4 py-1.5 font-mono w-64 cursor-pointer select-text transition-colors',
@@ -151,8 +139,6 @@ export function EnvVarsPanel({ panelId: _panelId }: { panelId: string }) {
                       >
                         {entry.name}
                       </td>
-
-                      {/* Value cell */}
                       <td
                         className={[
                           'px-4 py-1.5 font-mono text-muted-foreground transition-colors',
@@ -161,15 +147,15 @@ export function EnvVarsPanel({ panelId: _panelId }: { panelId: string }) {
                         ].filter(Boolean).join(' ')}
                       >
                         {isPath ? (
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="xs"
                             onClick={() => togglePath(entry.name)}
-                            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                            className="gap-1 font-mono text-muted-foreground hover:text-foreground px-1"
                           >
-                            <ChevronRight
-                              className={`size-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                            />
-                            <span>{pathEntries.length} entries</span>
-                          </button>
+                            <ChevronRight className={`size-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                            {pathEntries.length} entries
+                          </Button>
                         ) : (
                           <span
                             className="block max-w-[600px] truncate cursor-pointer"
@@ -182,14 +168,10 @@ export function EnvVarsPanel({ panelId: _panelId }: { panelId: string }) {
                       </td>
                     </tr>
 
-                    {/* PATH expanded sub-rows */}
                     {isPath && isExpanded && pathEntries.map((pathEntry, i) => {
                       const subKey = `path:${entry.name}:${i}`;
                       return (
-                        <tr
-                          key={subKey}
-                          className="border-b border-border/30 hover:bg-muted/30 transition-colors"
-                        >
+                        <tr key={subKey} className="border-b border-border/30 hover:bg-muted/30 transition-colors">
                           <td />
                           <td
                             className={[

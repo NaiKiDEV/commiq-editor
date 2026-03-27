@@ -5,6 +5,7 @@ import { useWorkspaceActions } from '../hooks/use-workspace';
 import { persistenceReady } from '../stores';
 import { useSettings } from '../contexts/settings';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 
 type BrowserPanelProps = {
@@ -163,13 +164,13 @@ export function BrowserPanel({ sessionId, panelId, isActive }: BrowserPanelProps
           </TooltipTrigger>
           <TooltipContent>{session?.loading ? 'Stop' : 'Reload'}</TooltipContent>
         </Tooltip>
-        <input
+        <Input
           type="text"
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Enter URL or search..."
-          className="flex-1 h-6 px-2.5 text-xs bg-background text-foreground rounded-md border border-border focus:border-ring focus:outline-none placeholder:text-muted-foreground"
+          className="flex-1 h-6 text-xs"
         />
       </div>
 

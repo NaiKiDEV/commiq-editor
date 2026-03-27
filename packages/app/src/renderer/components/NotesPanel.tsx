@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Plus, Trash2, FileText, Check, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 import { cn } from '@/lib/utils';
 
 type Note = {
@@ -155,14 +157,14 @@ export function NotesPanel({ panelId: _panelId }: NotesPanelProps) {
       <div className="flex-1 flex flex-col min-w-0">
         {activeNote ? (
           <>
-            <div className="flex items-center gap-2 px-4 py-2 border-b border-border">
-              <input
+            <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border">
+              <Input
                 ref={titleInputRef}
                 type="text"
                 value={activeNote.title}
                 onChange={(e) => updateNote(activeNote.id, { title: e.target.value })}
                 placeholder="Note title..."
-                className="flex-1 bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground"
+                className="flex-1 border-transparent bg-transparent focus-visible:border-transparent focus-visible:ring-0 px-0 h-7 text-sm font-medium"
               />
               <div className="flex items-center gap-1.5">
                 {saveState === 'saving' && (
@@ -181,12 +183,12 @@ export function NotesPanel({ panelId: _panelId }: NotesPanelProps) {
                 </Button>
               </div>
             </div>
-            <textarea
+            <Textarea
               ref={textareaRef}
               value={activeNote.content}
               onChange={(e) => updateNote(activeNote.id, { content: e.target.value })}
               placeholder="Start writing..."
-              className="flex-1 resize-none bg-transparent px-4 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground leading-relaxed"
+              className="flex-1 resize-none border-0 rounded-none px-4 py-3 text-sm leading-relaxed focus-visible:ring-0 min-h-0"
             />
             {/* Editor footer */}
             <div className="flex items-center justify-between px-4 py-1 border-t border-border text-[10px] text-muted-foreground/50">

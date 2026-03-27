@@ -251,7 +251,7 @@ export function TabBar() {
       {/* Tab strip */}
       <div
         ref={tabStripRef}
-        className="flex items-center overflow-x-auto flex-1 min-w-0"
+        className="flex items-center overflow-x-auto flex-1 min-w-0 [&::-webkit-scrollbar]:hidden"
       >
         {tabs.map((tab) => {
           const primaryPanel = tab.panels[0];
