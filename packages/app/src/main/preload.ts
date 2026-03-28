@@ -371,6 +371,80 @@ const electronAPI = {
       ipcRenderer.invoke('registers:save', registers) as Promise<void>,
   },
 
+  k8s: {
+    contexts: () =>
+      ipcRenderer.invoke('k8s:contexts') as Promise<{
+        contexts: Array<{ name: string; cluster: string; namespace: string | null }>;
+        currentContext: string;
+      } | { error: string }>,
+
+    namespaces: (context: string) =>
+      ipcRenderer.invoke('k8s:namespaces', context) as Promise<string[]>,
+
+    list: (context: string, kind: string, namespace?: string) =>
+      ipcRenderer.invoke('k8s:list', context, kind, namespace) as Promise<unknown[] | { error: string }>,
+
+    watchStart: (context: string, kind: string, watchId: string, namespace?: string) =>
+      ipcRenderer.invoke('k8s:watch:start', context, kind, watchId, namespace) as Promise<void>,
+
+    watchStop: (watchId: string) =>
+      ipcRenderer.invoke('k8s:watch:stop', watchId) as Promise<void>,
+
+    onWatchEvent: (watchId: string, callback: (event: { type: string; resource: unknown }) => void) => {
+      const channel = `k8s:watch:${watchId}`;
+      const listener = (_e: Electron.IpcRendererEvent, evt: { type: string; resource: unknown }) =>
+        callback(evt);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+
+    logsStart: (context: string, namespace: string, pod: string, container: string, streamId: string) =>
+      ipcRenderer.invoke('k8s:logs:start', context, namespace, pod, container, streamId) as Promise<void>,
+
+    logsStop: (streamId: string) =>
+      ipcRenderer.invoke('k8s:logs:stop', streamId) as Promise<void>,
+
+    onLogChunk: (streamId: string, callback: (chunk: { text: string }) => void) => {
+      const channel = `k8s:logs:${streamId}`;
+      const listener = (_e: Electron.IpcRendererEvent, chunk: { text: string }) =>
+        callback(chunk);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+
+    deletePod: (context: string, namespace: string, name: string) =>
+      ipcRenderer.invoke('k8s:pod:delete', context, namespace, name) as Promise<{ success?: boolean; error?: string }>,
+
+    getPodContainers: (context: string, namespace: string, name: string) =>
+      ipcRenderer.invoke('k8s:pod:containers', context, namespace, name) as Promise<string[]>,
+
+    execStart: (context: string, namespace: string, pod: string, container: string, execId: string, command?: string[]) =>
+      ipcRenderer.invoke('k8s:exec:start', context, namespace, pod, container, execId, command) as Promise<{ success?: boolean; error?: string }>,
+
+    execStop: (execId: string) =>
+      ipcRenderer.invoke('k8s:exec:stop', execId) as Promise<void>,
+
+    execWrite: (execId: string, data: string) =>
+      ipcRenderer.send(`k8s:exec:write:${execId}`, data),
+
+    execResize: (execId: string, cols: number, rows: number) =>
+      ipcRenderer.send(`k8s:exec:resize:${execId}`, cols, rows),
+
+    onExecData: (execId: string, callback: (data: string) => void) => {
+      const channel = `k8s:exec:data:${execId}`;
+      const listener = (_e: Electron.IpcRendererEvent, data: string) => callback(data);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+
+    onExecExit: (execId: string, callback: (code: number) => void) => {
+      const channel = `k8s:exec:exit:${execId}`;
+      const listener = (_e: Electron.IpcRendererEvent, code: number) => callback(code);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+  },
+
   browser: {
     create: (sessionId: string, url: string) =>
       ipcRenderer.invoke("browser:create", sessionId, url) as Promise<{

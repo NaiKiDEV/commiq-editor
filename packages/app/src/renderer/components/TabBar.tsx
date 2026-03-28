@@ -26,6 +26,7 @@ import {
   ArrowLeftRight,
   Layers2,
   ImagePlay,
+  Container,
 } from "lucide-react";
 import {
   useTabs,
@@ -101,6 +102,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <Layers2 className="size-3" />;
     case "svg":
       return <ImagePlay className="size-3" />;
+    case "k8s":
+      return <Container className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -395,6 +398,10 @@ export function TabBar() {
               <DropdownMenuItem onClick={() => createTab("env", "Environment")}>
                 <KeyRound />
                 Environment
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("k8s", "Kubernetes")}>
+                <Container />
+                Kubernetes
               </DropdownMenuItem>
             </DropdownMenuGroup>
 

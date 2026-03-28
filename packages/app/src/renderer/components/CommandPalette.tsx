@@ -35,6 +35,7 @@ import {
   ArrowLeftRight,
   Layers2,
   ImagePlay,
+  Container,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -80,6 +81,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "endian") return <ArrowLeftRight />;
   if (type === "bitfield") return <Layers2 />;
   if (type === "svg") return <ImagePlay />;
+  if (type === "k8s") return <Container />;
   return <NotepadText />;
 }
 
@@ -316,6 +318,12 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <ImagePlay />
               <span>New SVG Optimizer Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runAction(() => createTab("k8s", "Kubernetes"))}
+            >
+              <Container />
+              <span>New Kubernetes Tab</span>
             </CommandItem>
           </CommandGroup>
 

@@ -15,6 +15,7 @@ import { registerHttpIpc } from './ipc/http';
 import { registerWhiteboardIpc, registerWhiteboardPush } from './ipc/whiteboard';
 import { whiteboardState } from './whiteboard/state';
 import { registerRegistersIpc } from './ipc/registers';
+import { registerK8sIpc, stopAllK8sWatches } from './ipc/k8s';
 
 if (started) {
   app.quit();
@@ -51,6 +52,7 @@ registerSettingsIpc();
 registerHttpIpc();
 registerWhiteboardIpc();
 registerRegistersIpc();
+registerK8sIpc();
 
 const createWindow = () => {
   const isMac = process.platform === 'darwin';
@@ -97,6 +99,7 @@ app.on('before-quit', () => {
 app.on('window-all-closed', () => {
   killAllSessions();
   destroyAllViews();
+  stopAllK8sWatches();
   if (process.platform !== 'darwin') {
     app.quit();
   }
