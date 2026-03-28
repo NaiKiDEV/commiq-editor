@@ -34,6 +34,7 @@ import {
   FileCode2,
   ArrowLeftRight,
   Layers2,
+  ImagePlay,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -78,6 +79,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "hexdump") return <FileCode2 />;
   if (type === "endian") return <ArrowLeftRight />;
   if (type === "bitfield") return <Layers2 />;
+  if (type === "svg") return <ImagePlay />;
   return <NotepadText />;
 }
 
@@ -308,6 +310,12 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <Layers2 />
               <span>New Bit Field Editor Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runAction(() => createTab("svg", "SVG Optimizer"))}
+            >
+              <ImagePlay />
+              <span>New SVG Optimizer Tab</span>
             </CommandItem>
           </CommandGroup>
 

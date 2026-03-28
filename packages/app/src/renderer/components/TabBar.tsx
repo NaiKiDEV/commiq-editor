@@ -25,6 +25,7 @@ import {
   FileCode2,
   ArrowLeftRight,
   Layers2,
+  ImagePlay,
 } from "lucide-react";
 import {
   useTabs,
@@ -95,6 +96,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <ArrowLeftRight className="size-3" />;
     case "bitfield":
       return <Layers2 className="size-3" />;
+    case "svg":
+      return <ImagePlay className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -465,6 +468,10 @@ export function TabBar() {
             <DropdownMenuItem onClick={() => createTab("bitfield", "Bit Field Editor")}>
               <Layers2 />
               Bit Field Editor
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab("svg", "SVG Optimizer")}>
+              <ImagePlay />
+              SVG Optimizer
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

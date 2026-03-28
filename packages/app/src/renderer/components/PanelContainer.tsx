@@ -24,6 +24,7 @@ import { IeeePanel } from "./IeeePanel";
 import { HexDumpPanel } from "./HexDumpPanel";
 import { EndianPanel } from "./EndianPanel";
 import { BitFieldPanel } from "./BitFieldPanel";
+import { SvgOptimizerPanel } from "./SvgOptimizerPanel";
 import { getVisiblePanelIds } from "../lib/layout";
 import type { Panel } from "../stores/workspace";
 
@@ -84,6 +85,7 @@ function PanelContent({
       {panel.type === "hexdump" && <HexDumpPanel panelId={panel.id} />}
       {panel.type === "endian" && <EndianPanel panelId={panel.id} />}
       {panel.type === "bitfield" && <BitFieldPanel panelId={panel.id} />}
+      {panel.type === "svg" && <SvgOptimizerPanel panelId={panel.id} />}
     </div>
   );
 }

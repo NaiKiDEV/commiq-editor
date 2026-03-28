@@ -11,6 +11,7 @@
       "electron",
       "electron-winstaller",
       "esbuild",
+      "msw",
       "node-pty"
     ],
     "overrides": {
