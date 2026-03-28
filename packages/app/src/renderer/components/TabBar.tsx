@@ -40,7 +40,10 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -367,112 +370,125 @@ export function TabBar() {
             <TooltipContent side="bottom">New Tab</TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end" className="min-w-48">
-            <DropdownMenuItem onClick={() => createTab("terminal", "Terminal")}>
-              <TerminalSquare />
-              Terminal
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("browser", "Browser")}>
-              <Globe />
-              Browser
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("notes", "Notes")}>
-              <NotepadText />
-              Notes
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => createTab("workflow", "Workflows")}
-            >
-              <Zap />
-              Workflows
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("timer", "Timers")}>
-              <Timer />
-              Timers
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => createTab("ports", "Port Monitor")}
-            >
-              <Network />
-              Port Monitor
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => createTab("process", "Process Monitor")}
-            >
-              <Cpu />
-              Process Monitor
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("env", "Environment")}>
-              <KeyRound />
-              Environment
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("http", "HTTP Client")}>
-              <Globe2 />
-              HTTP Client
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => createTab("whiteboard", "Whiteboard")}
-            >
-              <LayoutDashboard />
-              Whiteboard
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => createTab("regex", "Regex Playground")}
-            >
-              <Regex />
-              Regex Playground
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("data", "Data Viewer")}>
-              <FileJson2 />
-              Data Viewer
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("encoder", "Encoder")}>
-              <ShieldCheck />
-              Encoder/Decoder
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("cron", "Cron")}>
-              <CalendarClock />
-              Cron Builder
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("diff", "Diff Viewer")}>
-              <GitCompare />
-              Diff Viewer
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("color", "Color Picker")}>
-              <Pipette />
-              Color Picker
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("epoch", "Epoch")}>
-              <Clock />
-              Epoch / DateTime
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("uuid", "UUID Generator")}>
-              <Fingerprint />
-              UUID Generator
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("numbase", "Number Base")}>
-              <Binary />
-              Number Base
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("ieee754", "IEEE 754")}>
-              <Sigma />
-              IEEE 754 Inspector
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("hexdump", "Hex Dump")}>
-              <FileCode2 />
-              Hex Dump Viewer
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("endian", "Endianness")}>
-              <ArrowLeftRight />
-              Endianness Converter
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("bitfield", "Bit Field Editor")}>
-              <Layers2 />
-              Bit Field Editor
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => createTab("svg", "SVG Optimizer")}>
-              <ImagePlay />
-              SVG Optimizer
-            </DropdownMenuItem>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Dev</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => createTab("terminal", "Terminal")}>
+                <TerminalSquare />
+                Terminal
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("browser", "Browser")}>
+                <Globe />
+                Browser
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("http", "HTTP Client")}>
+                <Globe2 />
+                HTTP Client
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("ports", "Port Monitor")}>
+                <Network />
+                Port Monitor
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("process", "Process Monitor")}>
+                <Cpu />
+                Process Monitor
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("env", "Environment")}>
+                <KeyRound />
+                Environment
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Productivity</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => createTab("notes", "Notes")}>
+                <NotepadText />
+                Notes
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("timer", "Timers")}>
+                <Timer />
+                Timers
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("workflow", "Workflows")}>
+                <Zap />
+                Workflows
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("whiteboard", "Whiteboard")}>
+                <LayoutDashboard />
+                Whiteboard
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Text & Data</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => createTab("diff", "Diff Viewer")}>
+                <GitCompare />
+                Diff Viewer
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("regex", "Regex Playground")}>
+                <Regex />
+                Regex Playground
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("data", "Data Viewer")}>
+                <FileJson2 />
+                Data Viewer
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("encoder", "Encoder")}>
+                <ShieldCheck />
+                Encoder/Decoder
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Low-level</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => createTab("numbase", "Number Base")}>
+                <Binary />
+                Number Base
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("ieee754", "IEEE 754")}>
+                <Sigma />
+                IEEE 754 Inspector
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("hexdump", "Hex Dump")}>
+                <FileCode2 />
+                Hex Dump Viewer
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("endian", "Endianness")}>
+                <ArrowLeftRight />
+                Endianness Converter
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("bitfield", "Bit Field Editor")}>
+                <Layers2 />
+                Bit Field Editor
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Generators & Utils</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => createTab("uuid", "UUID Generator")}>
+                <Fingerprint />
+                UUID Generator
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("epoch", "Epoch")}>
+                <Clock />
+                Epoch / DateTime
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("cron", "Cron")}>
+                <CalendarClock />
+                Cron Builder
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("color", "Color Picker")}>
+                <Pipette />
+                Color Picker
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("svg", "SVG Optimizer")}>
+                <ImagePlay />
+                SVG Optimizer
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
