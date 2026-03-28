@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Layers,
   ChevronDown,
@@ -6,34 +6,32 @@ import {
   Pencil,
   Trash2,
   Settings2,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   useWorkspaces,
   useActiveWorkspace,
   useWorkspaceActions,
-} from '../hooks/use-workspace';
-import { Button } from './ui/button';
+} from "../hooks/use-workspace";
+import { Button } from "./ui/button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from './ui/dropdown-menu';
-import { cn } from '@/lib/utils';
+} from "./ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 export function TitleBar({ onSettingsOpen }: { onSettingsOpen?: () => void }) {
   const workspaces = useWorkspaces();
   const activeWorkspace = useActiveWorkspace();
-  const {
-    createWorkspace,
-    switchWorkspace,
-    renameWorkspace,
-    deleteWorkspace,
-  } = useWorkspaceActions();
+  const { createWorkspace, switchWorkspace, renameWorkspace, deleteWorkspace } =
+    useWorkspaceActions();
 
-  const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
+  const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(
+    null,
+  );
+  const [editName, setEditName] = useState("");
 
   const handleStartRename = (id: string, currentName: string) => {
     setEditingWorkspaceId(id);
@@ -45,25 +43,25 @@ export function TitleBar({ onSettingsOpen }: { onSettingsOpen?: () => void }) {
       renameWorkspace(editingWorkspaceId, editName.trim());
     }
     setEditingWorkspaceId(null);
-    setEditName('');
+    setEditName("");
   };
 
-  const isMac = window.electronAPI.platform === 'darwin';
+  const isMac = window.electronAPI.platform === "darwin";
 
   return (
     <div
       className="flex items-center h-9 bg-card border-b border-border select-none shrink-0"
-      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
     >
       {/* Spacer for macOS traffic lights (left side) */}
-      {isMac && <div className="w-[70px] shrink-0" />}
+      {isMac && <div className="w-17.5 shrink-0" />}
 
       <span className="px-3 text-xs font-medium text-muted-foreground tracking-wide">
-        Commiq Editor
+        Developer Tools
       </span>
 
       {/* Workspace switcher */}
-      <div style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <div style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
         {editingWorkspaceId ? (
           <input
             autoFocus
@@ -71,10 +69,10 @@ export function TitleBar({ onSettingsOpen }: { onSettingsOpen?: () => void }) {
             onChange={(e) => setEditName(e.target.value)}
             onBlur={handleFinishRename}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') handleFinishRename();
-              if (e.key === 'Escape') {
+              if (e.key === "Enter") handleFinishRename();
+              if (e.key === "Escape") {
                 setEditingWorkspaceId(null);
-                setEditName('');
+                setEditName("");
               }
             }}
             className="h-5 w-28 px-1 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
@@ -92,7 +90,7 @@ export function TitleBar({ onSettingsOpen }: { onSettingsOpen?: () => void }) {
             >
               <Layers className="size-3" />
               <span className="max-w-32 truncate">
-                {activeWorkspace?.name ?? 'Workspace'}
+                {activeWorkspace?.name ?? "Workspace"}
               </span>
               <ChevronDown className="size-3 opacity-50" />
             </DropdownMenuTrigger>
@@ -101,14 +99,14 @@ export function TitleBar({ onSettingsOpen }: { onSettingsOpen?: () => void }) {
                 <DropdownMenuItem
                   key={ws.id}
                   className={cn(
-                    'flex items-center justify-between',
-                    ws.id === activeWorkspace?.id && 'bg-accent',
+                    "flex items-center justify-between",
+                    ws.id === activeWorkspace?.id && "bg-accent",
                   )}
                   onClick={() => switchWorkspace(ws.id)}
                 >
                   <span className="truncate">{ws.name}</span>
                   <span className="text-[10px] text-muted-foreground ml-2">
-                    {ws.tabs.length} tab{ws.tabs.length !== 1 ? 's' : ''}
+                    {ws.tabs.length} tab{ws.tabs.length !== 1 ? "s" : ""}
                   </span>
                 </DropdownMenuItem>
               ))}
@@ -150,7 +148,10 @@ export function TitleBar({ onSettingsOpen }: { onSettingsOpen?: () => void }) {
       </div>
 
       {/* Settings button — right-aligned before traffic light spacer */}
-      <div className="ml-auto" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <div
+        className="ml-auto"
+        style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+      >
         <Button variant="ghost" size="icon-xs" onClick={onSettingsOpen}>
           <Settings2 className="size-3.5" />
         </Button>

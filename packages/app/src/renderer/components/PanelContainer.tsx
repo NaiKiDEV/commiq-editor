@@ -1,25 +1,27 @@
-import { useLayoutEffect, useRef, useState, useCallback } from 'react';
-import { useAllPanels, useLayout } from '../hooks/use-workspace';
-import { LayoutRenderer } from './LayoutRenderer';
-import { TerminalPanel } from './TerminalPanel';
-import { BrowserPanel } from './BrowserPanel';
-import { NotesPanel } from './NotesPanel';
-import { WorkflowPanel } from './WorkflowPanel';
-import { TimerPanel } from './TimerPanel';
-import { PortMonitorPanel } from './PortMonitorPanel';
-import { ProcessMonitorPanel } from './ProcessMonitorPanel';
-import { EnvVarsPanel } from './EnvVarsPanel';
-import { HttpClientPanel } from './HttpClientPanel';
-import { WhiteboardPanel } from './WhiteboardPanel';
-import { RegexPlaygroundPanel } from './RegexPlaygroundPanel';
-import { DataViewerPanel } from './DataViewerPanel';
-import { EncoderPanel } from './EncoderPanel';
-import { CronPanel } from './CronPanel';
-import { DiffViewerPanel } from './DiffViewerPanel';
-import { ColorPickerPanel } from './ColorPickerPanel';
-import { EpochPanel } from './EpochPanel';
-import { getVisiblePanelIds } from '../lib/layout';
-import type { Panel } from '../stores/workspace';
+import { useLayoutEffect, useRef, useState, useCallback } from "react";
+import { useAllPanels, useLayout } from "../hooks/use-workspace";
+import { LayoutRenderer } from "./LayoutRenderer";
+import { TerminalPanel } from "./TerminalPanel";
+import { BrowserPanel } from "./BrowserPanel";
+import { NotesPanel } from "./NotesPanel";
+import { WorkflowPanel } from "./WorkflowPanel";
+import { TimerPanel } from "./TimerPanel";
+import { PortMonitorPanel } from "./PortMonitorPanel";
+import { ProcessMonitorPanel } from "./ProcessMonitorPanel";
+import { EnvVarsPanel } from "./EnvVarsPanel";
+import { HttpClientPanel } from "./HttpClientPanel";
+import { WhiteboardPanel } from "./WhiteboardPanel";
+import { RegexPlaygroundPanel } from "./RegexPlaygroundPanel";
+import { DataViewerPanel } from "./DataViewerPanel";
+import { EncoderPanel } from "./EncoderPanel";
+import { CronPanel } from "./CronPanel";
+import { DiffViewerPanel } from "./DiffViewerPanel";
+import { ColorPickerPanel } from "./ColorPickerPanel";
+import { EpochPanel } from "./EpochPanel";
+import { UuidPanel } from "./UuidPanel";
+import { NumberBasePanel } from "./NumberBasePanel";
+import { getVisiblePanelIds } from "../lib/layout";
+import type { Panel } from "../stores/workspace";
 
 type Bounds = { top: number; left: number; width: number; height: number };
 
@@ -44,34 +46,36 @@ function PanelContent({
               width: bounds.width,
               height: bounds.height,
             }
-          : { display: 'none' }
+          : { display: "none" }
       }
     >
-      {panel.type === 'terminal' && (
+      {panel.type === "terminal" && (
         <TerminalPanel sessionId={panel.id} panelId={panel.id} />
       )}
-      {panel.type === 'browser' && (
+      {panel.type === "browser" && (
         <BrowserPanel
           sessionId={panel.id}
           panelId={panel.id}
           isActive={visible}
         />
       )}
-      {panel.type === 'notes' && <NotesPanel panelId={panel.id} />}
-      {panel.type === 'workflow' && <WorkflowPanel panelId={panel.id} />}
-      {panel.type === 'timer' && <TimerPanel panelId={panel.id} />}
-      {panel.type === 'ports' && <PortMonitorPanel panelId={panel.id} />}
-      {panel.type === 'process' && <ProcessMonitorPanel panelId={panel.id} />}
-      {panel.type === 'env' && <EnvVarsPanel panelId={panel.id} />}
-      {panel.type === 'http' && <HttpClientPanel panelId={panel.id} />}
-      {panel.type === 'whiteboard' && <WhiteboardPanel panelId={panel.id} />}
-      {panel.type === 'regex' && <RegexPlaygroundPanel panelId={panel.id} />}
-      {panel.type === 'data' && <DataViewerPanel panelId={panel.id} />}
-      {panel.type === 'encoder' && <EncoderPanel panelId={panel.id} />}
-      {panel.type === 'cron' && <CronPanel panelId={panel.id} />}
-      {panel.type === 'diff' && <DiffViewerPanel panelId={panel.id} />}
-      {panel.type === 'color' && <ColorPickerPanel panelId={panel.id} />}
-      {panel.type === 'epoch' && <EpochPanel panelId={panel.id} />}
+      {panel.type === "notes" && <NotesPanel panelId={panel.id} />}
+      {panel.type === "workflow" && <WorkflowPanel panelId={panel.id} />}
+      {panel.type === "timer" && <TimerPanel panelId={panel.id} />}
+      {panel.type === "ports" && <PortMonitorPanel panelId={panel.id} />}
+      {panel.type === "process" && <ProcessMonitorPanel panelId={panel.id} />}
+      {panel.type === "env" && <EnvVarsPanel panelId={panel.id} />}
+      {panel.type === "http" && <HttpClientPanel panelId={panel.id} />}
+      {panel.type === "whiteboard" && <WhiteboardPanel panelId={panel.id} />}
+      {panel.type === "regex" && <RegexPlaygroundPanel panelId={panel.id} />}
+      {panel.type === "data" && <DataViewerPanel panelId={panel.id} />}
+      {panel.type === "encoder" && <EncoderPanel panelId={panel.id} />}
+      {panel.type === "cron" && <CronPanel panelId={panel.id} />}
+      {panel.type === "diff" && <DiffViewerPanel panelId={panel.id} />}
+      {panel.type === "color" && <ColorPickerPanel panelId={panel.id} />}
+      {panel.type === "epoch" && <EpochPanel panelId={panel.id} />}
+      {panel.type === "uuid" && <UuidPanel panelId={panel.id} />}
+      {panel.type === "numbase" && <NumberBasePanel panelId={panel.id} />}
     </div>
   );
 }
@@ -92,7 +96,7 @@ export function PanelContainer() {
     const containerRect = containerRef.current.getBoundingClientRect();
     const next = new Map<string, Bounds>();
     containerRef.current
-      .querySelectorAll<HTMLDivElement>('[data-slot-panel]')
+      .querySelectorAll<HTMLDivElement>("[data-slot-panel]")
       .forEach((el) => {
         const r = el.getBoundingClientRect();
         next.set(el.dataset.slotPanel!, {
@@ -114,7 +118,7 @@ export function PanelContainer() {
     const ro = new ResizeObserver(measureSlots);
     ro.observe(containerRef.current);
     containerRef.current
-      .querySelectorAll<HTMLDivElement>('[data-slot-panel]')
+      .querySelectorAll<HTMLDivElement>("[data-slot-panel]")
       .forEach((el) => ro.observe(el));
     return () => ro.disconnect();
   }, [layout, measureSlots]);
@@ -130,14 +134,14 @@ export function PanelContainer() {
         <div className="flex items-center justify-center h-full text-muted-foreground">
           <div className="text-center space-y-3">
             <p className="text-2xl font-semibold tracking-tight text-foreground/80">
-              Commiq Editor
+              Developer Tools
             </p>
             <div className="space-y-1 text-sm">
               <p>
                 <kbd className="px-1.5 py-0.5 text-xs font-mono bg-muted rounded border border-border">
                   Ctrl+K
-                </kbd>
-                {' '}to open command palette
+                </kbd>{" "}
+                to open command palette
               </p>
               <p className="text-muted-foreground/60">
                 or click + to open a new tab

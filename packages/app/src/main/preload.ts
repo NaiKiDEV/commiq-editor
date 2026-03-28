@@ -92,6 +92,10 @@ const electronAPI = {
 
     save: (state: unknown) =>
       ipcRenderer.invoke("workspace:save", state) as Promise<void>,
+
+    /** Synchronous save — blocks until the main process finishes writing. Use only in beforeunload. */
+    saveSync: (state: unknown) =>
+      ipcRenderer.sendSync("workspace:saveSync", state) as void,
   },
 
   workflow: {

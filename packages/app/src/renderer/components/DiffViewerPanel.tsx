@@ -75,7 +75,7 @@ export function DiffViewerPanel({ panelId: _panelId }: { panelId: string }) {
   return (
     <div className="flex flex-col h-full bg-background text-foreground text-sm">
       {/* Input row */}
-      <div className="grid grid-cols-2 gap-0 border-b border-border shrink-0" style={{ height: '38%' }}>
+      <div className="grid grid-cols-2 gap-0 border-b border-border flex-1 min-h-0">
         {/* Original */}
         <div className="flex flex-col border-r border-border min-h-0">
           <div className="flex items-center justify-between px-3 py-1.5 border-b border-border shrink-0">

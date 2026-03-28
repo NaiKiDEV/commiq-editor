@@ -19,6 +19,8 @@ import {
   GitCompare,
   Pipette,
   Clock,
+  Fingerprint,
+  Binary,
 } from "lucide-react";
 import {
   useTabs,
@@ -77,6 +79,10 @@ function TabIcon({ type }: { type: PanelType }) {
       return <Pipette className="size-3" />;
     case "epoch":
       return <Clock className="size-3" />;
+    case "uuid":
+      return <Fingerprint className="size-3" />;
+    case "numbase":
+      return <Binary className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -423,6 +429,14 @@ export function TabBar() {
             <DropdownMenuItem onClick={() => createTab("epoch", "Epoch")}>
               <Clock />
               Epoch / DateTime
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab("uuid", "UUID Generator")}>
+              <Fingerprint />
+              UUID Generator
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab("numbase", "Number Base")}>
+              <Binary />
+              Number Base
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -1,4 +1,4 @@
-# Commiq Editor
+# Developer Tools
 
 ## Running locally
 
@@ -20,7 +20,7 @@ This launches the Electron app via `electron-forge`. The renderer hot-reloads on
 
 ## Prerequisites
 
-Open Commiq Editor, go to **Settings → Whiteboard** tab, note the port (default `3100`), then click the **MCP button** (top-right of the whiteboard panel) to start the server. The button turns green when it's running.
+Open Developer Tools, go to **Settings → Whiteboard** tab, note the port (default `3100`), then click the **MCP button** (top-right of the whiteboard panel) to start the server. The button turns green when it's running.
 
 The MCP server must be running whenever you want an LLM to interact with it. It stops when Commiq closes.
 
@@ -41,9 +41,9 @@ The MCP server must be running whenever you want an LLM to interact with it. It 
 }
 ```
 
-2. **Start the server** in Commiq (see Prerequisites above).
+1. **Start the server** in Commiq (see Prerequisites above).
 
-3. **Use it** — open a Copilot Chat session and ask things like:
+2. **Use it** — open a Copilot Chat session and ask things like:
 
    > Create a sticky on the board with text "Fix auth bug", color pink
 
@@ -76,7 +76,7 @@ Or manually add to your project's `.mcp.json` (already included in this repo):
 }
 ```
 
-2. **Verify it's connected** — in a Claude Code session run:
+1. **Verify it's connected** — in a Claude Code session run:
 
 ```text
 /mcp
@@ -84,4 +84,4 @@ Or manually add to your project's `.mcp.json` (already included in this repo):
 
 You should see `commiq-whiteboard` listed as connected with its tools.
 
-3. **Use it** — same capabilities as Copilot above.
+1. **Use it** — same capabilities as Copilot above.

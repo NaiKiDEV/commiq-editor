@@ -26,12 +26,12 @@ export function initPersistence(
 ) {
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const save = () => {
+  const buildState = (): PersistedState => {
     const editor = workspaceStore.state;
     const browserSessions = browserStore.state.sessions;
 
     // Filter out transient tabs before persisting
-    const filteredEditor = {
+    const filteredEditor: EditorState = {
       ...editor,
       workspaces: editor.workspaces.map((ws) => ({
         ...ws,
@@ -47,13 +47,13 @@ export function initPersistence(
       }
     }
 
-    const persisted: PersistedState = {
-      version: 1,
-      editor: filteredEditor,
-      browserUrls,
-    };
+    return { version: 1, editor: filteredEditor, browserUrls };
+  };
 
-    window.electronAPI.workspace.save(persisted);
+  const save = () => {
+    window.electronAPI.workspace.save(buildState()).catch((err) => {
+      console.error('[persistence] async save failed:', err);
+    });
   };
 
   const debouncedSave = () => {
@@ -69,11 +69,26 @@ export function initPersistence(
   const browserListener: StreamListener = () => debouncedSave();
   browserStore.openStream(browserListener);
 
-  return { save, dispose: () => {
-    workspaceStore.closeStream(listener);
-    browserStore.closeStream(browserListener);
-    if (saveTimer) clearTimeout(saveTimer);
-  }};
+  // Flush immediately before the window closes so no changes are lost.
+  // Uses sendSync so the main process finishes writing before the window is destroyed.
+  const handleBeforeUnload = () => {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+    window.electronAPI.workspace.saveSync(buildState());
+  };
+  window.addEventListener('beforeunload', handleBeforeUnload);
+
+  return {
+    save,
+    dispose: () => {
+      workspaceStore.closeStream(listener);
+      browserStore.closeStream(browserListener);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (saveTimer) clearTimeout(saveTimer);
+    },
+  };
 }
 
 /**
@@ -83,14 +98,30 @@ export function initPersistence(
 export async function loadPersistedState(
   workspaceStore: SealedStore<EditorState>,
 ): Promise<Record<string, string> | null> {
-  const raw = await window.electronAPI.workspace.load() as PersistedState | null;
-  if (!raw || raw.version !== 1) return null;
+  console.log('[persistence] loading…');
+  let raw: PersistedState | null = null;
+  try {
+    raw = await window.electronAPI.workspace.load() as PersistedState | null;
+  } catch (err) {
+    console.error('[persistence] load IPC failed:', err);
+    return null;
+  }
 
-  // Validate the persisted state has the expected shape
-  if (!raw.editor?.workspaces?.length) return null;
+  console.log('[persistence] raw:', raw);
 
-  workspaceStore.queue(hydrateWorkspace(raw.editor));
-  await workspaceStore.flush();
+  if (!raw) { console.warn('[persistence] no data on disk'); return null; }
+  if (raw.version !== 1) { console.warn('[persistence] version mismatch:', raw.version); return null; }
+  if (!raw.editor?.workspaces?.length) { console.warn('[persistence] empty workspaces'); return null; }
+
+  console.log('[persistence] hydrating', raw.editor.workspaces.length, 'workspace(s)');
+  try {
+    workspaceStore.queue(hydrateWorkspace(raw.editor));
+    await workspaceStore.flush();
+    console.log('[persistence] hydration complete');
+  } catch (err) {
+    console.error('[persistence] hydration failed:', err);
+    return null;
+  }
 
   return raw.browserUrls ?? null;
 }

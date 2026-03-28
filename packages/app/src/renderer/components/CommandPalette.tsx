@@ -28,6 +28,8 @@ import {
   GitCompare,
   Pipette,
   Clock,
+  Fingerprint,
+  Binary,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -66,6 +68,8 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "diff") return <GitCompare />;
   if (type === "color") return <Pipette />;
   if (type === "epoch") return <Clock />;
+  if (type === "uuid") return <Fingerprint />;
+  if (type === "numbase") return <Binary />;
   return <NotepadText />;
 }
 
@@ -260,6 +264,18 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <Clock />
               <span>New Epoch / DateTime Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runAction(() => createTab("uuid", "UUID Generator"))}
+            >
+              <Fingerprint />
+              <span>New UUID Generator Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runAction(() => createTab("numbase", "Number Base"))}
+            >
+              <Binary />
+              <span>New Number Base Tab</span>
             </CommandItem>
           </CommandGroup>
 
