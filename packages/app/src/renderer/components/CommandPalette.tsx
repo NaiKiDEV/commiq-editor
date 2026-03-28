@@ -30,6 +30,10 @@ import {
   Clock,
   Fingerprint,
   Binary,
+  Sigma,
+  FileCode2,
+  ArrowLeftRight,
+  Layers2,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -70,6 +74,10 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "epoch") return <Clock />;
   if (type === "uuid") return <Fingerprint />;
   if (type === "numbase") return <Binary />;
+  if (type === "ieee754") return <Sigma />;
+  if (type === "hexdump") return <FileCode2 />;
+  if (type === "endian") return <ArrowLeftRight />;
+  if (type === "bitfield") return <Layers2 />;
   return <NotepadText />;
 }
 
@@ -276,6 +284,30 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <Binary />
               <span>New Number Base Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runAction(() => createTab("ieee754", "IEEE 754"))}
+            >
+              <Sigma />
+              <span>New IEEE 754 Inspector Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runAction(() => createTab("hexdump", "Hex Dump"))}
+            >
+              <FileCode2 />
+              <span>New Hex Dump Viewer Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runAction(() => createTab("endian", "Endianness"))}
+            >
+              <ArrowLeftRight />
+              <span>New Endianness Converter Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runAction(() => createTab("bitfield", "Bit Field Editor"))}
+            >
+              <Layers2 />
+              <span>New Bit Field Editor Tab</span>
             </CommandItem>
           </CommandGroup>
 

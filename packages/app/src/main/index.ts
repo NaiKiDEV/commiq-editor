@@ -14,6 +14,7 @@ import { registerSettingsIpc } from './ipc/settings';
 import { registerHttpIpc } from './ipc/http';
 import { registerWhiteboardIpc, registerWhiteboardPush } from './ipc/whiteboard';
 import { whiteboardState } from './whiteboard/state';
+import { registerRegistersIpc } from './ipc/registers';
 
 if (started) {
   app.quit();
@@ -49,6 +50,7 @@ registerEnvIpc();
 registerSettingsIpc();
 registerHttpIpc();
 registerWhiteboardIpc();
+registerRegistersIpc();
 
 const createWindow = () => {
   const isMac = process.platform === 'darwin';

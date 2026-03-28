@@ -21,6 +21,10 @@ import {
   Clock,
   Fingerprint,
   Binary,
+  Sigma,
+  FileCode2,
+  ArrowLeftRight,
+  Layers2,
 } from "lucide-react";
 import {
   useTabs,
@@ -83,6 +87,14 @@ function TabIcon({ type }: { type: PanelType }) {
       return <Fingerprint className="size-3" />;
     case "numbase":
       return <Binary className="size-3" />;
+    case "ieee754":
+      return <Sigma className="size-3" />;
+    case "hexdump":
+      return <FileCode2 className="size-3" />;
+    case "endian":
+      return <ArrowLeftRight className="size-3" />;
+    case "bitfield":
+      return <Layers2 className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -437,6 +449,22 @@ export function TabBar() {
             <DropdownMenuItem onClick={() => createTab("numbase", "Number Base")}>
               <Binary />
               Number Base
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab("ieee754", "IEEE 754")}>
+              <Sigma />
+              IEEE 754 Inspector
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab("hexdump", "Hex Dump")}>
+              <FileCode2 />
+              Hex Dump Viewer
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab("endian", "Endianness")}>
+              <ArrowLeftRight />
+              Endianness Converter
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createTab("bitfield", "Bit Field Editor")}>
+              <Layers2 />
+              Bit Field Editor
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

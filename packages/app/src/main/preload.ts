@@ -365,6 +365,12 @@ const electronAPI = {
     getMcpStatus: () => ipcRenderer.invoke("whiteboard:mcp-status"),
   },
 
+  registers: {
+    load: () => ipcRenderer.invoke('registers:load') as Promise<unknown[]>,
+    save: (registers: unknown[]) =>
+      ipcRenderer.invoke('registers:save', registers) as Promise<void>,
+  },
+
   browser: {
     create: (sessionId: string, url: string) =>
       ipcRenderer.invoke("browser:create", sessionId, url) as Promise<{

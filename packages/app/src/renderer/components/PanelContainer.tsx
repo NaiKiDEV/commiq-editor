@@ -20,6 +20,10 @@ import { ColorPickerPanel } from "./ColorPickerPanel";
 import { EpochPanel } from "./EpochPanel";
 import { UuidPanel } from "./UuidPanel";
 import { NumberBasePanel } from "./NumberBasePanel";
+import { IeeePanel } from "./IeeePanel";
+import { HexDumpPanel } from "./HexDumpPanel";
+import { EndianPanel } from "./EndianPanel";
+import { BitFieldPanel } from "./BitFieldPanel";
 import { getVisiblePanelIds } from "../lib/layout";
 import type { Panel } from "../stores/workspace";
 
@@ -76,6 +80,10 @@ function PanelContent({
       {panel.type === "epoch" && <EpochPanel panelId={panel.id} />}
       {panel.type === "uuid" && <UuidPanel panelId={panel.id} />}
       {panel.type === "numbase" && <NumberBasePanel panelId={panel.id} />}
+      {panel.type === "ieee754" && <IeeePanel panelId={panel.id} />}
+      {panel.type === "hexdump" && <HexDumpPanel panelId={panel.id} />}
+      {panel.type === "endian" && <EndianPanel panelId={panel.id} />}
+      {panel.type === "bitfield" && <BitFieldPanel panelId={panel.id} />}
     </div>
   );
 }
