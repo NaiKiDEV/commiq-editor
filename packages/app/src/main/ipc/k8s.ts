@@ -520,84 +520,79 @@ async function listResources(
 ): Promise<K8sResource[]> {
   const ns = namespace ?? 'default';
 
-  try {
-    switch (kind) {
-      case 'nodes': {
-        const api = kc.makeApiClient(k8s.CoreV1Api);
-        const res = await api.listNode();
-        return (res.items ?? []).map((o) => serializeResource(o, kind));
-      }
-      case 'namespaces': {
-        const api = kc.makeApiClient(k8s.CoreV1Api);
-        const res = await api.listNamespace();
-        return (res.items ?? []).map((o) => serializeResource(o, kind));
-      }
-      case 'pods': {
-        const api = kc.makeApiClient(k8s.CoreV1Api);
-        const res = await api.listNamespacedPod({ namespace: ns });
-        return (res.items ?? []).map((o) => serializeResource(o, kind));
-      }
-      case 'deployments': {
-        const api = kc.makeApiClient(k8s.AppsV1Api);
-        const res = await api.listNamespacedDeployment({ namespace: ns });
-        return (res.items ?? []).map((o) => serializeResource(o, kind));
-      }
-      case 'statefulsets': {
-        const api = kc.makeApiClient(k8s.AppsV1Api);
-        const res = await api.listNamespacedStatefulSet({ namespace: ns });
-        return (res.items ?? []).map((o) => serializeResource(o, kind));
-      }
-      case 'daemonsets': {
-        const api = kc.makeApiClient(k8s.AppsV1Api);
-        const res = await api.listNamespacedDaemonSet({ namespace: ns });
-        return (res.items ?? []).map((o) => serializeResource(o, kind));
-      }
-      case 'jobs': {
-        const api = kc.makeApiClient(k8s.BatchV1Api);
-        const res = await api.listNamespacedJob({ namespace: ns });
-        return (res.items ?? []).map((o) => serializeResource(o, kind));
-      }
-      case 'cronjobs': {
-        const api = kc.makeApiClient(k8s.BatchV1Api);
-        const res = await api.listNamespacedCronJob({ namespace: ns });
-        return (res.items ?? []).map((o) => serializeResource(o, kind));
-      }
-      case 'services': {
-        const api = kc.makeApiClient(k8s.CoreV1Api);
-        const res = await api.listNamespacedService({ namespace: ns });
-        return (res.items ?? []).map((o) => serializeResource(o, kind));
-      }
-      case 'ingresses': {
-        const api = kc.makeApiClient(k8s.NetworkingV1Api);
-        const res = await api.listNamespacedIngress({ namespace: ns });
-        return (res.items ?? []).map((o) => serializeResource(o, kind));
-      }
-      case 'configmaps': {
-        const api = kc.makeApiClient(k8s.CoreV1Api);
-        const res = await api.listNamespacedConfigMap({ namespace: ns });
-        return (res.items ?? []).map((o) => serializeResource(o, kind));
-      }
-      case 'secrets': {
-        const api = kc.makeApiClient(k8s.CoreV1Api);
-        const res = await api.listNamespacedSecret({ namespace: ns });
-        return (res.items ?? []).map((o) => serializeResource(o, kind));
-      }
-      case 'pvcs': {
-        const api = kc.makeApiClient(k8s.CoreV1Api);
-        const res = await api.listNamespacedPersistentVolumeClaim({ namespace: ns });
-        return (res.items ?? []).map((o) => serializeResource(o, kind));
-      }
-      case 'pvs': {
-        const api = kc.makeApiClient(k8s.CoreV1Api);
-        const res = await api.listPersistentVolume();
-        return (res.items ?? []).map((o) => serializeResource(o, kind));
-      }
-      default:
-        return [];
+  switch (kind) {
+    case 'nodes': {
+      const api = kc.makeApiClient(k8s.CoreV1Api);
+      const res = await api.listNode();
+      return (res.items ?? []).map((o) => serializeResource(o, kind));
     }
-  } catch (err) {
-    console.error(`[k8s] Error listing ${kind}:`, err);
-    return [];
+    case 'namespaces': {
+      const api = kc.makeApiClient(k8s.CoreV1Api);
+      const res = await api.listNamespace();
+      return (res.items ?? []).map((o) => serializeResource(o, kind));
+    }
+    case 'pods': {
+      const api = kc.makeApiClient(k8s.CoreV1Api);
+      const res = await api.listNamespacedPod({ namespace: ns });
+      return (res.items ?? []).map((o) => serializeResource(o, kind));
+    }
+    case 'deployments': {
+      const api = kc.makeApiClient(k8s.AppsV1Api);
+      const res = await api.listNamespacedDeployment({ namespace: ns });
+      return (res.items ?? []).map((o) => serializeResource(o, kind));
+    }
+    case 'statefulsets': {
+      const api = kc.makeApiClient(k8s.AppsV1Api);
+      const res = await api.listNamespacedStatefulSet({ namespace: ns });
+      return (res.items ?? []).map((o) => serializeResource(o, kind));
+    }
+    case 'daemonsets': {
+      const api = kc.makeApiClient(k8s.AppsV1Api);
+      const res = await api.listNamespacedDaemonSet({ namespace: ns });
+      return (res.items ?? []).map((o) => serializeResource(o, kind));
+    }
+    case 'jobs': {
+      const api = kc.makeApiClient(k8s.BatchV1Api);
+      const res = await api.listNamespacedJob({ namespace: ns });
+      return (res.items ?? []).map((o) => serializeResource(o, kind));
+    }
+    case 'cronjobs': {
+      const api = kc.makeApiClient(k8s.BatchV1Api);
+      const res = await api.listNamespacedCronJob({ namespace: ns });
+      return (res.items ?? []).map((o) => serializeResource(o, kind));
+    }
+    case 'services': {
+      const api = kc.makeApiClient(k8s.CoreV1Api);
+      const res = await api.listNamespacedService({ namespace: ns });
+      return (res.items ?? []).map((o) => serializeResource(o, kind));
+    }
+    case 'ingresses': {
+      const api = kc.makeApiClient(k8s.NetworkingV1Api);
+      const res = await api.listNamespacedIngress({ namespace: ns });
+      return (res.items ?? []).map((o) => serializeResource(o, kind));
+    }
+    case 'configmaps': {
+      const api = kc.makeApiClient(k8s.CoreV1Api);
+      const res = await api.listNamespacedConfigMap({ namespace: ns });
+      return (res.items ?? []).map((o) => serializeResource(o, kind));
+    }
+    case 'secrets': {
+      const api = kc.makeApiClient(k8s.CoreV1Api);
+      const res = await api.listNamespacedSecret({ namespace: ns });
+      return (res.items ?? []).map((o) => serializeResource(o, kind));
+    }
+    case 'pvcs': {
+      const api = kc.makeApiClient(k8s.CoreV1Api);
+      const res = await api.listNamespacedPersistentVolumeClaim({ namespace: ns });
+      return (res.items ?? []).map((o) => serializeResource(o, kind));
+    }
+    case 'pvs': {
+      const api = kc.makeApiClient(k8s.CoreV1Api);
+      const res = await api.listPersistentVolume();
+      return (res.items ?? []).map((o) => serializeResource(o, kind));
+    }
+    default:
+      return [];
   }
 }
 
