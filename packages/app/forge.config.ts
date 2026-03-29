@@ -28,8 +28,8 @@ const config: ForgeConfig = {
   makers: [
     new MakerSquirrel({ name: 'CommiqEditor' }),
     new MakerZIP({}, ['darwin']),
-    new MakerRpm({}),
-    new MakerDeb({}),
+    new MakerRpm({ options: { bin: 'commiq-editor' } }),
+    new MakerDeb({ options: { bin: 'commiq-editor' } }),
   ],
   plugins: [
     new AutoUnpackNativesPlugin({}),
