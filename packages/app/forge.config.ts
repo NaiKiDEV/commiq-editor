@@ -12,6 +12,7 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     asarUnpack: ['**/*.node'],
+    executableName: 'commiq-editor',
   },
   rebuildConfig: {},
   hooks: {
