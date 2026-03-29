@@ -62,7 +62,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: commiq-editor-macos
-          path: packages/app/out/make/zip/darwin/x64/
+          path: packages/app/out/make/zip/darwin/
 
   build-linux:
     runs-on: ubuntu-latest
