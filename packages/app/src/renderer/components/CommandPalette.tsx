@@ -36,6 +36,7 @@ import {
   Layers2,
   ImagePlay,
   Container,
+  Unplug,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -220,6 +221,12 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <Globe2 />
               <span>New HTTP Client Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runAction(() => createTab("ws", "WebSocket Client"))}
+            >
+              <Unplug />
+              <span>New WebSocket Client Tab</span>
             </CommandItem>
             <CommandItem
               onSelect={() =>

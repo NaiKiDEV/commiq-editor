@@ -3,6 +3,7 @@ import {
   TerminalSquare,
   Globe,
   Globe2,
+  Unplug,
   NotepadText,
   Zap,
   X,
@@ -104,6 +105,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <ImagePlay className="size-3" />;
     case "k8s":
       return <Container className="size-3" />;
+    case "ws":
+      return <Unplug className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -386,6 +389,10 @@ export function TabBar() {
               <DropdownMenuItem onClick={() => createTab("http", "HTTP Client")}>
                 <Globe2 />
                 HTTP Client
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("ws", "WebSocket Client")}>
+                <Unplug />
+                WebSocket Client
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => createTab("ports", "Port Monitor")}>
                 <Network />

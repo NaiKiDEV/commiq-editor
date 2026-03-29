@@ -26,6 +26,7 @@ import { EndianPanel } from "./EndianPanel";
 import { BitFieldPanel } from "./BitFieldPanel";
 import { SvgOptimizerPanel } from "./SvgOptimizerPanel";
 import { KubernetesPanel } from "./kubernetes/KubernetesPanel";
+import { WebSocketPanel } from "./websocket/WebSocketPanel";
 import { getVisiblePanelIds } from "../lib/layout";
 import type { Panel } from "../stores/workspace";
 
@@ -88,6 +89,7 @@ function PanelContent({
       {panel.type === "bitfield" && <BitFieldPanel panelId={panel.id} />}
       {panel.type === "svg" && <SvgOptimizerPanel panelId={panel.id} />}
       {panel.type === "k8s" && <KubernetesPanel panelId={panel.id} />}
+      {panel.type === "ws" && <WebSocketPanel panelId={panel.id} />}
     </div>
   );
 }

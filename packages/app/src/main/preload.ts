@@ -371,6 +371,133 @@ const electronAPI = {
       ipcRenderer.invoke('registers:save', registers) as Promise<void>,
   },
 
+  ws: {
+    profilesList: () =>
+      ipcRenderer.invoke('ws:profiles:list') as Promise<
+        Array<{
+          id: string;
+          name: string;
+          url: string;
+          headers: { key: string; value: string; enabled: boolean }[];
+          subprotocol: string;
+          autoReconnect: boolean;
+          reconnectDelay: number;
+        }>
+      >,
+
+    profilesSave: (profile: {
+      id: string;
+      name: string;
+      url: string;
+      headers: { key: string; value: string; enabled: boolean }[];
+      subprotocol: string;
+      autoReconnect: boolean;
+      reconnectDelay: number;
+    }) =>
+      ipcRenderer.invoke('ws:profiles:save', profile) as Promise<typeof profile>,
+
+    profilesDelete: (id: string) =>
+      ipcRenderer.invoke('ws:profiles:delete', id) as Promise<void>,
+
+    templatesList: () =>
+      ipcRenderer.invoke('ws:templates:list') as Promise<
+        Array<{ id: string; name: string; payload: string }>
+      >,
+
+    templatesSave: (tpl: { id: string; name: string; payload: string }) =>
+      ipcRenderer.invoke('ws:templates:save', tpl) as Promise<typeof tpl>,
+
+    templatesDelete: (id: string) =>
+      ipcRenderer.invoke('ws:templates:delete', id) as Promise<void>,
+
+    connect: (
+      connId: string,
+      profile: {
+        id: string;
+        name: string;
+        url: string;
+        headers: { key: string; value: string; enabled: boolean }[];
+        subprotocol: string;
+        autoReconnect: boolean;
+        reconnectDelay: number;
+      },
+    ) => ipcRenderer.invoke('ws:connect', connId, profile) as Promise<void>,
+
+    disconnect: (connId: string) =>
+      ipcRenderer.invoke('ws:disconnect', connId) as Promise<void>,
+
+    send: (connId: string, payload: string) =>
+      ipcRenderer.invoke('ws:send', connId, payload) as Promise<{
+        success?: boolean;
+        error?: string;
+      }>,
+
+    ping: (connId: string) =>
+      ipcRenderer.invoke('ws:ping', connId) as Promise<{
+        success?: boolean;
+        error?: string;
+      }>,
+
+    onStatus: (
+      connId: string,
+      callback: (event: {
+        status: string;
+        at?: number;
+        code?: number;
+        reason?: string;
+        error?: string;
+      }) => void,
+    ) => {
+      const channel = `ws:${connId}:status`;
+      const listener = (
+        _e: Electron.IpcRendererEvent,
+        event: { status: string; at?: number; code?: number; reason?: string; error?: string },
+      ) => callback(event);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+
+    onMessage: (
+      connId: string,
+      callback: (msg: {
+        id: string;
+        direction: 'sent' | 'received';
+        payload: string;
+        binary: boolean;
+        byteLen: number;
+        timestamp: number;
+      }) => void,
+    ) => {
+      const channel = `ws:${connId}:message`;
+      const listener = (
+        _e: Electron.IpcRendererEvent,
+        msg: {
+          id: string;
+          direction: 'sent' | 'received';
+          payload: string;
+          binary: boolean;
+          byteLen: number;
+          timestamp: number;
+        },
+      ) => callback(msg);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+
+    onFrame: (
+      connId: string,
+      callback: (frame: { type: 'ping' | 'pong'; latency?: number | null; timestamp: number }) => void,
+    ) => {
+      const channel = `ws:${connId}:frame`;
+      const listener = (
+        _e: Electron.IpcRendererEvent,
+        frame: { type: 'ping' | 'pong'; latency?: number | null; timestamp: number },
+      ) => callback(frame);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+  },
+
   k8s: {
     contexts: () =>
       ipcRenderer.invoke('k8s:contexts') as Promise<{
