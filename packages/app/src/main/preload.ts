@@ -10,6 +10,9 @@ type NavigationInfo = {
 const electronAPI = {
   platform: process.platform,
 
+  openExternal: (url: string) =>
+    ipcRenderer.invoke('app:openExternal', url) as Promise<void>,
+
   onShortcut: (callback: (action: string) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, action: string) =>
       callback(action);

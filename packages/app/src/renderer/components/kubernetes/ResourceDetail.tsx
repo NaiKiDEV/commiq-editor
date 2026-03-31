@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import {
   ArrowLeft, ScrollText, Trash2, Copy, Check, Tag, Clock, Hash, Box, Shield,
   TerminalSquare, Search, X, KeyRound, HardDrive, Globe, Activity, Layers,
-  CalendarClock, MapPin,
+  CalendarClock, MapPin, Eye, EyeOff,
 } from 'lucide-react';
 import * as yaml from 'js-yaml';
 import { Button } from '../ui/button';
@@ -161,6 +161,8 @@ export function ResourceDetail({
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set());
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const yamlStr = useMemo(() => {
     try {
@@ -683,36 +685,63 @@ export function ResourceDetail({
               <Section title="Rules" icon={<Globe className="size-3" />}>
                 <div className="space-y-2">
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {(spec.rules as any[]).map((rule: any, i: number) => (
-                    <div key={i} className="rounded-md border border-border/60 bg-muted/20 overflow-hidden">
-                      <div className="px-3 py-1.5 bg-muted/30 border-b border-border/40 font-mono text-[11px] font-medium text-blue-300">
-                        {rule.host ?? <span className="italic text-muted-foreground">* (all hosts)</span>}
-                      </div>
-                      {rule.http?.paths && (
-                        <table className="w-full text-[11px]">
-                          <thead>
-                            <tr className="border-b border-border/30">
-                              <th className="text-left px-3 py-1 text-[10px] text-muted-foreground/60 font-medium">Path</th>
-                              <th className="text-left px-3 py-1 text-[10px] text-muted-foreground/60 font-medium">Type</th>
-                              <th className="text-left px-3 py-1 text-[10px] text-muted-foreground/60 font-medium">Service</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                            {(rule.http.paths as any[]).map((p: any, j: number) => (
-                              <tr key={j} className="border-b border-border/20 last:border-0 hover:bg-muted/20">
-                                <td className="px-3 py-1.5 font-mono text-foreground/80">{p.path ?? '/'}</td>
-                                <td className="px-3 py-1.5 text-muted-foreground text-[10px]">{p.pathType}</td>
-                                <td className="px-3 py-1.5 font-mono text-[10px] text-foreground/70">
-                                  {p.backend?.service?.name}:{p.backend?.service?.port?.number ?? p.backend?.service?.port?.name}
-                                </td>
+                  {(spec.rules as any[]).map((rule: any, i: number) => {
+                    const tlsHosts = new Set<string>(
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      (spec.tls as any[] | undefined ?? []).flatMap((t: any) => t.hosts ?? [])
+                    );
+                    const scheme = rule.host && tlsHosts.has(rule.host) ? 'https' : 'http';
+                    return (
+                      <div key={i} className="rounded-md border border-border/60 bg-muted/20 overflow-hidden">
+                        <div className="px-3 py-1.5 bg-muted/30 border-b border-border/40 font-mono text-[11px] font-medium">
+                          {rule.host ? (
+                            <button
+                              className="text-blue-300 hover:text-blue-200 hover:underline cursor-pointer"
+                              onClick={() => window.electronAPI.openExternal(`${scheme}://${rule.host}`)}
+                            >
+                              {rule.host}
+                            </button>
+                          ) : (
+                            <span className="italic text-muted-foreground">* (all hosts)</span>
+                          )}
+                        </div>
+                        {rule.http?.paths && (
+                          <table className="w-full text-[11px]">
+                            <thead>
+                              <tr className="border-b border-border/30">
+                                <th className="text-left px-3 py-1 text-[10px] text-muted-foreground/60 font-medium">Path</th>
+                                <th className="text-left px-3 py-1 text-[10px] text-muted-foreground/60 font-medium">Type</th>
+                                <th className="text-left px-3 py-1 text-[10px] text-muted-foreground/60 font-medium">Service</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      )}
-                    </div>
-                  ))}
+                            </thead>
+                            <tbody>
+                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                              {(rule.http.paths as any[]).map((p: any, j: number) => (
+                                <tr key={j} className="border-b border-border/20 last:border-0 hover:bg-muted/20">
+                                  <td className="px-3 py-1.5 font-mono text-foreground/80">
+                                    {rule.host ? (
+                                      <button
+                                        className="hover:text-blue-300 hover:underline cursor-pointer"
+                                        onClick={() => window.electronAPI.openExternal(`${scheme}://${rule.host}${p.path ?? '/'}`)}
+                                      >
+                                        {p.path ?? '/'}
+                                      </button>
+                                    ) : (
+                                      p.path ?? '/'
+                                    )}
+                                  </td>
+                                  <td className="px-3 py-1.5 text-muted-foreground text-[10px]">{p.pathType}</td>
+                                  <td className="px-3 py-1.5 font-mono text-[10px] text-foreground/70">
+                                    {p.backend?.service?.name}:{p.backend?.service?.port?.number ?? p.backend?.service?.port?.name}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </Section>
             )}
@@ -826,20 +855,53 @@ export function ResourceDetail({
               <Section title="Data" icon={<Shield className="size-3" />}>
                 {raw.data ? (
                   <div className="rounded-md border border-border/60 bg-muted/20 overflow-hidden">
-                    {Object.keys(raw.data as Record<string, string>).map((key, i, arr) => (
-                      <div
-                        key={key}
-                        className={cn(
-                          'flex items-center justify-between px-3 py-1.5',
-                          i < arr.length - 1 && 'border-b border-border/30',
-                        )}
-                      >
-                        <span className="font-mono text-[11px] text-foreground">{key}</span>
-                        <span className="text-muted-foreground text-[10px]">
-                          {((raw.data as Record<string, string>)[key]?.length ?? 0)} bytes (base64)
-                        </span>
-                      </div>
-                    ))}
+                    {Object.entries(raw.data as Record<string, string>).map(([key, b64], i, arr) => {
+                      const decoded = (() => { try { return atob(b64); } catch { return b64; } })();
+                      const revealed = revealedKeys.has(key);
+                      return (
+                        <div
+                          key={key}
+                          className={cn(
+                            'flex items-center gap-2 px-3 py-2',
+                            i < arr.length - 1 && 'border-b border-border/30',
+                          )}
+                        >
+                          <span className="font-mono text-[11px] text-foreground flex-1 truncate">{key}</span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className={cn(
+                              'font-mono text-[11px] max-w-[200px] truncate',
+                              revealed ? 'text-foreground/80' : 'text-muted-foreground tracking-widest select-none',
+                            )}>
+                              {revealed ? decoded : '••••••••'}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              title={revealed ? 'Hide' : 'Reveal'}
+                              onClick={() => setRevealedKeys((prev) => {
+                                const next = new Set(prev);
+                                revealed ? next.delete(key) : next.add(key);
+                                return next;
+                              })}
+                            >
+                              {revealed ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              title="Copy value"
+                              onClick={() => {
+                                navigator.clipboard.writeText(decoded);
+                                setCopiedKey(key);
+                                setTimeout(() => setCopiedKey(null), 1500);
+                              }}
+                            >
+                              {copiedKey === key ? <Check className="size-3 text-green-400" /> : <Copy className="size-3" />}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-muted-foreground italic text-[11px]">No data</p>

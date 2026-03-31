@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Loader2, RefreshCw, Eye, ScrollText, Trash2, Search, X, TerminalSquare, WifiOff } from 'lucide-react';
+import { Loader2, RefreshCw, Eye, ScrollText, Trash2, Search, X, TerminalSquare, WifiOff, Check } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '@/lib/utils';
 import type { K8sResource, K8sWatchEvent, ResourceKind } from './types';
@@ -116,6 +116,7 @@ export function ResourceList({ context, namespace, kind, onSelect, onOpenLogs, o
   const [watchId, setWatchId] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
   const [showFilter, setShowFilter] = useState(false);
+  const [confirmingUid, setConfirmingUid] = useState<string | null>(null);
 
   const loadAndWatch = useCallback(() => {
     setLoading(true);
@@ -188,17 +189,25 @@ export function ResourceList({ context, namespace, kind, onSelect, onOpenLogs, o
     );
   }, [resources, filter]);
 
-  const handleDelete = useCallback(
-    async (e: React.MouseEvent, resource: K8sResource) => {
-      e.stopPropagation();
-      await window.electronAPI.k8s.deletePod(
-        context,
-        resource.namespace ?? 'default',
-        resource.name,
-      );
-    },
-    [context],
-  );
+  const handleDeleteClick = useCallback((e: React.MouseEvent, resource: K8sResource) => {
+    e.stopPropagation();
+    setConfirmingUid(resource.uid);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async (e: React.MouseEvent, resource: K8sResource) => {
+    e.stopPropagation();
+    setConfirmingUid(null);
+    await window.electronAPI.k8s.deletePod(
+      context,
+      resource.namespace ?? 'default',
+      resource.name,
+    );
+  }, [context]);
+
+  const handleDeleteCancel = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirmingUid(null);
+  }, []);
 
   // Status summary counts
   const statusCounts = useMemo(() => {
@@ -304,7 +313,7 @@ export function ResourceList({ context, namespace, kind, onSelect, onOpenLogs, o
           </div>
         ) : (
           <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-muted/30 border-b border-border z-10">
+            <thead className="sticky top-0 bg-background/70 backdrop-blur-sm border-b border-border z-10">
               <tr>
                 {columns.map((col) => (
                   <th
@@ -324,7 +333,10 @@ export function ResourceList({ context, namespace, kind, onSelect, onOpenLogs, o
               {sortedResources.map((resource) => (
                 <tr
                   key={resource.uid}
-                  className="group border-b border-border/30 hover:bg-accent/40 cursor-pointer transition-colors"
+                  className={cn(
+                    'group border-b border-border/30 hover:bg-accent/40 cursor-pointer transition-colors',
+                    confirmingUid === resource.uid && 'bg-destructive/10 hover:bg-destructive/15',
+                  )}
                   onClick={() => onSelect(resource)}
                 >
                   {columns.map((col) => (
@@ -357,53 +369,79 @@ export function ResourceList({ context, namespace, kind, onSelect, onOpenLogs, o
                     </td>
                   ))}
                   <td className="px-3 py-2">
-                    <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelect(resource);
-                        }}
-                        title="View details"
-                      >
-                        <Eye className="size-3" />
-                      </Button>
-                      {kind === 'pods' && (
+                    <div className={cn(
+                      'flex items-center justify-end gap-0.5 transition-opacity',
+                      confirmingUid === resource.uid ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                    )}>
+                      {confirmingUid === resource.uid ? (
+                        <>
+                          <Button
+                            variant="destructive"
+                            size="icon-xs"
+                            onClick={(e) => handleDeleteConfirm(e, resource)}
+                            title="Confirm delete"
+                          >
+                            <Check className="size-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={handleDeleteCancel}
+                            title="Cancel"
+                          >
+                            <X className="size-3" />
+                          </Button>
+                        </>
+                      ) : (
                         <>
                           <Button
                             variant="ghost"
                             size="icon-xs"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onOpenLogs(resource);
+                              onSelect(resource);
                             }}
-                            title="View logs"
+                            title="View details"
                           >
-                            <ScrollText className="size-3" />
+                            <Eye className="size-3" />
                           </Button>
-                          {onOpenShell && (
-                            <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onOpenShell(resource);
-                              }}
-                              title="Shell into pod"
-                            >
-                              <TerminalSquare className="size-3" />
-                            </Button>
+                          {kind === 'pods' && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onOpenLogs(resource);
+                                }}
+                                title="View logs"
+                              >
+                                <ScrollText className="size-3" />
+                              </Button>
+                              {onOpenShell && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onOpenShell(resource);
+                                  }}
+                                  title="Shell into pod"
+                                >
+                                  <TerminalSquare className="size-3" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                onClick={(e) => handleDeleteClick(e, resource)}
+                                title="Delete pod"
+                                className="hover:text-red-400"
+                              >
+                                <Trash2 className="size-3" />
+                              </Button>
+                            </>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={(e) => handleDelete(e, resource)}
-                            title="Delete pod"
-                            className="hover:text-red-400"
-                          >
-                            <Trash2 className="size-3" />
-                          </Button>
                         </>
                       )}
                     </div>

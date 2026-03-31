@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu } from 'electron';
+import { app, BrowserWindow, Menu, shell, ipcMain } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { registerTerminalIpc, killAllSessions } from './ipc/terminal';
@@ -40,6 +40,8 @@ Menu.setApplicationMenu(
     },
   ]),
 );
+
+ipcMain.handle('app:openExternal', (_event, url: string) => shell.openExternal(url));
 
 registerTerminalIpc();
 registerNotesIpc();

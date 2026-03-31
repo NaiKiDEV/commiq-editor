@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { ArrowLeft, ChevronDown, ArrowDownToLine, Copy, Check, Loader2, Search, X, Pause, Play, Box } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronsDown, Copy, Check, Loader2, Search, X, Pause, Play, Box } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
   DropdownMenu,
@@ -190,7 +190,7 @@ export function PodLogs({ context, namespace, podName, onBack }: PodLogsProps) {
               onClick={scrollToBottom}
               title="Scroll to bottom"
             >
-              <ArrowDownToLine className="size-3" />
+              <ChevronsDown className="size-3" />
             </Button>
           )}
         </div>
