@@ -37,6 +37,7 @@ import {
   ImagePlay,
   Container,
   Unplug,
+  KeySquare,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -331,6 +332,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <Container />
               <span>New Kubernetes Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() =>
+                runAction(() => createTab("secrets", "Secret Sharing"))
+              }
+            >
+              <KeySquare />
+              <span>New Secret Sharing Tab</span>
             </CommandItem>
           </CommandGroup>
 

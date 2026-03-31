@@ -28,6 +28,7 @@ import {
   Layers2,
   ImagePlay,
   Container,
+  KeySquare,
 } from "lucide-react";
 import {
   useTabs,
@@ -107,6 +108,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <Container className="size-3" />;
     case "ws":
       return <Unplug className="size-3" />;
+    case "secrets":
+      return <KeySquare className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -378,7 +381,9 @@ export function TabBar() {
           <DropdownMenuContent align="end" className="min-w-48">
             <DropdownMenuGroup>
               <DropdownMenuLabel>Dev</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => createTab("terminal", "Terminal")}>
+              <DropdownMenuItem
+                onClick={() => createTab("terminal", "Terminal")}
+              >
                 <TerminalSquare />
                 Terminal
               </DropdownMenuItem>
@@ -386,19 +391,27 @@ export function TabBar() {
                 <Globe />
                 Browser
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => createTab("http", "HTTP Client")}>
+              <DropdownMenuItem
+                onClick={() => createTab("http", "HTTP Client")}
+              >
                 <Globe2 />
                 HTTP Client
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => createTab("ws", "WebSocket Client")}>
+              <DropdownMenuItem
+                onClick={() => createTab("ws", "WebSocket Client")}
+              >
                 <Unplug />
                 WebSocket Client
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => createTab("ports", "Port Monitor")}>
+              <DropdownMenuItem
+                onClick={() => createTab("ports", "Port Monitor")}
+              >
                 <Network />
                 Port Monitor
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => createTab("process", "Process Monitor")}>
+              <DropdownMenuItem
+                onClick={() => createTab("process", "Process Monitor")}
+              >
                 <Cpu />
                 Process Monitor
               </DropdownMenuItem>
@@ -423,11 +436,15 @@ export function TabBar() {
                 <Timer />
                 Timers
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => createTab("workflow", "Workflows")}>
+              <DropdownMenuItem
+                onClick={() => createTab("workflow", "Workflows")}
+              >
                 <Zap />
                 Workflows
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => createTab("whiteboard", "Whiteboard")}>
+              <DropdownMenuItem
+                onClick={() => createTab("whiteboard", "Whiteboard")}
+              >
                 <LayoutDashboard />
                 Whiteboard
               </DropdownMenuItem>
@@ -436,15 +453,21 @@ export function TabBar() {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuLabel>Text & Data</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => createTab("diff", "Diff Viewer")}>
+              <DropdownMenuItem
+                onClick={() => createTab("diff", "Diff Viewer")}
+              >
                 <GitCompare />
                 Diff Viewer
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => createTab("regex", "Regex Playground")}>
+              <DropdownMenuItem
+                onClick={() => createTab("regex", "Regex Playground")}
+              >
                 <Regex />
                 Regex Playground
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => createTab("data", "Data Viewer")}>
+              <DropdownMenuItem
+                onClick={() => createTab("data", "Data Viewer")}
+              >
                 <FileJson2 />
                 Data Viewer
               </DropdownMenuItem>
@@ -452,28 +475,44 @@ export function TabBar() {
                 <ShieldCheck />
                 Encoder/Decoder
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => createTab("secrets", "Secret Sharing")}
+              >
+                <KeySquare />
+                Secret Sharing
+              </DropdownMenuItem>
             </DropdownMenuGroup>
 
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuLabel>Low-level</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => createTab("numbase", "Number Base")}>
+              <DropdownMenuItem
+                onClick={() => createTab("numbase", "Number Base")}
+              >
                 <Binary />
                 Number Base
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => createTab("ieee754", "IEEE 754")}>
+              <DropdownMenuItem
+                onClick={() => createTab("ieee754", "IEEE 754")}
+              >
                 <Sigma />
                 IEEE 754 Inspector
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => createTab("hexdump", "Hex Dump")}>
+              <DropdownMenuItem
+                onClick={() => createTab("hexdump", "Hex Dump")}
+              >
                 <FileCode2 />
                 Hex Dump Viewer
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => createTab("endian", "Endianness")}>
+              <DropdownMenuItem
+                onClick={() => createTab("endian", "Endianness")}
+              >
                 <ArrowLeftRight />
                 Endianness Converter
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => createTab("bitfield", "Bit Field Editor")}>
+              <DropdownMenuItem
+                onClick={() => createTab("bitfield", "Bit Field Editor")}
+              >
                 <Layers2 />
                 Bit Field Editor
               </DropdownMenuItem>
@@ -482,7 +521,9 @@ export function TabBar() {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuLabel>Generators & Utils</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => createTab("uuid", "UUID Generator")}>
+              <DropdownMenuItem
+                onClick={() => createTab("uuid", "UUID Generator")}
+              >
                 <Fingerprint />
                 UUID Generator
               </DropdownMenuItem>
@@ -494,11 +535,15 @@ export function TabBar() {
                 <CalendarClock />
                 Cron Builder
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => createTab("color", "Color Picker")}>
+              <DropdownMenuItem
+                onClick={() => createTab("color", "Color Picker")}
+              >
                 <Pipette />
                 Color Picker
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => createTab("svg", "SVG Optimizer")}>
+              <DropdownMenuItem
+                onClick={() => createTab("svg", "SVG Optimizer")}
+              >
                 <ImagePlay />
                 SVG Optimizer
               </DropdownMenuItem>
