@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/renderer/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/renderer/components/ui/select";
 import { useSettings } from "@/renderer/contexts/settings";
 import { cn } from "@/lib/utils";
 
@@ -107,38 +108,36 @@ function TerminalTab() {
       </div>
       <div className="flex items-center justify-between py-2 border-b border-border/40">
         <span className="text-sm text-foreground">Cursor Style</span>
-        <select
+        <Select
           value={terminal.cursorStyle}
-          onChange={(e) =>
-            updateSettings({
-              terminal: {
-                cursorStyle: e.target.value as "block" | "underline" | "bar",
-              },
-            })
-          }
-          className="h-7 px-2 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
+          onValueChange={(v) => updateSettings({ terminal: { cursorStyle: v as "block" | "underline" | "bar" } })}
         >
-          <option value="block">Block</option>
-          <option value="underline">Underline</option>
-          <option value="bar">Bar</option>
-        </select>
+          <SelectTrigger className="h-7 text-xs w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="block">Block</SelectItem>
+            <SelectItem value="underline">Underline</SelectItem>
+            <SelectItem value="bar">Bar</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div className="flex items-center justify-between py-2 border-b border-border/40">
         <span className="text-sm text-foreground">Shell</span>
-        <select
-          value={terminal.shell}
-          onChange={(e) =>
-            updateSettings({ terminal: { shell: e.target.value } })
-          }
-          className="w-64 h-7 px-2 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
+        <Select
+          value={terminal.shell || "__default__"}
+          onValueChange={(v) => updateSettings({ terminal: { shell: v === "__default__" ? "" : v } })}
         >
-          <option value="">System default</option>
-          {availableShells.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="h-7 text-xs w-64">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__default__">System default</SelectItem>
+            {availableShells.map((s) => (
+              <SelectItem key={s} value={s}>{s}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="flex items-center justify-between py-2 border-b border-border/40">
         <span className="text-sm text-foreground">Scrollback Lines</span>

@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Copy, Check, RefreshCw } from 'lucide-react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { Copy, Check, RefreshCw, Plus, X, Hash, Globe } from 'lucide-react';
 import { Button } from './ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -48,38 +49,66 @@ function humanRelative(date: Date): string {
   return 'just now';
 }
 
-const TIMEZONES = [
-  'UTC',
-  'America/New_York',
-  'America/Chicago',
-  'America/Denver',
-  'America/Los_Angeles',
-  'Europe/London',
-  'Europe/Paris',
-  'Europe/Berlin',
-  'Asia/Tokyo',
-  'Asia/Shanghai',
-  'Asia/Kolkata',
-  'Australia/Sydney',
-];
-
-function formatInZone(date: Date, tz: string): string {
+function formatInZone(date: Date, tz: string): { time: string; offset: string; label: string } {
   try {
-    return new Intl.DateTimeFormat('en-US', {
+    const time = new Intl.DateTimeFormat('en-US', {
       timeZone: tz,
-      year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
       hour12: false,
-      timeZoneName: 'short',
     }).format(date);
+
+    const parts = new Intl.DateTimeFormat('en', {
+      timeZone: tz,
+      timeZoneName: 'shortOffset',
+    }).formatToParts(date);
+    const offset = parts.find((p) => p.type === 'timeZoneName')?.value ?? '';
+    const label = tz === 'UTC' ? 'UTC' : tz.split('/').pop()?.replace(/_/g, ' ') ?? tz;
+
+    return { time, offset, label };
   } catch {
-    return '—';
+    return { time: '—', offset: '', label: tz };
   }
 }
+
+function validateTz(tz: string): boolean {
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ── constants ─────────────────────────────────────────────────────────────────
+
+const DEFAULT_TIMEZONES = [
+  'UTC',
+  'America/New_York',
+  'America/Los_Angeles',
+  'Europe/London',
+  'Europe/Paris',
+  'Asia/Tokyo',
+  'Asia/Shanghai',
+  'Asia/Kolkata',
+  'Australia/Sydney',
+];
+
+const TZ_SUGGESTIONS = [
+  'UTC',
+  'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+  'America/Toronto', 'America/Vancouver', 'America/Sao_Paulo', 'America/Mexico_City',
+  'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Amsterdam',
+  'Europe/Rome', 'Europe/Madrid', 'Europe/Stockholm', 'Europe/Warsaw',
+  'Europe/Moscow', 'Europe/Istanbul',
+  'Asia/Dubai', 'Asia/Kolkata', 'Asia/Bangkok', 'Asia/Singapore',
+  'Asia/Tokyo', 'Asia/Seoul', 'Asia/Shanghai', 'Asia/Hong_Kong',
+  'Australia/Sydney', 'Australia/Melbourne', 'Pacific/Auckland',
+  'Pacific/Honolulu', 'Africa/Cairo', 'Africa/Johannesburg',
+];
 
 // ── copy hook ─────────────────────────────────────────────────────────────────
 
@@ -93,37 +122,58 @@ function useCopy() {
   return { copiedKey, copy };
 }
 
-// ── section label ─────────────────────────────────────────────────────────────
+// ── sub-components ────────────────────────────────────────────────────────────
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function SectionHeader({
+  icon,
+  label,
+  colorClass,
+  action,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  colorClass: string;
+  action?: React.ReactNode;
+}) {
   return (
-    <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-      {children}
-    </span>
+    <div className="flex items-center justify-between px-4 py-2">
+      <div className={cn('flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-semibold', colorClass)}>
+        {icon}
+        {label}
+      </div>
+      {action}
+    </div>
   );
 }
 
-// ── copyable row ──────────────────────────────────────────────────────────────
-
-function CopyRow({ label, value, copyKey, copiedKey, onCopy }: {
+function FormatCard({
+  label,
+  value,
+  copyKey,
+  copiedKey,
+  onCopy,
+}: {
   label: string;
   value: string;
   copyKey: string;
   copiedKey: string | null;
   onCopy: (v: string, k: string) => void;
 }) {
+  const copied = copiedKey === copyKey;
   return (
     <button
       onClick={() => onCopy(value, copyKey)}
-      className="flex items-center justify-between w-full px-3 py-1.5 rounded hover:bg-muted/40 transition-colors text-left group"
+      className="group flex flex-col gap-1 p-2.5 rounded-lg bg-muted/20 border border-border/50 hover:border-teal-500/30 hover:bg-teal-500/5 transition-all text-left"
     >
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground w-28 shrink-0">{label}</span>
-      <span className="flex-1 font-mono text-xs text-foreground">{value}</span>
-      <span className="opacity-0 group-hover:opacity-100 transition-opacity ml-2">
-        {copiedKey === copyKey
-          ? <Check className="size-3 text-green-400" />
-          : <Copy className="size-3 text-muted-foreground" />}
-      </span>
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] uppercase tracking-widest text-teal-400/70 font-semibold">{label}</span>
+        <span className={cn('transition-opacity', copied ? 'opacity-100' : 'opacity-0 group-hover:opacity-60')}>
+          {copied
+            ? <Check className="size-2.5 text-green-400" />
+            : <Copy className="size-2.5 text-muted-foreground" />}
+        </span>
+      </div>
+      <span className="font-mono text-[11px] text-foreground/90 truncate w-full">{value}</span>
     </button>
   );
 }
@@ -136,6 +186,11 @@ export function EpochPanel({ panelId: _panelId }: { panelId: string }) {
   const [addValue, setAddValue] = useState('');
   const [addUnit, setAddUnit] = useState<'seconds' | 'minutes' | 'hours' | 'days' | 'weeks'>('days');
   const [liveMode, setLiveMode] = useState(false);
+  const [timezones, setTimezones] = useState<string[]>(DEFAULT_TIMEZONES);
+  const [addingTz, setAddingTz] = useState(false);
+  const [tzInput, setTzInput] = useState('');
+  const [tzError, setTzError] = useState('');
+  const tzInputRef = useRef<HTMLInputElement>(null);
   const { copiedKey, copy } = useCopy();
 
   // Live tick
@@ -149,6 +204,11 @@ export function EpochPanel({ panelId: _panelId }: { panelId: string }) {
     return () => clearInterval(id);
   }, [liveMode]);
 
+  // Focus tz input when it opens
+  useEffect(() => {
+    if (addingTz) setTimeout(() => tzInputRef.current?.focus(), 50);
+  }, [addingTz]);
+
   const date = useMemo(() => {
     const n = Number(epochInput);
     if (!isNaN(n) && epochInput.trim() !== '') return epochToDate(n);
@@ -159,18 +219,14 @@ export function EpochPanel({ panelId: _panelId }: { panelId: string }) {
     setLiveMode(false);
     setEpochInput(value);
     const n = Number(value);
-    if (!isNaN(n) && value.trim() !== '') {
-      setDateInput(toLocalIso(new Date(n * 1000)));
-    }
+    if (!isNaN(n) && value.trim() !== '') setDateInput(toLocalIso(new Date(n * 1000)));
   }, []);
 
   const handleDateChange = useCallback((value: string) => {
     setLiveMode(false);
     setDateInput(value);
     const d = new Date(value);
-    if (!isNaN(d.getTime())) {
-      setEpochInput(String(dateToEpoch(d)));
-    }
+    if (!isNaN(d.getTime())) setEpochInput(String(dateToEpoch(d)));
   }, []);
 
   const handleNow = useCallback(() => {
@@ -189,153 +245,247 @@ export function EpochPanel({ panelId: _panelId }: { panelId: string }) {
     setDateInput(toLocalIso(newDate));
   }, [addValue, addUnit, date]);
 
+  const handleAddTz = useCallback(() => {
+    const tz = tzInput.trim();
+    if (!tz) return;
+    if (!validateTz(tz)) { setTzError('Invalid IANA timezone'); return; }
+    if (timezones.includes(tz)) { setTzError('Already added'); return; }
+    setTimezones((prev) => [...prev, tz]);
+    setTzInput('');
+    setTzError('');
+    setAddingTz(false);
+  }, [tzInput, timezones]);
+
+  const handleRemoveTz = useCallback((tz: string) => {
+    setTimezones((prev) => prev.filter((t) => t !== tz));
+  }, []);
+
+  const isFuture = date ? date.getTime() > Date.now() : false;
+  const relativeText = date ? humanRelative(date) : null;
+
   return (
     <div className="flex flex-col h-full bg-background text-foreground text-sm overflow-y-auto">
-      {/* Converter */}
-      <div className="flex flex-col gap-3 px-4 pt-4 pb-3 border-b border-border">
-        <div className="flex items-center justify-between">
-          <SectionLabel>Converter</SectionLabel>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={handleNow}
-              title="Set to now"
-            >
-              <RefreshCw className="size-3" />
-              Now
-            </Button>
+
+      {/* ── Converter hero ─────────────────────────────────────────────── */}
+      <div className="px-3 pt-3 pb-2">
+        <div className="rounded-xl border border-border/60 overflow-hidden bg-muted/10">
+          {/* Header bar */}
+          <div className="flex items-center justify-between px-3 py-2 bg-muted/20 border-b border-border/40">
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => {
+                  setLiveMode((v) => !v);
+                  if (!liveMode) {
+                    const now = nowEpoch();
+                    setEpochInput(String(now));
+                    setDateInput(toLocalIso(new Date(now * 1000)));
+                  }
+                }}
+                className={cn(
+                  'flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium border transition-all',
+                  liveMode
+                    ? 'bg-green-500/15 border-green-500/40 text-green-400'
+                    : 'border-border/50 text-muted-foreground hover:text-foreground hover:border-border',
+                )}
+              >
+                <span className={cn('w-1.5 h-1.5 rounded-full', liveMode ? 'bg-green-400 animate-pulse' : 'bg-muted-foreground/50')} />
+                Live
+              </button>
+              <Button variant="ghost" size="xs" onClick={handleNow} className="text-muted-foreground hover:text-foreground">
+                <RefreshCw className="size-3" />
+                Now
+              </Button>
+            </div>
+
+            {relativeText && (
+              <span className={cn(
+                'text-[10px] font-mono px-2 py-0.5 rounded-full border font-medium',
+                isFuture
+                  ? 'bg-orange-500/10 border-orange-500/25 text-orange-300'
+                  : 'bg-green-500/10 border-green-500/25 text-green-300',
+              )}>
+                {relativeText}
+              </span>
+            )}
+          </div>
+
+          {/* Epoch input */}
+          <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border/30">
+            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+              <span className="text-[9px] uppercase tracking-widest text-muted-foreground/50 font-medium">Unix (seconds)</span>
+              <input
+                type="number"
+                value={epochInput}
+                onChange={(e) => handleEpochChange(e.target.value)}
+                className="bg-transparent font-mono text-base font-medium text-foreground outline-none w-full placeholder:text-muted-foreground/30"
+                placeholder="1700000000"
+              />
+            </div>
             <button
-              onClick={() => {
-                setLiveMode((v) => !v);
-                if (!liveMode) {
-                  const now = nowEpoch();
-                  setEpochInput(String(now));
-                  setDateInput(toLocalIso(new Date(now * 1000)));
-                }
-              }}
-              className={cn(
-                'flex items-center gap-1.5 px-2 py-1 rounded text-xs border transition-colors',
-                liveMode
-                  ? 'bg-primary/15 border-primary/40 text-primary'
-                  : 'border-border text-muted-foreground hover:text-foreground',
-              )}
+              onClick={() => copy(epochInput, 'epoch')}
+              className="shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
             >
-              <span className={cn('w-1.5 h-1.5 rounded-full', liveMode ? 'bg-primary animate-pulse' : 'bg-muted-foreground')} />
-              Live
+              {copiedKey === 'epoch' ? <Check className="size-3 text-green-400" /> : <Copy className="size-3" />}
+            </button>
+          </div>
+
+          {/* Datetime input */}
+          <div className="flex items-center gap-2 px-3 py-2.5">
+            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+              <span className="text-[9px] uppercase tracking-widest text-muted-foreground/50 font-medium">Local date & time</span>
+              <input
+                type="datetime-local"
+                value={dateInput}
+                onChange={(e) => handleDateChange(e.target.value)}
+                step="1"
+                className="bg-transparent font-mono text-sm text-foreground outline-none w-full"
+              />
+            </div>
+            <button
+              onClick={() => copy(dateInput, 'datetime')}
+              className="shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+            >
+              {copiedKey === 'datetime' ? <Check className="size-3 text-green-400" /> : <Copy className="size-3" />}
             </button>
           </div>
         </div>
-
-        {/* Epoch input */}
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] text-muted-foreground">Unix Timestamp (seconds)</label>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              value={epochInput}
-              onChange={(e) => handleEpochChange(e.target.value)}
-              className="flex-1 bg-muted/40 border border-border rounded px-3 py-1.5 font-mono text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring/30"
-              placeholder="1700000000"
-            />
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => copy(epochInput, 'epoch')}
-            >
-              {copiedKey === 'epoch' ? <Check className="text-green-400" /> : <Copy />}
-            </Button>
-          </div>
-        </div>
-
-        {/* Date/time input */}
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] text-muted-foreground">Local Date & Time</label>
-          <div className="flex items-center gap-2">
-            <input
-              type="datetime-local"
-              value={dateInput}
-              onChange={(e) => handleDateChange(e.target.value)}
-              step="1"
-              className="flex-1 bg-muted/40 border border-border rounded px-3 py-1.5 font-mono text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring/30"
-            />
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => copy(dateInput, 'datetime')}
-            >
-              {copiedKey === 'datetime' ? <Check className="text-green-400" /> : <Copy />}
-            </Button>
-          </div>
-        </div>
-
-        {/* Relative */}
-        {date && (
-          <p className="text-xs text-muted-foreground px-1">
-            {humanRelative(date)}
-          </p>
-        )}
       </div>
 
-      {/* Formats */}
+      {/* ── Formats ────────────────────────────────────────────────────── */}
       {date && (
-        <div className="flex flex-col py-1 border-b border-border">
-          <div className="px-4 py-2">
-            <SectionLabel>Formats</SectionLabel>
+        <div className="flex flex-col border-t border-border/40">
+          <SectionHeader icon={<Hash className="size-2.5" />} label="Formats" colorClass="text-teal-400" />
+          <div className="grid grid-cols-2 gap-1.5 px-3 pb-3">
+            <FormatCard label="ISO 8601" value={date.toISOString()} copyKey="iso" copiedKey={copiedKey} onCopy={copy} />
+            <FormatCard label="UTC" value={date.toUTCString()} copyKey="utc" copiedKey={copiedKey} onCopy={copy} />
+            <FormatCard label="Local" value={date.toLocaleString()} copyKey="local" copiedKey={copiedKey} onCopy={copy} />
+            <FormatCard label="Epoch ms" value={String(date.getTime())} copyKey="ms" copiedKey={copiedKey} onCopy={copy} />
+            <FormatCard label="Epoch s" value={epochInput} copyKey="epoch2" copiedKey={copiedKey} onCopy={copy} />
           </div>
-          <CopyRow label="ISO 8601" value={date.toISOString()} copyKey="iso" copiedKey={copiedKey} onCopy={copy} />
-          <CopyRow label="UTC" value={date.toUTCString()} copyKey="utc" copiedKey={copiedKey} onCopy={copy} />
-          <CopyRow label="Local" value={date.toLocaleString()} copyKey="local" copiedKey={copiedKey} onCopy={copy} />
-          <CopyRow label="Epoch (ms)" value={String(date.getTime())} copyKey="ms" copiedKey={copiedKey} onCopy={copy} />
-          <CopyRow label="Epoch (s)" value={epochInput} copyKey="epoch2" copiedKey={copiedKey} onCopy={copy} />
         </div>
       )}
 
-      {/* Date math */}
-      <div className="flex flex-col gap-2 px-4 py-3 border-b border-border">
-        <SectionLabel>Date Math</SectionLabel>
-        <div className="flex items-center gap-2">
+      {/* ── Date Math ──────────────────────────────────────────────────── */}
+      <div className="flex flex-col border-t border-border/40">
+        <SectionHeader icon={<span className="text-[10px] font-bold leading-none">±</span>} label="Date Math" colorClass="text-violet-400" />
+        <div className="flex items-center gap-2 px-3 pb-3">
           <input
             type="number"
             value={addValue}
             onChange={(e) => setAddValue(e.target.value)}
             placeholder="±"
-            className="w-20 bg-muted/40 border border-border rounded px-2 py-1 font-mono text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring/30"
+            className="w-20 bg-muted/30 border border-border/60 rounded-lg px-2.5 py-1.5 font-mono text-xs outline-none focus:border-violet-500/40 focus:bg-violet-500/5 transition-colors"
           />
-          <select
-            value={addUnit}
-            onChange={(e) => setAddUnit(e.target.value as typeof addUnit)}
-            className="bg-muted/40 border border-border rounded px-2 py-1 text-xs outline-none focus:border-ring"
+          <Select value={addUnit} onValueChange={(v) => setAddUnit(v as typeof addUnit)}>
+            <SelectTrigger className="flex-1 text-xs h-7">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="seconds">Seconds</SelectItem>
+              <SelectItem value="minutes">Minutes</SelectItem>
+              <SelectItem value="hours">Hours</SelectItem>
+              <SelectItem value="days">Days</SelectItem>
+              <SelectItem value="weeks">Weeks</SelectItem>
+            </SelectContent>
+          </Select>
+          <button
+            onClick={handleAdd}
+            disabled={!addValue || !date}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-500/15 border border-violet-500/30 text-violet-300 hover:bg-violet-500/25 hover:border-violet-500/50 transition-all disabled:opacity-30 disabled:pointer-events-none"
           >
-            <option value="seconds">Seconds</option>
-            <option value="minutes">Minutes</option>
-            <option value="hours">Hours</option>
-            <option value="days">Days</option>
-            <option value="weeks">Weeks</option>
-          </select>
-          <Button variant="outline" size="xs" onClick={handleAdd}>
             Apply
-          </Button>
+          </button>
         </div>
       </div>
 
-      {/* Timezone table */}
+      {/* ── Timezones ──────────────────────────────────────────────────── */}
       {date && (
-        <div className="flex flex-col border-b border-border">
-          <div className="px-4 py-2 border-b border-border">
-            <SectionLabel>Timezones</SectionLabel>
-          </div>
-          <div>
-            {TIMEZONES.map((tz) => (
-              <CopyRow
-                key={tz}
-                label={tz.split('/').pop() ?? tz}
-                value={formatInZone(date, tz)}
-                copyKey={`tz-${tz}`}
-                copiedKey={copiedKey}
-                onCopy={copy}
-              />
-            ))}
+        <div className="flex flex-col border-t border-border/40 pb-2">
+          <SectionHeader
+            icon={<Globe className="size-2.5" />}
+            label="Timezones"
+            colorClass="text-amber-400"
+            action={
+              <button
+                onClick={() => { setAddingTz(true); setTzInput(''); setTzError(''); }}
+                className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border border-border/50 text-muted-foreground hover:text-amber-400 hover:border-amber-500/30 hover:bg-amber-500/5 transition-all"
+              >
+                <Plus className="size-2.5" />
+                Add
+              </button>
+            }
+          />
+
+          {/* Add timezone inline input */}
+          {addingTz && (
+            <div className="flex flex-col gap-1 px-3 pb-2">
+              <div className="flex items-center gap-2">
+                <input
+                  ref={tzInputRef}
+                  list="tz-suggestions"
+                  value={tzInput}
+                  onChange={(e) => { setTzInput(e.target.value); setTzError(''); }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddTz();
+                    if (e.key === 'Escape') { setAddingTz(false); setTzError(''); }
+                  }}
+                  onBlur={() => { if (!tzInput) { setAddingTz(false); setTzError(''); } }}
+                  placeholder="e.g. Europe/Berlin"
+                  className="flex-1 bg-muted/30 border border-border/60 rounded-lg px-2.5 py-1.5 font-mono text-xs outline-none focus:border-amber-500/40 focus:bg-amber-500/5 transition-colors"
+                />
+                <button
+                  onClick={handleAddTz}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 transition-all"
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => { setAddingTz(false); setTzError(''); }}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+              {tzError && <p className="text-[10px] text-red-400 pl-1">{tzError}</p>}
+              <datalist id="tz-suggestions">
+                {TZ_SUGGESTIONS.map((tz) => <option key={tz} value={tz} />)}
+              </datalist>
+            </div>
+          )}
+
+          {/* Rows */}
+          <div className="flex flex-col divide-y divide-border/20 px-1">
+            {timezones.map((tz) => {
+              const { time, offset, label } = formatInZone(date, tz);
+              const copyKey = `tz-${tz}`;
+              return (
+                <div key={tz} className="group flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-muted/20 transition-colors">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="text-xs font-medium text-foreground/90 truncate">{label}</span>
+                    <span className="shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400/80">
+                      {offset}
+                    </span>
+                  </div>
+                  <span className="font-mono text-[11px] text-muted-foreground shrink-0">{time}</span>
+                  <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => copy(time, copyKey)}
+                      className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                    >
+                      {copiedKey === copyKey ? <Check className="size-2.5 text-green-400" /> : <Copy className="size-2.5" />}
+                    </button>
+                    {timezones.length > 1 && (
+                      <button
+                        onClick={() => handleRemoveTz(tz)}
+                        className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        <X className="size-2.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

@@ -38,11 +38,13 @@ type View =
 const SIDEBAR_CATEGORIES: {
   label: string;
   icon: React.ReactNode;
+  color: string;
   items: { kind: ResourceKind; label: string }[];
 }[] = [
   {
     label: 'Cluster',
     icon: <Server className="size-3" />,
+    color: 'text-teal-400',
     items: [
       { kind: 'nodes', label: 'Nodes' },
       { kind: 'namespaces', label: 'Namespaces' },
@@ -51,6 +53,7 @@ const SIDEBAR_CATEGORIES: {
   {
     label: 'Workloads',
     icon: <Box className="size-3" />,
+    color: 'text-violet-400',
     items: [
       { kind: 'pods', label: 'Pods' },
       { kind: 'deployments', label: 'Deployments' },
@@ -63,6 +66,7 @@ const SIDEBAR_CATEGORIES: {
   {
     label: 'Network',
     icon: <Network className="size-3" />,
+    color: 'text-emerald-400',
     items: [
       { kind: 'services', label: 'Services' },
       { kind: 'ingresses', label: 'Ingresses' },
@@ -71,6 +75,7 @@ const SIDEBAR_CATEGORIES: {
   {
     label: 'Config & Storage',
     icon: <Database className="size-3" />,
+    color: 'text-amber-400',
     items: [
       { kind: 'configmaps', label: 'ConfigMaps' },
       { kind: 'secrets', label: 'Secrets' },
@@ -148,7 +153,9 @@ export function KubernetesPanel({ panelId: _panelId }: { panelId: string }) {
   const handleRefreshContexts = useCallback(() => {
     setLoadingContexts(true);
     setError(null);
-    window.electronAPI.k8s.contexts().then((result) => {
+    window.electronAPI.k8s.reloadConfig().then(() =>
+      window.electronAPI.k8s.contexts()
+    ).then((result) => {
       if ('error' in result) {
         setError(result.error);
       } else {
@@ -193,9 +200,19 @@ export function KubernetesPanel({ panelId: _panelId }: { panelId: string }) {
         <div className="p-2.5 space-y-2 border-b border-border">
           {/* Context */}
           <div>
-            <label className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium mb-1 block px-0.5">
-              Context
-            </label>
+            <div className="flex items-center justify-between mb-1 px-0.5">
+              <label className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium">
+                Context
+              </label>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                title="Reload kubeconfig"
+                onClick={handleRefreshContexts}
+              >
+                <RefreshCw className="size-3" />
+              </Button>
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
@@ -266,7 +283,7 @@ export function KubernetesPanel({ panelId: _panelId }: { panelId: string }) {
         <div className="flex-1 overflow-y-auto py-1">
           {SIDEBAR_CATEGORIES.map((category) => (
             <div key={category.label} className="mb-1">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium">
+              <div className={cn('flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-wider font-medium', category.color)}>
                 {category.icon}
                 {category.label}
               </div>

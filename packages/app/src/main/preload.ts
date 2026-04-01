@@ -502,6 +502,9 @@ const electronAPI = {
   },
 
   k8s: {
+    reloadConfig: () =>
+      ipcRenderer.invoke('k8s:config:reload') as Promise<void>,
+
     contexts: () =>
       ipcRenderer.invoke('k8s:contexts') as Promise<{
         contexts: Array<{ name: string; cluster: string; namespace: string | null }>;

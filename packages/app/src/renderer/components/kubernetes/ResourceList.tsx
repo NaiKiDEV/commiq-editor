@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Loader2, RefreshCw, Eye, ScrollText, Trash2, Search, X, TerminalSquare, WifiOff, Check } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '@/lib/utils';
@@ -113,19 +113,22 @@ export function ResourceList({ context, namespace, kind, onSelect, onOpenLogs, o
   const [resources, setResources] = useState<Map<string, K8sResource>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [watchId, setWatchId] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
   const [showFilter, setShowFilter] = useState(false);
   const [confirmingUid, setConfirmingUid] = useState<string | null>(null);
 
+  // Ref holds the teardown for whichever watch is currently active,
+  // so the Refresh button can stop it without stale-closure issues.
+  const cleanupRef = useRef<(() => void) | null>(null);
+
   const loadAndWatch = useCallback(() => {
+    // Stop any existing watch before starting a new one
+    cleanupRef.current?.();
+    cleanupRef.current = null;
+
     setLoading(true);
     setError(null);
     setResources(new Map());
-
-    if (watchId) {
-      window.electronAPI.k8s.watchStop(watchId);
-    }
 
     window.electronAPI.k8s.list(context, kind, namespace).then((result) => {
       if ('error' in result) {
@@ -142,7 +145,6 @@ export function ResourceList({ context, namespace, kind, onSelect, onOpenLogs, o
     });
 
     const newWatchId = crypto.randomUUID();
-    setWatchId(newWatchId);
 
     const unsubscribe = window.electronAPI.k8s.onWatchEvent(newWatchId, (evt) => {
       const event = evt as K8sWatchEvent;
@@ -159,17 +161,22 @@ export function ResourceList({ context, namespace, kind, onSelect, onOpenLogs, o
 
     window.electronAPI.k8s.watchStart(context, kind, newWatchId, namespace);
 
-    return () => {
+    const cleanup = () => {
       unsubscribe();
       window.electronAPI.k8s.watchStop(newWatchId);
     };
+    cleanupRef.current = cleanup;
+    return cleanup;
   }, [context, namespace, kind]);
 
   useEffect(() => {
     setFilter('');
     setShowFilter(false);
     const cleanup = loadAndWatch();
-    return cleanup;
+    return () => {
+      cleanup();
+      cleanupRef.current = null;
+    };
   }, [loadAndWatch]);
 
   const columns = useMemo(() => getColumns(kind), [kind]);
@@ -306,7 +313,7 @@ export function ResourceList({ context, namespace, kind, onSelect, onOpenLogs, o
               {filter ? `No ${kind} matching "${filter}"` : `No ${kind} found`}
             </span>
             {filter && (
-              <button onClick={() => setFilter('')} className="text-[10px] text-blue-400 hover:underline">
+              <button onClick={() => setFilter('')} className="text-[10px] text-teal-400 hover:underline">
                 Clear filter
               </button>
             )}

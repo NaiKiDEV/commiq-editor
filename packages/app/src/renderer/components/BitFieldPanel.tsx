@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Plus, Trash2, Save, BookOpen, ChevronLeft, Edit2, Check, X, Copy } from 'lucide-react';
 import { Button } from './ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -251,16 +252,17 @@ function FieldForm({
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-[10px] text-muted-foreground">Access</label>
-          <select
-            value={access}
-            onChange={(e) => setAccess(e.target.value as FieldDef['access'])}
-            className="bg-muted/40 border border-border rounded px-2 py-1 text-xs outline-none focus:border-ring"
-          >
-            <option value="RW">RW — Read/Write</option>
-            <option value="RO">RO — Read Only</option>
-            <option value="WO">WO — Write Only</option>
-            <option value="RC">RC — Read/Clear</option>
-          </select>
+          <Select value={access} onValueChange={(v) => setAccess(v as FieldDef['access'])}>
+            <SelectTrigger className="text-xs h-7">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="RW">RW — Read/Write</SelectItem>
+              <SelectItem value="RO">RO — Read Only</SelectItem>
+              <SelectItem value="WO">WO — Write Only</SelectItem>
+              <SelectItem value="RC">RC — Read/Clear</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -770,18 +772,22 @@ export function BitFieldPanel({ panelId: _panelId }: { panelId: string }) {
                   {/* Value editor */}
                   <div className="flex items-center gap-1.5 shrink-0">
                     {field.enums.length > 0 ? (
-                      <select
-                        value={Number(value)}
-                        onChange={(e) => handleFieldValueChange(field, BigInt(e.target.value))}
-                        className="bg-muted/40 border border-border rounded px-1.5 py-1 text-xs font-mono outline-none focus:border-ring"
+                      <Select
+                        value={String(Number(value))}
+                        onValueChange={(v) => handleFieldValueChange(field, BigInt(v))}
                       >
-                        {field.enums.map((e) => (
-                          <option key={e.value} value={e.value}>{e.value} — {e.label}</option>
-                        ))}
-                        {!field.enums.find((e) => BigInt(e.value) === value) && (
-                          <option value={Number(value)}>{Number(value)} — (unnamed)</option>
-                        )}
-                      </select>
+                        <SelectTrigger className="text-xs h-7 font-mono">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {field.enums.map((e) => (
+                            <SelectItem key={e.value} value={String(e.value)}>{e.value} — {e.label}</SelectItem>
+                          ))}
+                          {!field.enums.find((e) => BigInt(e.value) === value) && (
+                            <SelectItem value={String(Number(value))}>{Number(value)} — (unnamed)</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
                     ) : (
                       <input
                         type="number"

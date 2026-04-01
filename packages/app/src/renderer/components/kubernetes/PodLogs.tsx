@@ -171,7 +171,7 @@ export function PodLogs({ context, namespace, podName, onBack }: PodLogsProps) {
             size="icon-xs"
             onClick={() => setShowFilter(!showFilter)}
             title="Filter logs"
-            className={cn(filter && 'text-blue-400')}
+            className={cn(filter && 'text-teal-400')}
           >
             <Search className="size-3" />
           </Button>

@@ -1,5 +1,28 @@
 # Developer Tools
 
+## Installation
+
+### macOS — "App is damaged" / "developer cannot be verified"
+
+The app is not code-signed, so macOS Gatekeeper blocks it on first launch. It is not actually damaged.
+
+**Option 1 — System Settings (no terminal needed)**
+
+1. Try to open the app — it will be blocked.
+2. Open **System Settings → Privacy & Security**, scroll down.
+3. Click **Open Anyway** next to the Commiq Editor entry.
+4. Confirm in the dialog that appears.
+
+**Option 2 — Terminal (one command)**
+
+```bash
+xattr -cr /path/to/CommiqEditor.app
+```
+
+Replace the path with wherever you placed the `.app` (e.g. `/Applications/CommiqEditor.app`). After running this, open the app normally.
+
+---
+
 ## Running locally
 
 **Prerequisites:** Node.js, [pnpm](https://pnpm.io/installation)

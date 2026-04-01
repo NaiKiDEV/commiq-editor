@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { diffLines } from 'diff';
 import { GitCompare, AlignJustify, Columns2, Copy, Check, Trash2, ArrowLeftRight, Braces } from 'lucide-react';
 import { Button } from './ui/button';
@@ -38,6 +38,32 @@ export function DiffViewerPanel({ panelId: _panelId }: { panelId: string }) {
   const [copied, setCopied] = useState(false);
   const origRef = useRef<HTMLTextAreaElement>(null);
   const modRef = useRef<HTMLTextAreaElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [inputHeightPct, setInputHeightPct] = useState(40);
+  const dragging = useRef(false);
+
+  const handleDividerPointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    dragging.current = true;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const handleDividerPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const pct = ((e.clientY - rect.top) / rect.height) * 100;
+    setInputHeightPct(Math.min(75, Math.max(15, pct)));
+  }, []);
+
+  const handleDividerPointerUp = useCallback(() => {
+    dragging.current = false;
+  }, []);
+
+  useEffect(() => {
+    const onUp = () => { dragging.current = false; };
+    window.addEventListener('pointerup', onUp);
+    return () => window.removeEventListener('pointerup', onUp);
+  }, []);
 
   const stats = useMemo(() => computeStats(original, modified), [original, modified]);
   const hasDiff = original !== '' || modified !== '';
@@ -73,9 +99,17 @@ export function DiffViewerPanel({ panelId: _panelId }: { panelId: string }) {
   }, [buildUnifiedText]);
 
   return (
-    <div className="flex flex-col h-full bg-background text-foreground text-sm">
+    <div
+      ref={containerRef}
+      className="flex flex-col h-full bg-background text-foreground text-sm"
+      onPointerMove={handleDividerPointerMove}
+      onPointerUp={handleDividerPointerUp}
+    >
       {/* Input row */}
-      <div className="grid grid-cols-2 gap-0 border-b border-border flex-1 min-h-0">
+      <div
+        className="grid grid-cols-2 gap-0 border-b border-border min-h-0 overflow-hidden"
+        style={{ height: `${inputHeightPct}%` }}
+      >
         {/* Original */}
         <div className="flex flex-col border-r border-border min-h-0">
           <div className="flex items-center justify-between px-3 py-1.5 border-b border-border shrink-0">
@@ -128,6 +162,12 @@ export function DiffViewerPanel({ panelId: _panelId }: { panelId: string }) {
           />
         </div>
       </div>
+
+      {/* Drag handle */}
+      <div
+        onPointerDown={handleDividerPointerDown}
+        className="h-1 shrink-0 cursor-row-resize bg-border hover:bg-primary/40 transition-colors"
+      />
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border shrink-0">
@@ -199,7 +239,7 @@ export function DiffViewerPanel({ panelId: _panelId }: { panelId: string }) {
       </div>
 
       {/* Diff output */}
-      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden min-h-0">
         {!hasDiff ? (
           <div className="flex items-center justify-center flex-1 text-muted-foreground/40">
             <div className="text-center space-y-1">

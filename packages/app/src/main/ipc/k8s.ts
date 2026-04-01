@@ -193,6 +193,8 @@ async function startWatch(
     ? resourceDef.path()
     : resourceDef.path(namespace);
 
+  let retryDelay = 1000;
+
   const makeWatch = async () => {
     try {
       const req = await watch.watch(
@@ -200,6 +202,7 @@ async function startWatch(
         {},
         (type: string, obj: unknown) => {
           if (sender.isDestroyed()) return;
+          retryDelay = 1000; // reset backoff on successful event
           const event: K8sWatchEvent = {
             type: type as K8sWatchEvent['type'],
             resource: serializeResource(obj, kind),
@@ -207,15 +210,21 @@ async function startWatch(
           sender.send(`k8s:watch:${watchId}`, event);
         },
         (err?: unknown) => {
-          // Stream ended — reconnect if watch is still registered
-          if (watches.has(watchId) && !sender.isDestroyed()) {
-            setTimeout(() => {
-              if (watches.has(watchId)) makeWatch();
-            }, 1000);
+          if (!watches.has(watchId) || sender.isDestroyed()) return;
+          // AbortError means we intentionally stopped the watch — not an error
+          if (err && (err as { type?: string }).type === 'aborted') return;
+          if (err) {
+            // Only log at the first retry; suppress repeated connection errors
+            if (retryDelay <= 1000) {
+              console.error(`[k8s] Watch error for ${kind}:`, err);
+            }
           }
-          if (err && !sender.isDestroyed()) {
-            console.error(`[k8s] Watch error for ${kind}:`, err);
-          }
+          // Exponential backoff: 1s → 2s → 4s → 8s → 16s → 30s max
+          const delay = retryDelay;
+          retryDelay = Math.min(retryDelay * 2, 30_000);
+          setTimeout(() => {
+            if (watches.has(watchId)) makeWatch();
+          }, delay);
         },
       );
 
@@ -246,6 +255,10 @@ async function startWatch(
 
 export function registerK8sIpc(): void {
   // List available contexts from kubeconfig
+  ipcMain.handle('k8s:config:reload', () => {
+    kcCache.clear();
+  });
+
   ipcMain.handle('k8s:contexts', () => {
     try {
       const kc = loadKubeConfig();
