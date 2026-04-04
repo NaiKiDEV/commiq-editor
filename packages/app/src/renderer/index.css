@@ -25,6 +25,9 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -32,8 +35,9 @@
   --radius-2xl: calc(var(--radius) * 1.8);
 }
 
-/* Dark theme as default (workbench is dark-first) */
-:root {
+/* AMOLED theme (default) — true black */
+:root,
+[data-theme="amoled"] {
   --radius: 0.5rem;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -54,6 +58,295 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
+  --success: oklch(0.72 0.17 145);
+  --warning: oklch(0.78 0.14 80);
+  --info: oklch(0.68 0.15 255);
+}
+
+/* Midnight theme — softer dark, Discord-inspired */
+[data-theme="midnight"] {
+  --background: oklch(0.235 0.005 270);
+  --foreground: oklch(0.93 0.005 270);
+  --card: oklch(0.28 0.008 270);
+  --card-foreground: oklch(0.93 0.005 270);
+  --popover: oklch(0.28 0.008 270);
+  --popover-foreground: oklch(0.93 0.005 270);
+  --primary: oklch(0.88 0.005 270);
+  --primary-foreground: oklch(0.235 0.005 270);
+  --secondary: oklch(0.32 0.01 270);
+  --secondary-foreground: oklch(0.93 0.005 270);
+  --muted: oklch(0.32 0.01 270);
+  --muted-foreground: oklch(0.65 0.015 270);
+  --accent: oklch(0.32 0.01 270);
+  --accent-foreground: oklch(0.93 0.005 270);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0.005 270 / 12%);
+  --input: oklch(1 0.005 270 / 16%);
+  --ring: oklch(0.55 0.02 270);
+  --success: oklch(0.72 0.17 145);
+  --warning: oklch(0.78 0.14 80);
+  --info: oklch(0.68 0.15 255);
+}
+
+/* Light theme — clean and bright */
+[data-theme="light"] {
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.145 0.005 270);
+  --card: oklch(0.965 0.003 270);
+  --card-foreground: oklch(0.145 0.005 270);
+  --popover: oklch(0.985 0 0);
+  --popover-foreground: oklch(0.145 0.005 270);
+  --primary: oklch(0.205 0.005 270);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.935 0.005 270);
+  --secondary-foreground: oklch(0.205 0.005 270);
+  --muted: oklch(0.935 0.005 270);
+  --muted-foreground: oklch(0.46 0.01 270);
+  --accent: oklch(0.935 0.005 270);
+  --accent-foreground: oklch(0.205 0.005 270);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0 0 0 / 11%);
+  --input: oklch(0 0 0 / 14%);
+  --ring: oklch(0.46 0.01 270);
+  --success: oklch(0.46 0.17 145);
+  --warning: oklch(0.50 0.16 75);
+  --info: oklch(0.44 0.16 255);
+}
+
+/* Catppuccin Mocha theme — warm pastel tones on a dark base */
+[data-theme="catppuccin-mocha"] {
+  --background: oklch(0.24 0.02 285);
+  --foreground: oklch(0.87 0.04 270);
+  --card: oklch(0.30 0.025 280);
+  --card-foreground: oklch(0.87 0.04 270);
+  --popover: oklch(0.30 0.025 280);
+  --popover-foreground: oklch(0.87 0.04 270);
+  --primary: oklch(0.79 0.09 270);
+  --primary-foreground: oklch(0.24 0.02 285);
+  --secondary: oklch(0.38 0.025 275);
+  --secondary-foreground: oklch(0.87 0.04 270);
+  --muted: oklch(0.38 0.025 275);
+  --muted-foreground: oklch(0.60 0.03 270);
+  --accent: oklch(0.38 0.025 275);
+  --accent-foreground: oklch(0.87 0.04 270);
+  --destructive: oklch(0.73 0.13 10);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.87 0.04 270 / 12%);
+  --input: oklch(0.87 0.04 270 / 16%);
+  --ring: oklch(0.53 0.03 275);
+  --success: oklch(0.74 0.13 145);
+  --warning: oklch(0.82 0.12 85);
+  --info: oklch(0.72 0.13 255);
+}
+
+/* Gruvbox Material Dark Hard theme — earthy warm tones on a near-black base */
+[data-theme="gruvbox-material-dark-hard"] {
+  --background: oklch(0.22 0.003 240);
+  --foreground: oklch(0.79 0.05 75);
+  --card: oklch(0.27 0.005 65);
+  --card-foreground: oklch(0.79 0.05 75);
+  --popover: oklch(0.27 0.005 65);
+  --popover-foreground: oklch(0.79 0.05 75);
+  --primary: oklch(0.73 0.10 80);
+  --primary-foreground: oklch(0.22 0.003 240);
+  --secondary: oklch(0.36 0.01 55);
+  --secondary-foreground: oklch(0.79 0.05 75);
+  --muted: oklch(0.36 0.01 55);
+  --muted-foreground: oklch(0.58 0.03 65);
+  --accent: oklch(0.36 0.01 55);
+  --accent-foreground: oklch(0.79 0.05 75);
+  --destructive: oklch(0.65 0.16 25);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.79 0.05 75 / 12%);
+  --input: oklch(0.79 0.05 75 / 16%);
+  --ring: oklch(0.58 0.03 65);
+  --success: oklch(0.72 0.10 125);
+  --warning: oklch(0.73 0.10 78);
+  --info: oklch(0.65 0.08 215);
+}
+
+/* Rosé Pine Moon theme — dusty purple depths with muted rose accents */
+[data-theme="rose-pine-moon"] {
+  --background: oklch(0.23 0.03 290);
+  --foreground: oklch(0.90 0.03 285);
+  --card: oklch(0.27 0.03 287);
+  --card-foreground: oklch(0.90 0.03 285);
+  --popover: oklch(0.27 0.03 287);
+  --popover-foreground: oklch(0.90 0.03 285);
+  --primary: oklch(0.75 0.09 295);
+  --primary-foreground: oklch(0.23 0.03 290);
+  --secondary: oklch(0.34 0.035 285);
+  --secondary-foreground: oklch(0.90 0.03 285);
+  --muted: oklch(0.34 0.035 285);
+  --muted-foreground: oklch(0.52 0.04 285);
+  --accent: oklch(0.34 0.035 285);
+  --accent-foreground: oklch(0.90 0.03 285);
+  --destructive: oklch(0.67 0.14 355);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.90 0.03 285 / 12%);
+  --input: oklch(0.90 0.03 285 / 16%);
+  --ring: oklch(0.52 0.04 285);
+  --success: oklch(0.82 0.06 200);
+  --warning: oklch(0.84 0.10 80);
+  --info: oklch(0.75 0.09 295);
+}
+
+/* Kanagawa Wave theme — deep indigo ink with warm parchment and muted watercolor accents */
+[data-theme="kanagawa-wave"] {
+  --background: oklch(0.22 0.02 285);
+  --foreground: oklch(0.88 0.04 90);
+  --card: oklch(0.27 0.02 285);
+  --card-foreground: oklch(0.88 0.04 90);
+  --popover: oklch(0.27 0.02 285);
+  --popover-foreground: oklch(0.88 0.04 90);
+  --primary: oklch(0.65 0.10 260);
+  --primary-foreground: oklch(0.22 0.02 285);
+  --secondary: oklch(0.32 0.02 285);
+  --secondary-foreground: oklch(0.88 0.04 90);
+  --muted: oklch(0.32 0.02 285);
+  --muted-foreground: oklch(0.62 0.04 280);
+  --accent: oklch(0.32 0.02 285);
+  --accent-foreground: oklch(0.88 0.04 90);
+  --destructive: oklch(0.65 0.13 15);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.88 0.04 90 / 12%);
+  --input: oklch(0.88 0.04 90 / 16%);
+  --ring: oklch(0.62 0.04 280);
+  --success: oklch(0.73 0.11 130);
+  --warning: oklch(0.70 0.08 75);
+  --info: oklch(0.65 0.10 260);
+}
+
+/* Kanagawa Dragon theme — warm ash-black with muted desaturated accents */
+[data-theme="kanagawa-dragon"] {
+  --background: oklch(0.21 0.005 65);
+  --foreground: oklch(0.82 0.005 155);
+  --card: oklch(0.26 0.003 65);
+  --card-foreground: oklch(0.82 0.005 155);
+  --popover: oklch(0.26 0.003 65);
+  --popover-foreground: oklch(0.82 0.005 155);
+  --primary: oklch(0.63 0.05 265);
+  --primary-foreground: oklch(0.21 0.005 65);
+  --secondary: oklch(0.31 0.003 65);
+  --secondary-foreground: oklch(0.82 0.005 155);
+  --muted: oklch(0.31 0.003 65);
+  --muted-foreground: oklch(0.60 0.01 65);
+  --accent: oklch(0.31 0.003 65);
+  --accent-foreground: oklch(0.82 0.005 155);
+  --destructive: oklch(0.61 0.10 20);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.82 0.005 155 / 12%);
+  --input: oklch(0.82 0.005 155 / 16%);
+  --ring: oklch(0.60 0.01 65);
+  --success: oklch(0.68 0.07 145);
+  --warning: oklch(0.74 0.07 80);
+  --info: oklch(0.57 0.06 220);
+}
+
+/* Rosé Pine theme — deep violet-black base with soft rose and iris accents */
+[data-theme="rose-pine"] {
+  --background: oklch(0.20 0.03 295);
+  --foreground: oklch(0.90 0.03 285);
+  --card: oklch(0.24 0.03 293);
+  --card-foreground: oklch(0.90 0.03 285);
+  --popover: oklch(0.24 0.03 293);
+  --popover-foreground: oklch(0.90 0.03 285);
+  --primary: oklch(0.75 0.09 300);
+  --primary-foreground: oklch(0.20 0.03 295);
+  --secondary: oklch(0.28 0.035 290);
+  --secondary-foreground: oklch(0.90 0.03 285);
+  --muted: oklch(0.28 0.035 290);
+  --muted-foreground: oklch(0.55 0.04 290);
+  --accent: oklch(0.28 0.035 290);
+  --accent-foreground: oklch(0.90 0.03 285);
+  --destructive: oklch(0.67 0.14 355);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.90 0.03 285 / 12%);
+  --input: oklch(0.90 0.03 285 / 16%);
+  --ring: oklch(0.55 0.04 290);
+  --success: oklch(0.82 0.06 200);
+  --warning: oklch(0.84 0.10 80);
+  --info: oklch(0.75 0.09 300);
+}
+
+/* Catppuccin Latte theme — soft pastel tones on a light cream base */
+[data-theme="catppuccin-latte"] {
+  --background: oklch(0.95 0.005 265);
+  --foreground: oklch(0.37 0.045 275);
+  --card: oklch(0.92 0.005 265);
+  --card-foreground: oklch(0.37 0.045 275);
+  --popover: oklch(0.92 0.005 265);
+  --popover-foreground: oklch(0.37 0.045 275);
+  --primary: oklch(0.37 0.045 275);
+  --primary-foreground: oklch(0.95 0.005 265);
+  --secondary: oklch(0.83 0.008 265);
+  --secondary-foreground: oklch(0.37 0.045 275);
+  --muted: oklch(0.83 0.008 265);
+  --muted-foreground: oklch(0.60 0.018 275);
+  --accent: oklch(0.83 0.008 265);
+  --accent-foreground: oklch(0.37 0.045 275);
+  --destructive: oklch(0.46 0.220 18);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0 0 0 / 11%);
+  --input: oklch(0 0 0 / 14%);
+  --ring: oklch(0.56 0.17 270);
+  --success: oklch(0.49 0.15 140);
+  --warning: oklch(0.52 0.13 70);
+  --info: oklch(0.50 0.22 260);
+}
+
+/* Gruvbox Material Light theme — warm cream canvas with earthy ink tones */
+[data-theme="gruvbox-material-light"] {
+  --background: oklch(0.96 0.042 90);
+  --foreground: oklch(0.27 0.018 55);
+  --card: oklch(0.88 0.040 86);
+  --card-foreground: oklch(0.27 0.018 55);
+  --popover: oklch(0.96 0.042 90);
+  --popover-foreground: oklch(0.27 0.018 55);
+  --primary: oklch(0.27 0.018 55);
+  --primary-foreground: oklch(0.96 0.042 90);
+  --secondary: oklch(0.80 0.036 82);
+  --secondary-foreground: oklch(0.27 0.018 55);
+  --muted: oklch(0.80 0.036 82);
+  --muted-foreground: oklch(0.49 0.018 65);
+  --accent: oklch(0.80 0.036 82);
+  --accent-foreground: oklch(0.27 0.018 55);
+  --destructive: oklch(0.49 0.130 20);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0 0 0 / 11%);
+  --input: oklch(0 0 0 / 14%);
+  --ring: oklch(0.49 0.018 65);
+  --success: oklch(0.47 0.12 122);
+  --warning: oklch(0.50 0.13 65);
+  --info: oklch(0.47 0.10 215);
+}
+
+/* Rosé Pine Light (Dawn) theme — warm parchment base with soft rose and muted iris accents */
+[data-theme="rose-pine-light"] {
+  --background: oklch(0.97 0.012 85);
+  --foreground: oklch(0.37 0.055 295);
+  --card: oklch(0.985 0.010 88);
+  --card-foreground: oklch(0.37 0.055 295);
+  --popover: oklch(0.97 0.012 85);
+  --popover-foreground: oklch(0.37 0.055 295);
+  --primary: oklch(0.37 0.055 295);
+  --primary-foreground: oklch(0.97 0.012 85);
+  --secondary: oklch(0.93 0.020 75);
+  --secondary-foreground: oklch(0.37 0.055 295);
+  --muted: oklch(0.93 0.020 75);
+  --muted-foreground: oklch(0.63 0.020 295);
+  --accent: oklch(0.93 0.020 75);
+  --accent-foreground: oklch(0.37 0.055 295);
+  --destructive: oklch(0.56 0.120 355);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0 0 0 / 11%);
+  --input: oklch(0 0 0 / 14%);
+  --ring: oklch(0.52 0.035 295);
+  --success: oklch(0.44 0.09 200);
+  --warning: oklch(0.52 0.12 65);
+  --info: oklch(0.44 0.08 285);
 }
 
 @layer base {

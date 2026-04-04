@@ -313,7 +313,7 @@ export function ResourceList({ context, namespace, kind, onSelect, onOpenLogs, o
               {filter ? `No ${kind} matching "${filter}"` : `No ${kind} found`}
             </span>
             {filter && (
-              <button onClick={() => setFilter('')} className="text-[10px] text-teal-400 hover:underline">
+              <button onClick={() => setFilter('')} className="text-[10px] text-primary hover:underline">
                 Clear filter
               </button>
             )}

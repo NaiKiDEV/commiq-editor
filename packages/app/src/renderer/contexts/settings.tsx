@@ -2,7 +2,10 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 
+export type Theme = 'amoled' | 'midnight' | 'light' | 'catppuccin-mocha' | 'gruvbox-material-dark-hard' | 'rose-pine-moon' | 'rose-pine' | 'kanagawa-wave' | 'kanagawa-dragon' | 'rose-pine-light' | 'catppuccin-latte' | 'gruvbox-material-light';
+
 export type AppSettings = {
+  theme: Theme;
   terminal: {
     fontFamily: string;
     fontSize: number;
@@ -19,6 +22,7 @@ export type AppSettings = {
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  theme: 'amoled',
   terminal: {
     fontFamily: "'CommitMono NF', 'CommitMono NF Mono', Menlo, Monaco, monospace",
     fontSize: 13,
@@ -65,9 +69,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     window.electronAPI.settings.load()
-      .then((loaded) => setSettings(deepMerge(DEFAULT_SETTINGS, loaded as DeepPartial<AppSettings>)))
+      .then((loaded) => {
+        const merged = deepMerge(DEFAULT_SETTINGS, loaded as DeepPartial<AppSettings>);
+        setSettings(merged);
+        document.documentElement.setAttribute('data-theme', merged.theme);
+      })
       .catch(() => {/* keep defaults */});
   }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', settings.theme);
+  }, [settings.theme]);
 
   const updateSettings = (patch: DeepPartial<AppSettings>) => {
     setSettings((prev) => {

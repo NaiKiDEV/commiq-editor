@@ -96,7 +96,7 @@ export function AesGcmTool() {
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border",
             mode === "encrypt"
-              ? "bg-blue-500/15 border-blue-500/40 text-blue-300 shadow-sm shadow-blue-500/20"
+              ? "bg-blue-500/15 border-blue-500/40 text-blue-300"
               : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50",
           )}
         >
@@ -108,7 +108,7 @@ export function AesGcmTool() {
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border",
             mode === "decrypt"
-              ? "bg-blue-500/15 border-blue-500/40 text-blue-300 shadow-sm shadow-blue-500/20"
+              ? "bg-blue-500/15 border-blue-500/40 text-blue-300"
               : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50",
           )}
         >

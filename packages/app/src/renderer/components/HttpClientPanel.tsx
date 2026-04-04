@@ -43,13 +43,13 @@ type HttpError = { error: string };
 const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as const;
 
 const METHOD_COLORS: Record<string, string> = {
-  GET: 'text-green-400',
-  POST: 'text-blue-400',
-  PUT: 'text-yellow-400',
-  PATCH: 'text-orange-400',
-  DELETE: 'text-red-400',
-  HEAD: 'text-purple-400',
-  OPTIONS: 'text-cyan-400',
+  GET: 'text-success',
+  POST: 'text-info',
+  PUT: 'text-warning',
+  PATCH: 'text-warning',
+  DELETE: 'text-destructive',
+  HEAD: 'text-primary',
+  OPTIONS: 'text-muted-foreground',
 };
 
 function methodColor(method: string): string {
@@ -169,7 +169,7 @@ export function HttpClientPanel({ panelId: _panelId }: HttpClientPanelProps) {
 
           {importMessage && (
             <div className="px-3 py-1.5 text-xs bg-muted/50 border-b border-border text-muted-foreground flex items-center gap-1.5">
-              <Check className="size-3 text-green-400 shrink-0" />
+              <Check className="size-3 text-success shrink-0" />
               {importMessage}
             </div>
           )}
@@ -321,9 +321,9 @@ function prettyPrint(body: string, contentType: string): string {
 
 function statusColor(status: number): string {
   if (status < 200) return 'text-muted-foreground';
-  if (status < 300) return 'text-green-400';
-  if (status < 400) return 'text-yellow-400';
-  return 'text-red-400';
+  if (status < 300) return 'text-success';
+  if (status < 400) return 'text-warning';
+  return 'text-destructive';
 }
 
 function RequestEditor({
@@ -507,7 +507,7 @@ function RequestEditor({
               </div>
             )}
             {!isLoading && isError && (
-              <span className="text-red-400">{(response as HttpError).error}</span>
+              <span className="text-destructive">{(response as HttpError).error}</span>
             )}
             {!isLoading && okResponse && responseTab === 'body' && (
               <pre className="whitespace-pre-wrap break-words">{responseBody}</pre>

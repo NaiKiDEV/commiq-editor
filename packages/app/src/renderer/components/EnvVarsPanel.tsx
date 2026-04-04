@@ -131,7 +131,7 @@ export function EnvVarsPanel({ panelId: _panelId }: { panelId: string }) {
                         className={[
                           'px-4 py-1.5 font-mono w-64 cursor-pointer select-text transition-colors',
                           WELL_KNOWN.has(entry.name) ? 'font-medium text-foreground' : 'text-muted-foreground',
-                          copiedKey === nameCopyKey ? 'bg-green-500/10 text-green-600' : '',
+                          copiedKey === nameCopyKey ? 'bg-success/10 text-success' : '',
                           copyFailed === nameCopyKey ? 'bg-destructive/10 text-destructive' : '',
                         ].filter(Boolean).join(' ')}
                         onClick={() => copyToClipboard(entry.name, nameCopyKey)}
@@ -142,7 +142,7 @@ export function EnvVarsPanel({ panelId: _panelId }: { panelId: string }) {
                       <td
                         className={[
                           'px-4 py-1.5 font-mono text-muted-foreground transition-colors',
-                          copiedKey === valCopyKey ? 'bg-green-500/10 text-green-600' : '',
+                          copiedKey === valCopyKey ? 'bg-success/10 text-success' : '',
                           copyFailed === valCopyKey ? 'bg-destructive/10 text-destructive' : '',
                         ].filter(Boolean).join(' ')}
                       >

@@ -92,7 +92,7 @@ export function DataViewerPanel({ panelId: _panelId }: { panelId: string }) {
             <Button
               variant="outline"
               size="xs"
-              className={cn('font-mono font-semibold w-16 justify-center shrink-0', error && 'border-red-500/50 text-red-400')}
+              className={cn('font-mono font-semibold w-16 justify-center shrink-0', error && 'border-destructive/50 text-destructive')}
             />
           }>
             {FORMAT_LABELS[format]}
@@ -109,7 +109,7 @@ export function DataViewerPanel({ panelId: _panelId }: { panelId: string }) {
 
         {/* Error */}
         {error && (
-          <span className="text-xs text-red-400 font-mono truncate flex-1 min-w-0" title={error}>
+          <span className="text-xs text-destructive font-mono truncate flex-1 min-w-0" title={error}>
             {error}
           </span>
         )}

@@ -43,7 +43,7 @@ export function XorSplitTool() {
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border",
             mode === "split"
-              ? "bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-sm shadow-amber-500/20"
+              ? "bg-amber-500/15 border-amber-500/40 text-amber-300"
               : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50",
           )}
         >
@@ -55,7 +55,7 @@ export function XorSplitTool() {
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border",
             mode === "reconstruct"
-              ? "bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-sm shadow-amber-500/20"
+              ? "bg-amber-500/15 border-amber-500/40 text-amber-300"
               : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50",
           )}
         >
@@ -322,7 +322,12 @@ function ReconstructView() {
           >
             <ClipboardPaste className="size-3" /> Paste All
           </Button>
-          <Button variant="ghost" size="xs" className="gap-1" onClick={addShare}>
+          <Button
+            variant="ghost"
+            size="xs"
+            className="gap-1"
+            onClick={addShare}
+          >
             <Plus className="size-3" /> Add
           </Button>
         </div>

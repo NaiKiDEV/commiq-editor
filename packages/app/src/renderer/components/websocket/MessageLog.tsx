@@ -58,15 +58,15 @@ const MessageRow = memo(function MessageRow({ msg, expanded, onToggleExpand }: M
   return (
     <div className={cn(
       'flex gap-2 px-3 py-1.5 border-b border-border/40 hover:bg-muted/20',
-      msg.direction === 'sent' ? 'bg-blue-950/10' : 'bg-green-950/10',
+      msg.direction === 'sent' ? 'bg-info/5' : 'bg-success/5',
     )}>
       <div className="flex flex-col items-center gap-0.5 shrink-0 pt-0.5">
         <span className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
           {formatTs(msg.timestamp)}
         </span>
         {msg.direction === 'sent'
-          ? <ArrowUp className="size-3 text-blue-400" />
-          : <ArrowDown className="size-3 text-green-400" />}
+          ? <ArrowUp className="size-3 text-info" />
+          : <ArrowDown className="size-3 text-success" />}
       </div>
       <div className="flex-1 min-w-0 font-mono text-xs">
         <pre className={cn('whitespace-pre-wrap break-all', !expanded && 'line-clamp-4')}>

@@ -50,7 +50,7 @@ const PortRow = memo(
       >
         <td className="px-4 py-1.5">
           <span
-            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-medium ${entry.protocol === "TCP" ? "bg-blue-500/10 text-blue-400" : "bg-amber-500/10 text-amber-400"}`}
+            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-medium ${entry.protocol === "TCP" ? "bg-info/10 text-info" : "bg-warning/10 text-warning"}`}
           >
             {entry.protocol}
           </span>
@@ -61,7 +61,7 @@ const PortRow = memo(
         </td>
         <td className="px-4 py-1.5">
           <span
-            className={isListening ? "text-green-400" : "text-muted-foreground"}
+            className={isListening ? "text-success" : "text-muted-foreground"}
           >
             {entry.state || "—"}
           </span>

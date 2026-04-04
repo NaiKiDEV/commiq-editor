@@ -100,15 +100,15 @@ function buildSplit(changes: Change[]): { left: SideLine[]; right: SideLine[] } 
 
 const ROW_BG: Record<string, string> = {
   unchanged: '',
-  removed: 'bg-red-500/10',
-  added: 'bg-green-500/10',
+  removed: 'bg-destructive/10',
+  added: 'bg-success/10',
   empty: 'bg-muted/5',
 };
 
 const TEXT_COLOR: Record<string, string> = {
   unchanged: 'text-foreground',
-  removed: 'text-red-400',
-  added: 'text-green-400',
+  removed: 'text-destructive',
+  added: 'text-success',
   empty: '',
 };
 

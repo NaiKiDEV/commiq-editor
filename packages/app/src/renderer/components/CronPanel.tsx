@@ -45,7 +45,7 @@ export function CronPanel({ panelId: _panelId }: { panelId: string }) {
         <div className="flex items-center gap-2">
           <div className={cn(
             'flex-1 flex items-center gap-2 rounded-lg border px-3 py-1.5 transition-colors',
-            isValid ? 'border-border' : 'border-red-500/50',
+            isValid ? 'border-border' : 'border-destructive/50',
           )}>
             <span className="text-muted-foreground/50 font-mono text-xs shrink-0">cron</span>
             <input
@@ -58,14 +58,14 @@ export function CronPanel({ panelId: _panelId }: { panelId: string }) {
             />
           </div>
           <Button variant="ghost" size="icon-xs" onClick={handleCopy} title="Copy expression">
-            {copied ? <Check className="text-green-400" /> : <Copy />}
+            {copied ? <Check className="text-success" /> : <Copy />}
           </Button>
         </div>
 
         {/* Human-readable */}
         <p className={cn(
           'text-sm px-1 min-h-5 transition-colors',
-          isValid ? 'text-muted-foreground' : 'text-red-400 text-xs',
+          isValid ? 'text-muted-foreground' : 'text-destructive text-xs',
         )}>
           {isValid ? description : 'Invalid cron expression'}
         </p>

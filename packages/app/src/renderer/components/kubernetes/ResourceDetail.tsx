@@ -262,7 +262,7 @@ export function ResourceDetail({
             className={cn(
               'px-3 py-2 text-xs font-medium border-b-2 -mb-px transition-colors capitalize',
               tab === t
-                ? 'border-teal-400 text-foreground'
+                ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground',
             )}
             onClick={() => setTab(t)}
@@ -650,7 +650,7 @@ export function ResourceDetail({
                               <span className="text-muted-foreground/50">&rarr;</span>
                               <span className="text-foreground">{String(p.targetPort)}</span>
                               <span className="text-muted-foreground/50">/{p.protocol ?? 'TCP'}</span>
-                              {p.nodePort && <span className="text-teal-400">(node: {p.nodePort})</span>}
+                              {p.nodePort && <span className="text-primary">(node: {p.nodePort})</span>}
                             </div>
                           ))}
                       </div>
@@ -675,7 +675,7 @@ export function ResourceDetail({
             {/* ── Ingresses ──────────────────────────────────────────── */}
             {kind === 'ingresses' && spec.ingressClassName && (
               <Section title="Class">
-                <span className="inline-flex px-2 py-0.5 rounded bg-teal-400/10 text-teal-300 text-[11px] font-mono">
+                <span className="inline-flex px-2 py-0.5 rounded bg-primary/10 text-primary text-[11px] font-mono">
                   {spec.ingressClassName}
                 </span>
               </Section>
@@ -696,7 +696,7 @@ export function ResourceDetail({
                         <div className="px-3 py-1.5 bg-muted/30 border-b border-border/40 font-mono text-[11px] font-medium">
                           {rule.host ? (
                             <button
-                              className="text-teal-300 hover:text-teal-200 hover:underline cursor-pointer"
+                              className="text-primary hover:text-primary/80 hover:underline cursor-pointer"
                               onClick={() => window.electronAPI.openExternal(`${scheme}://${rule.host}`)}
                             >
                               {rule.host}
@@ -721,7 +721,7 @@ export function ResourceDetail({
                                   <td className="px-3 py-1.5 font-mono text-foreground/80">
                                     {rule.host ? (
                                       <button
-                                        className="hover:text-teal-300 hover:underline cursor-pointer"
+                                        className="hover:text-primary hover:underline cursor-pointer"
                                         onClick={() => window.electronAPI.openExternal(`${scheme}://${rule.host}${p.path ?? '/'}`)}
                                       >
                                         {p.path ?? '/'}
@@ -999,10 +999,10 @@ export function ResourceDetail({
                   {Object.entries(labels).map(([k, v]) => (
                     <span
                       key={k}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-teal-400/10 text-teal-300 text-[10px] font-mono"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-mono"
                     >
-                      <span className="text-teal-400/60">{k}</span>
-                      <span className="text-teal-400/40">=</span>
+                      <span className="text-primary/60">{k}</span>
+                      <span className="text-primary/40">=</span>
                       {v}
                     </span>
                   ))}
@@ -1288,7 +1288,7 @@ function EnvVarsTab({
                               </span>
                             )}
                             {v.source.startsWith('configmap:') && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-teal-400/10 text-teal-300 text-[10px] font-mono">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-mono">
                                 {v.source.slice(10)}
                               </span>
                             )}

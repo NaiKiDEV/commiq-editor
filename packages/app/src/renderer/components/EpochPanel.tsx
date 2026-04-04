@@ -163,10 +163,10 @@ function FormatCard({
   return (
     <button
       onClick={() => onCopy(value, copyKey)}
-      className="group flex flex-col gap-1 p-2.5 rounded-lg bg-muted/20 border border-border/50 hover:border-teal-500/30 hover:bg-teal-500/5 transition-all text-left"
+      className="group flex flex-col gap-1 p-2.5 rounded-lg bg-muted/20 border border-border/50 hover:border-info/30 hover:bg-info/5 transition-all text-left"
     >
       <div className="flex items-center justify-between">
-        <span className="text-[9px] uppercase tracking-widest text-teal-400/70 font-semibold">{label}</span>
+        <span className="text-[9px] uppercase tracking-widest text-info/70 font-semibold">{label}</span>
         <span className={cn('transition-opacity', copied ? 'opacity-100' : 'opacity-0 group-hover:opacity-60')}>
           {copied
             ? <Check className="size-2.5 text-green-400" />
@@ -284,11 +284,11 @@ export function EpochPanel({ panelId: _panelId }: { panelId: string }) {
                 className={cn(
                   'flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium border transition-all',
                   liveMode
-                    ? 'bg-green-500/15 border-green-500/40 text-green-400'
+                    ? 'bg-success/15 border-success/40 text-success'
                     : 'border-border/50 text-muted-foreground hover:text-foreground hover:border-border',
                 )}
               >
-                <span className={cn('w-1.5 h-1.5 rounded-full', liveMode ? 'bg-green-400 animate-pulse' : 'bg-muted-foreground/50')} />
+                <span className={cn('w-1.5 h-1.5 rounded-full', liveMode ? 'bg-success animate-pulse' : 'bg-muted-foreground/50')} />
                 Live
               </button>
               <Button variant="ghost" size="xs" onClick={handleNow} className="text-muted-foreground hover:text-foreground">
@@ -301,8 +301,8 @@ export function EpochPanel({ panelId: _panelId }: { panelId: string }) {
               <span className={cn(
                 'text-[10px] font-mono px-2 py-0.5 rounded-full border font-medium',
                 isFuture
-                  ? 'bg-orange-500/10 border-orange-500/25 text-orange-300'
-                  : 'bg-green-500/10 border-green-500/25 text-green-300',
+                  ? 'bg-warning/10 border-warning/25 text-warning'
+                  : 'bg-success/10 border-success/25 text-success',
               )}>
                 {relativeText}
               </span>
@@ -325,7 +325,7 @@ export function EpochPanel({ panelId: _panelId }: { panelId: string }) {
               onClick={() => copy(epochInput, 'epoch')}
               className="shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
             >
-              {copiedKey === 'epoch' ? <Check className="size-3 text-green-400" /> : <Copy className="size-3" />}
+              {copiedKey === 'epoch' ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
             </button>
           </div>
 
@@ -345,7 +345,7 @@ export function EpochPanel({ panelId: _panelId }: { panelId: string }) {
               onClick={() => copy(dateInput, 'datetime')}
               className="shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
             >
-              {copiedKey === 'datetime' ? <Check className="size-3 text-green-400" /> : <Copy className="size-3" />}
+              {copiedKey === 'datetime' ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
             </button>
           </div>
         </div>
@@ -354,7 +354,7 @@ export function EpochPanel({ panelId: _panelId }: { panelId: string }) {
       {/* ── Formats ────────────────────────────────────────────────────── */}
       {date && (
         <div className="flex flex-col border-t border-border/40">
-          <SectionHeader icon={<Hash className="size-2.5" />} label="Formats" colorClass="text-teal-400" />
+          <SectionHeader icon={<Hash className="size-2.5" />} label="Formats" colorClass="text-info" />
           <div className="grid grid-cols-2 gap-1.5 px-3 pb-3">
             <FormatCard label="ISO 8601" value={date.toISOString()} copyKey="iso" copiedKey={copiedKey} onCopy={copy} />
             <FormatCard label="UTC" value={date.toUTCString()} copyKey="utc" copiedKey={copiedKey} onCopy={copy} />
@@ -367,14 +367,14 @@ export function EpochPanel({ panelId: _panelId }: { panelId: string }) {
 
       {/* ── Date Math ──────────────────────────────────────────────────── */}
       <div className="flex flex-col border-t border-border/40">
-        <SectionHeader icon={<span className="text-[10px] font-bold leading-none">±</span>} label="Date Math" colorClass="text-violet-400" />
+        <SectionHeader icon={<span className="text-[10px] font-bold leading-none">±</span>} label="Date Math" colorClass="text-primary" />
         <div className="flex items-center gap-2 px-3 pb-3">
           <input
             type="number"
             value={addValue}
             onChange={(e) => setAddValue(e.target.value)}
             placeholder="±"
-            className="w-20 bg-muted/30 border border-border/60 rounded-lg px-2.5 py-1.5 font-mono text-xs outline-none focus:border-violet-500/40 focus:bg-violet-500/5 transition-colors"
+            className="w-20 bg-muted/30 border border-border/60 rounded-lg px-2.5 py-1.5 font-mono text-xs outline-none focus:border-primary/40 focus:bg-primary/5 transition-colors"
           />
           <Select value={addUnit} onValueChange={(v) => setAddUnit(v as typeof addUnit)}>
             <SelectTrigger className="flex-1 text-xs h-7">
@@ -391,7 +391,7 @@ export function EpochPanel({ panelId: _panelId }: { panelId: string }) {
           <button
             onClick={handleAdd}
             disabled={!addValue || !date}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-500/15 border border-violet-500/30 text-violet-300 hover:bg-violet-500/25 hover:border-violet-500/50 transition-all disabled:opacity-30 disabled:pointer-events-none"
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/15 border border-primary/30 text-primary hover:bg-primary/25 hover:border-primary/50 transition-all disabled:opacity-30 disabled:pointer-events-none"
           >
             Apply
           </button>
@@ -404,11 +404,11 @@ export function EpochPanel({ panelId: _panelId }: { panelId: string }) {
           <SectionHeader
             icon={<Globe className="size-2.5" />}
             label="Timezones"
-            colorClass="text-amber-400"
+            colorClass="text-warning"
             action={
               <button
                 onClick={() => { setAddingTz(true); setTzInput(''); setTzError(''); }}
-                className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border border-border/50 text-muted-foreground hover:text-amber-400 hover:border-amber-500/30 hover:bg-amber-500/5 transition-all"
+                className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border border-border/50 text-muted-foreground hover:text-warning hover:border-warning/30 hover:bg-warning/5 transition-all"
               >
                 <Plus className="size-2.5" />
                 Add
@@ -431,11 +431,11 @@ export function EpochPanel({ panelId: _panelId }: { panelId: string }) {
                   }}
                   onBlur={() => { if (!tzInput) { setAddingTz(false); setTzError(''); } }}
                   placeholder="e.g. Europe/Berlin"
-                  className="flex-1 bg-muted/30 border border-border/60 rounded-lg px-2.5 py-1.5 font-mono text-xs outline-none focus:border-amber-500/40 focus:bg-amber-500/5 transition-colors"
+                  className="flex-1 bg-muted/30 border border-border/60 rounded-lg px-2.5 py-1.5 font-mono text-xs outline-none focus:border-warning/40 focus:bg-warning/5 transition-colors"
                 />
                 <button
                   onClick={handleAddTz}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 transition-all"
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-warning/15 border border-warning/30 text-warning hover:bg-warning/25 transition-all"
                 >
                   Add
                 </button>
@@ -446,7 +446,7 @@ export function EpochPanel({ panelId: _panelId }: { panelId: string }) {
                   <X className="size-3" />
                 </button>
               </div>
-              {tzError && <p className="text-[10px] text-red-400 pl-1">{tzError}</p>}
+              {tzError && <p className="text-[10px] text-destructive pl-1">{tzError}</p>}
               <datalist id="tz-suggestions">
                 {TZ_SUGGESTIONS.map((tz) => <option key={tz} value={tz} />)}
               </datalist>
@@ -462,7 +462,7 @@ export function EpochPanel({ panelId: _panelId }: { panelId: string }) {
                 <div key={tz} className="group flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-muted/20 transition-colors">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <span className="text-xs font-medium text-foreground/90 truncate">{label}</span>
-                    <span className="shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400/80">
+                    <span className="shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded bg-warning/10 border border-warning/20 text-warning/80">
                       {offset}
                     </span>
                   </div>
@@ -472,12 +472,12 @@ export function EpochPanel({ panelId: _panelId }: { panelId: string }) {
                       onClick={() => copy(time, copyKey)}
                       className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
                     >
-                      {copiedKey === copyKey ? <Check className="size-2.5 text-green-400" /> : <Copy className="size-2.5" />}
+                      {copiedKey === copyKey ? <Check className="size-2.5 text-success" /> : <Copy className="size-2.5" />}
                     </button>
                     {timezones.length > 1 && (
                       <button
                         onClick={() => handleRemoveTz(tz)}
-                        className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                       >
                         <X className="size-2.5" />
                       </button>

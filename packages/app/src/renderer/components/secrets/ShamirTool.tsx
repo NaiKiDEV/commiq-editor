@@ -34,7 +34,7 @@ export function ShamirTool() {
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border",
             mode === "split"
-              ? "bg-violet-500/15 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/20"
+              ? "bg-violet-500/15 border-violet-500/40 text-violet-300"
               : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50",
           )}
         >
@@ -46,7 +46,7 @@ export function ShamirTool() {
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border",
             mode === "reconstruct"
-              ? "bg-violet-500/15 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/20"
+              ? "bg-violet-500/15 border-violet-500/40 text-violet-300"
               : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50",
           )}
         >
@@ -315,7 +315,12 @@ function ReconstructView() {
           >
             <ClipboardPaste className="size-3" /> Paste All
           </Button>
-          <Button variant="ghost" size="xs" className="gap-1" onClick={addShare}>
+          <Button
+            variant="ghost"
+            size="xs"
+            className="gap-1"
+            onClick={addShare}
+          >
             <Plus className="size-3" /> Add
           </Button>
         </div>

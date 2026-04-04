@@ -44,7 +44,7 @@ const SIDEBAR_CATEGORIES: {
   {
     label: 'Cluster',
     icon: <Server className="size-3" />,
-    color: 'text-teal-400',
+    color: 'text-info',
     items: [
       { kind: 'nodes', label: 'Nodes' },
       { kind: 'namespaces', label: 'Namespaces' },
@@ -53,7 +53,7 @@ const SIDEBAR_CATEGORIES: {
   {
     label: 'Workloads',
     icon: <Box className="size-3" />,
-    color: 'text-violet-400',
+    color: 'text-primary',
     items: [
       { kind: 'pods', label: 'Pods' },
       { kind: 'deployments', label: 'Deployments' },
@@ -66,7 +66,7 @@ const SIDEBAR_CATEGORIES: {
   {
     label: 'Network',
     icon: <Network className="size-3" />,
-    color: 'text-emerald-400',
+    color: 'text-success',
     items: [
       { kind: 'services', label: 'Services' },
       { kind: 'ingresses', label: 'Ingresses' },
@@ -75,7 +75,7 @@ const SIDEBAR_CATEGORIES: {
   {
     label: 'Config & Storage',
     icon: <Database className="size-3" />,
-    color: 'text-amber-400',
+    color: 'text-warning',
     items: [
       { kind: 'configmaps', label: 'ConfigMaps' },
       { kind: 'secrets', label: 'Secrets' },
