@@ -723,6 +723,54 @@ const electronAPI = {
       ipcRenderer.invoke('docker:files:read', containerId, path) as Promise<{ content?: string; error?: string }>,
   },
 
+  ssl: {
+    inspect: (host: string, port: number) =>
+      ipcRenderer.invoke('ssl:inspect', host, port) as Promise<
+        Array<{
+          subject: Record<string, string>;
+          issuer: Record<string, string>;
+          sans: string[];
+          notBefore: string;
+          notAfter: string;
+          serialNumber: string;
+          fingerprint: string;
+          signatureAlgorithm: string;
+          publicKeyAlgorithm: string;
+          keyBits: number;
+          isCA: boolean;
+          pem: string;
+        }> | { error: string }
+      >,
+
+    decodePem: (pem: string) =>
+      ipcRenderer.invoke('ssl:decode-pem', pem) as Promise<
+        Array<{
+          subject: Record<string, string>;
+          issuer: Record<string, string>;
+          sans: string[];
+          notBefore: string;
+          notAfter: string;
+          serialNumber: string;
+          fingerprint: string;
+          signatureAlgorithm: string;
+          publicKeyAlgorithm: string;
+          keyBits: number;
+          isCA: boolean;
+          pem: string;
+        }> | { error: string }
+      >,
+
+    generateSelfSigned: (opts: {
+      commonName: string;
+      sans: string[];
+      days: number;
+      keyAlgorithm: 'rsa' | 'ec';
+    }) =>
+      ipcRenderer.invoke('ssl:generate-self-signed', opts) as Promise<
+        { cert: string; key: string } | { error: string }
+      >,
+  },
+
   k8s: {
     reloadConfig: () =>
       ipcRenderer.invoke('k8s:config:reload') as Promise<void>,

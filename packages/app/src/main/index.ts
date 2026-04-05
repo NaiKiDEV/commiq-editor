@@ -19,6 +19,7 @@ import { registerK8sIpc, stopAllK8sWatches } from './ipc/k8s';
 import { registerWsIpc, stopAllWsConnections } from './ipc/ws';
 import { registerDbIpc, closeAllDbConnections } from './ipc/db';
 import { registerDockerIpc, stopAllDockerStreams } from './ipc/docker';
+import { registerSslIpc } from './ipc/ssl';
 
 if (started) {
   app.quit();
@@ -61,6 +62,7 @@ registerK8sIpc();
 registerWsIpc();
 registerDbIpc();
 registerDockerIpc();
+registerSslIpc();
 
 const createWindow = () => {
   const isMac = process.platform === 'darwin';

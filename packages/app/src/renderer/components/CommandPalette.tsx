@@ -40,6 +40,7 @@ import {
   KeySquare,
   Database,
   Package,
+  ShieldAlert,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -88,6 +89,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "k8s") return <Container />;
   if (type === "db") return <Database />;
   if (type === "docker") return <Package />;
+  if (type === "ssl") return <ShieldAlert />;
   return <NotepadText />;
 }
 
@@ -358,6 +360,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <Package />
               <span>New Docker Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() =>
+                runAction(() => createTab("ssl", "SSL Inspector"))
+              }
+            >
+              <ShieldAlert />
+              <span>New SSL Inspector Tab</span>
             </CommandItem>
           </CommandGroup>
 
