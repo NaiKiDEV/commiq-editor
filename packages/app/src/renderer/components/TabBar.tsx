@@ -30,6 +30,7 @@ import {
   Container,
   KeySquare,
   Database,
+  Package,
 } from "lucide-react";
 import {
   useTabs,
@@ -113,6 +114,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <KeySquare className="size-3" />;
     case "db":
       return <Database className="size-3" />;
+    case "docker":
+      return <Package className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -381,9 +384,11 @@ export function TabBar() {
             </DropdownMenuTrigger>
             <TooltipContent side="bottom">New Tab</TooltipContent>
           </Tooltip>
-          <DropdownMenuContent align="end" className="min-w-48">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Dev</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-80 p-2">
+            <DropdownMenuGroup className="grid grid-cols-2 gap-0.5">
+              <DropdownMenuLabel className="col-span-2 px-1 pb-1">
+                Dev
+              </DropdownMenuLabel>
               <DropdownMenuItem
                 onClick={() => createTab("terminal", "Terminal")}
               >
@@ -430,11 +435,17 @@ export function TabBar() {
                 <Database />
                 Database Client
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("docker", "Docker")}>
+                <Package />
+                Docker
+              </DropdownMenuItem>
             </DropdownMenuGroup>
 
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Productivity</DropdownMenuLabel>
+            <DropdownMenuSeparator className="my-1" />
+            <DropdownMenuGroup className="grid grid-cols-2 gap-0.5">
+              <DropdownMenuLabel className="col-span-2 px-1 pb-1">
+                Productivity
+              </DropdownMenuLabel>
               <DropdownMenuItem onClick={() => createTab("notes", "Notes")}>
                 <NotepadText />
                 Notes
@@ -457,9 +468,11 @@ export function TabBar() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
 
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Text & Data</DropdownMenuLabel>
+            <DropdownMenuSeparator className="my-1" />
+            <DropdownMenuGroup className="grid grid-cols-2 gap-0.5">
+              <DropdownMenuLabel className="col-span-2 px-1 pb-1">
+                Text & Data
+              </DropdownMenuLabel>
               <DropdownMenuItem
                 onClick={() => createTab("diff", "Diff Viewer")}
               >
@@ -490,9 +503,11 @@ export function TabBar() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
 
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Low-level</DropdownMenuLabel>
+            <DropdownMenuSeparator className="my-1" />
+            <DropdownMenuGroup className="grid grid-cols-2 gap-0.5">
+              <DropdownMenuLabel className="col-span-2 px-1 pb-1">
+                Low-level
+              </DropdownMenuLabel>
               <DropdownMenuItem
                 onClick={() => createTab("numbase", "Number Base")}
               >
@@ -515,7 +530,7 @@ export function TabBar() {
                 onClick={() => createTab("endian", "Endianness")}
               >
                 <ArrowLeftRight />
-                Endianness Converter
+                Endianness
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => createTab("bitfield", "Bit Field Editor")}
@@ -525,9 +540,11 @@ export function TabBar() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
 
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Generators & Utils</DropdownMenuLabel>
+            <DropdownMenuSeparator className="my-1" />
+            <DropdownMenuGroup className="grid grid-cols-2 gap-0.5">
+              <DropdownMenuLabel className="col-span-2 px-1 pb-1">
+                Generators & Utils
+              </DropdownMenuLabel>
               <DropdownMenuItem
                 onClick={() => createTab("uuid", "UUID Generator")}
               >

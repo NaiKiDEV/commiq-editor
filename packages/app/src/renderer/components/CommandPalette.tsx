@@ -39,6 +39,7 @@ import {
   Unplug,
   KeySquare,
   Database,
+  Package,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -86,6 +87,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "svg") return <ImagePlay />;
   if (type === "k8s") return <Container />;
   if (type === "db") return <Database />;
+  if (type === "docker") return <Package />;
   return <NotepadText />;
 }
 
@@ -350,6 +352,12 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <Database />
               <span>New Database Client Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runAction(() => createTab("docker", "Docker"))}
+            >
+              <Package />
+              <span>New Docker Tab</span>
             </CommandItem>
           </CommandGroup>
 

@@ -610,6 +610,119 @@ const electronAPI = {
       ipcRenderer.invoke('db:history:clear') as Promise<void>,
   },
 
+  docker: {
+    check: () =>
+      ipcRenderer.invoke('docker:check') as Promise<{
+        available: boolean;
+        reason?: string;
+      }>,
+
+    listContainers: () =>
+      ipcRenderer.invoke('docker:containers:list') as Promise<unknown[] | { error: string }>,
+
+    startContainer: (id: string) =>
+      ipcRenderer.invoke('docker:container:start', id) as Promise<{ success?: boolean; error?: string }>,
+
+    stopContainer: (id: string) =>
+      ipcRenderer.invoke('docker:container:stop', id) as Promise<{ success?: boolean; error?: string }>,
+
+    restartContainer: (id: string) =>
+      ipcRenderer.invoke('docker:container:restart', id) as Promise<{ success?: boolean; error?: string }>,
+
+    removeContainer: (id: string, force: boolean) =>
+      ipcRenderer.invoke('docker:container:remove', id, force) as Promise<{ success?: boolean; error?: string }>,
+
+    logsStart: (containerId: string, streamId: string) =>
+      ipcRenderer.invoke('docker:logs:start', containerId, streamId) as Promise<{ success?: boolean; error?: string }>,
+
+    logsStop: (streamId: string) =>
+      ipcRenderer.invoke('docker:logs:stop', streamId) as Promise<void>,
+
+    onLogChunk: (streamId: string, callback: (chunk: { text: string }) => void) => {
+      const channel = `docker:logs:${streamId}`;
+      const listener = (_e: Electron.IpcRendererEvent, chunk: { text: string }) => callback(chunk);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+
+    listImages: () =>
+      ipcRenderer.invoke('docker:images:list') as Promise<unknown[] | { error: string }>,
+
+    removeImage: (id: string) =>
+      ipcRenderer.invoke('docker:image:remove', id) as Promise<{ success?: boolean; error?: string }>,
+
+    pruneImages: () =>
+      ipcRenderer.invoke('docker:image:prune') as Promise<{ success?: boolean; output?: string; error?: string }>,
+
+    listCompose: () =>
+      ipcRenderer.invoke('docker:compose:list') as Promise<unknown[] | { error: string }>,
+
+    composeUp: (projectName: string, configFile: string) =>
+      ipcRenderer.invoke('docker:compose:up', projectName, configFile) as Promise<{ success?: boolean; error?: string }>,
+
+    composeDown: (projectName: string, configFile: string) =>
+      ipcRenderer.invoke('docker:compose:down', projectName, configFile) as Promise<{ success?: boolean; error?: string }>,
+
+    composeRestart: (projectName: string, configFile: string) =>
+      ipcRenderer.invoke('docker:compose:restart', projectName, configFile) as Promise<{ success?: boolean; error?: string }>,
+
+    listVolumes: () =>
+      ipcRenderer.invoke('docker:volumes:list') as Promise<unknown[] | { error: string }>,
+
+    removeVolume: (name: string) =>
+      ipcRenderer.invoke('docker:volume:remove', name) as Promise<{ success?: boolean; error?: string }>,
+
+    pruneVolumes: () =>
+      ipcRenderer.invoke('docker:volume:prune') as Promise<{ success?: boolean; output?: string; error?: string }>,
+
+    listNetworks: () =>
+      ipcRenderer.invoke('docker:networks:list') as Promise<unknown[] | { error: string }>,
+
+    removeNetwork: (id: string) =>
+      ipcRenderer.invoke('docker:network:remove', id) as Promise<{ success?: boolean; error?: string }>,
+
+    inspectContainer: (id: string) =>
+      ipcRenderer.invoke('docker:container:inspect', id) as Promise<unknown | { error: string }>,
+
+    inspectVolume: (name: string) =>
+      ipcRenderer.invoke('docker:volume:inspect', name) as Promise<unknown | { error: string }>,
+
+    imageHistory: (id: string) =>
+      ipcRenderer.invoke('docker:image:history', id) as Promise<unknown[] | { error: string }>,
+
+    execStart: (containerId: string, execId: string, shell: string) =>
+      ipcRenderer.invoke('docker:exec:start', containerId, execId, shell) as Promise<{ success?: boolean; error?: string }>,
+
+    execStop: (execId: string) =>
+      ipcRenderer.invoke('docker:exec:stop', execId) as Promise<void>,
+
+    execWrite: (execId: string, data: string) =>
+      ipcRenderer.send('docker:exec:write', execId, data),
+
+    execResize: (execId: string, cols: number, rows: number) =>
+      ipcRenderer.send('docker:exec:resize', execId, cols, rows),
+
+    onExecData: (execId: string, callback: (data: string) => void) => {
+      const channel = `docker:exec:data:${execId}`;
+      const listener = (_e: Electron.IpcRendererEvent, data: string) => callback(data);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+
+    onExecExit: (execId: string, callback: (code: number) => void) => {
+      const channel = `docker:exec:exit:${execId}`;
+      const listener = (_e: Electron.IpcRendererEvent, code: number) => callback(code);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+
+    filesList: (containerId: string, path: string) =>
+      ipcRenderer.invoke('docker:files:list', containerId, path) as Promise<{ output?: string; error?: string }>,
+
+    filesRead: (containerId: string, path: string) =>
+      ipcRenderer.invoke('docker:files:read', containerId, path) as Promise<{ content?: string; error?: string }>,
+  },
+
   k8s: {
     reloadConfig: () =>
       ipcRenderer.invoke('k8s:config:reload') as Promise<void>,

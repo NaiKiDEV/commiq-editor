@@ -18,6 +18,7 @@ import { registerRegistersIpc } from './ipc/registers';
 import { registerK8sIpc, stopAllK8sWatches } from './ipc/k8s';
 import { registerWsIpc, stopAllWsConnections } from './ipc/ws';
 import { registerDbIpc, closeAllDbConnections } from './ipc/db';
+import { registerDockerIpc, stopAllDockerStreams } from './ipc/docker';
 
 if (started) {
   app.quit();
@@ -59,6 +60,7 @@ registerRegistersIpc();
 registerK8sIpc();
 registerWsIpc();
 registerDbIpc();
+registerDockerIpc();
 
 const createWindow = () => {
   const isMac = process.platform === 'darwin';
@@ -108,6 +110,7 @@ app.on('window-all-closed', () => {
   stopAllK8sWatches();
   stopAllWsConnections();
   closeAllDbConnections();
+  stopAllDockerStreams();
   if (process.platform !== 'darwin') {
     app.quit();
   }
