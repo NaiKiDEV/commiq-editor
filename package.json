@@ -12,7 +12,8 @@
       "electron-winstaller",
       "esbuild",
       "msw",
-      "node-pty"
+      "node-pty",
+      "better-sqlite3"
     ],
     "overrides": {
       "vite": "^7.3.1"

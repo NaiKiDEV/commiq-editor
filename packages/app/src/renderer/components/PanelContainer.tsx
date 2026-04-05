@@ -28,6 +28,7 @@ import { SvgOptimizerPanel } from "./SvgOptimizerPanel";
 import { KubernetesPanel } from "./kubernetes/KubernetesPanel";
 import { WebSocketPanel } from "./websocket/WebSocketPanel";
 import { SecretSharingPanel } from "./secrets/SecretSharingPanel";
+import { DatabaseClientPanel } from "./DatabaseClientPanel";
 import { getVisiblePanelIds } from "../lib/layout";
 import type { Panel } from "../stores/workspace";
 
@@ -92,6 +93,7 @@ function PanelContent({
       {panel.type === "k8s" && <KubernetesPanel panelId={panel.id} />}
       {panel.type === "ws" && <WebSocketPanel panelId={panel.id} />}
       {panel.type === "secrets" && <SecretSharingPanel panelId={panel.id} />}
+      {panel.type === "db" && <DatabaseClientPanel panelId={panel.id} />}
     </div>
   );
 }

@@ -28,6 +28,7 @@ function getLanguageExtension(format: DataFormat) {
   if (format === 'json') return json();
   if (format === 'yaml') return yaml();
   if (format === 'toml') return StreamLanguage.define(toml);
+  // CSV/TSV — no special language mode, plain text
   return [];
 }
 

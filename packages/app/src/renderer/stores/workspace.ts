@@ -16,7 +16,7 @@ import {
   getVisiblePanelIds,
 } from '../lib/layout';
 
-export type PanelType = 'terminal' | 'browser' | 'notes' | 'app' | 'workflow' | 'timer' | 'ports' | 'process' | 'env' | 'http' | 'whiteboard' | 'regex' | 'data' | 'encoder' | 'cron' | 'diff' | 'color' | 'epoch' | 'uuid' | 'numbase' | 'ieee754' | 'hexdump' | 'endian' | 'bitfield' | 'svg' | 'k8s' | 'ws' | 'secrets';
+export type PanelType = 'terminal' | 'browser' | 'notes' | 'app' | 'workflow' | 'timer' | 'ports' | 'process' | 'env' | 'http' | 'whiteboard' | 'regex' | 'data' | 'encoder' | 'cron' | 'diff' | 'color' | 'epoch' | 'uuid' | 'numbase' | 'ieee754' | 'hexdump' | 'endian' | 'bitfield' | 'svg' | 'k8s' | 'ws' | 'secrets' | 'db';
 
 export type Panel = {
   id: string;

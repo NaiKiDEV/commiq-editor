@@ -38,6 +38,7 @@ import {
   Container,
   Unplug,
   KeySquare,
+  Database,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -84,6 +85,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "bitfield") return <Layers2 />;
   if (type === "svg") return <ImagePlay />;
   if (type === "k8s") return <Container />;
+  if (type === "db") return <Database />;
   return <NotepadText />;
 }
 
@@ -340,6 +342,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <KeySquare />
               <span>New Secret Sharing Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() =>
+                runAction(() => createTab("db", "Database Client"))
+              }
+            >
+              <Database />
+              <span>New Database Client Tab</span>
             </CommandItem>
           </CommandGroup>
 

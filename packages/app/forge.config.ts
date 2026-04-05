@@ -19,10 +19,15 @@ const config: ForgeConfig = {
     packageAfterCopy: async (_forgeConfig, buildPath) => {
       const fs = await import('node:fs');
       const path = await import('node:path');
-      const src = path.join(__dirname, '..', '..', 'node_modules', 'node-pty');
-      const dest = path.join(buildPath, 'node_modules', 'node-pty');
-      fs.mkdirSync(path.dirname(dest), { recursive: true });
-      fs.cpSync(src, dest, { recursive: true, verbatimSymlinks: false });
+      const monorepoModules = path.join(__dirname, '..', '..', 'node_modules');
+      for (const mod of ['node-pty', 'better-sqlite3', 'pg', 'pg-pool', 'pg-protocol', 'pg-types', 'pg-connection-string', 'pg-cloudflare', 'pg-int8', 'postgres-array', 'postgres-bytea', 'postgres-date', 'postgres-interval', 'postgres-range', 'pgpass', 'mysql2', 'iconv-lite', 'safer-buffer', 'long', 'named-placeholders', 'lru-cache', 'denque', 'generate-function', 'is-property', 'sqlstring', 'seq-queue']) {
+        const src = path.join(monorepoModules, mod);
+        const dest = path.join(buildPath, 'node_modules', mod);
+        if (fs.existsSync(src)) {
+          fs.mkdirSync(path.dirname(dest), { recursive: true });
+          fs.cpSync(src, dest, { recursive: true, verbatimSymlinks: false });
+        }
+      }
     },
   },
   makers: [

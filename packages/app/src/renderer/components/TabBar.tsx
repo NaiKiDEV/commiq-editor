@@ -29,6 +29,7 @@ import {
   ImagePlay,
   Container,
   KeySquare,
+  Database,
 } from "lucide-react";
 import {
   useTabs,
@@ -110,6 +111,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <Unplug className="size-3" />;
     case "secrets":
       return <KeySquare className="size-3" />;
+    case "db":
+      return <Database className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -422,6 +425,10 @@ export function TabBar() {
               <DropdownMenuItem onClick={() => createTab("k8s", "Kubernetes")}>
                 <Container />
                 Kubernetes
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("db", "Database")}>
+                <Database />
+                Database Client
               </DropdownMenuItem>
             </DropdownMenuGroup>
 

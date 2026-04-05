@@ -501,6 +501,115 @@ const electronAPI = {
     },
   },
 
+  db: {
+    profilesList: () =>
+      ipcRenderer.invoke('db:profiles:list') as Promise<
+        Array<{
+          id: string;
+          name: string;
+          driver: 'sqlite' | 'postgresql' | 'mysql';
+          host: string;
+          port: number;
+          database: string;
+          username: string;
+          password: string;
+        }>
+      >,
+
+    profilesSave: (profile: {
+      id: string;
+      name: string;
+      driver: 'sqlite' | 'postgresql' | 'mysql';
+      host: string;
+      port: number;
+      database: string;
+      username: string;
+      password: string;
+    }) =>
+      ipcRenderer.invoke('db:profiles:save', profile) as Promise<typeof profile>,
+
+    profilesDelete: (id: string) =>
+      ipcRenderer.invoke('db:profiles:delete', id) as Promise<void>,
+
+    connect: (profile: {
+      id: string;
+      name: string;
+      driver: 'sqlite' | 'postgresql' | 'mysql';
+      host: string;
+      port: number;
+      database: string;
+      username: string;
+      password: string;
+    }) =>
+      ipcRenderer.invoke('db:connect', profile) as Promise<
+        { success: true } | { error: string }
+      >,
+
+    disconnect: (profileId: string) =>
+      ipcRenderer.invoke('db:disconnect', profileId) as Promise<void>,
+
+    test: (profile: {
+      id: string;
+      name: string;
+      driver: 'sqlite' | 'postgresql' | 'mysql';
+      host: string;
+      port: number;
+      database: string;
+      username: string;
+      password: string;
+    }) =>
+      ipcRenderer.invoke('db:test', profile) as Promise<
+        { success: true; duration: number } | { error: string }
+      >,
+
+    query: (profileId: string, sql: string) =>
+      ipcRenderer.invoke('db:query', profileId, sql) as Promise<
+        | {
+            columns: string[];
+            rows: Record<string, unknown>[];
+            rowCount: number;
+            affectedRows: number;
+            duration: number;
+          }
+        | { error: string }
+      >,
+
+    schema: (profileId: string) =>
+      ipcRenderer.invoke('db:schema', profileId) as Promise<
+        | Array<{
+            name: string;
+            schema: string;
+            columns: Array<{
+              name: string;
+              type: string;
+              nullable: boolean;
+              primaryKey: boolean;
+              defaultValue: string | null;
+            }>;
+            indexes: Array<{
+              name: string;
+              unique: boolean;
+              columns: string[];
+            }>;
+            foreignKeys: Array<{
+              columns: string[];
+              referencedSchema: string;
+              referencedTable: string;
+              referencedColumns: string[];
+            }>;
+          }>
+        | { error: string }
+      >,
+
+    historyList: (connectionId?: string) =>
+      ipcRenderer.invoke('db:history:list', connectionId) as Promise<
+        Array<{ id: string; connectionId: string; query: string; timestamp: number }>
+      >,
+
+    historyClear: () =>
+      ipcRenderer.invoke('db:history:clear') as Promise<void>,
+  },
+
   k8s: {
     reloadConfig: () =>
       ipcRenderer.invoke('k8s:config:reload') as Promise<void>,
