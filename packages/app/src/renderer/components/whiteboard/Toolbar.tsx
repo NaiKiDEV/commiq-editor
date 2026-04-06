@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import {
   MousePointer2, StickyNote, Square, ArrowRight, Trash2,
-  ZoomIn, ZoomOut, Maximize,
+  ZoomIn, ZoomOut, Maximize, Undo2, Redo2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StickyColor } from '../../../shared/whiteboard-types';
@@ -14,12 +14,16 @@ interface ToolbarProps {
   stageScale: number;
   preCreationStickyColor: StickyColor;
   preCreationFrameColor: string;
+  canUndo: boolean;
+  canRedo: boolean;
   onToolChange: (tool: Tool) => void;
   onStickyColorChange: (color: StickyColor) => void;
   onFrameColorChange: (color: string) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onFitToScreen: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
 }
 
 const TOOLS: [Tool, typeof MousePointer2, string][] = [
@@ -32,11 +36,35 @@ const TOOLS: [Tool, typeof MousePointer2, string][] = [
 
 export const Toolbar = memo(function Toolbar({
   tool, stageScale, preCreationStickyColor, preCreationFrameColor,
+  canUndo, canRedo,
   onToolChange, onStickyColorChange, onFrameColorChange,
-  onZoomIn, onZoomOut, onFitToScreen,
+  onZoomIn, onZoomOut, onFitToScreen, onUndo, onRedo,
 }: ToolbarProps) {
   return (
     <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg px-2 py-1.5 shadow-xl">
+      <button
+        onClick={onUndo}
+        disabled={!canUndo}
+        className={cn(
+          'p-1.5 rounded-md transition-colors',
+          canUndo ? 'text-white/60 hover:text-white/90 hover:bg-white/10' : 'text-white/20 cursor-not-allowed',
+        )}
+        title="Undo (Ctrl+Z)"
+      >
+        <Undo2 size={16} />
+      </button>
+      <button
+        onClick={onRedo}
+        disabled={!canRedo}
+        className={cn(
+          'p-1.5 rounded-md transition-colors',
+          canRedo ? 'text-white/60 hover:text-white/90 hover:bg-white/10' : 'text-white/20 cursor-not-allowed',
+        )}
+        title="Redo (Ctrl+Shift+Z)"
+      >
+        <Redo2 size={16} />
+      </button>
+      <div className="w-px h-5 bg-white/10 mx-1" />
       {TOOLS.map(([t, Icon, label]) => (
         <button
           key={t}

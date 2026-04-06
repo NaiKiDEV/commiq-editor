@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Stage, Layer, Rect, Arrow, Transformer } from 'react-konva';
 import type Konva from 'konva';
-import { Radio, Keyboard, Palette } from 'lucide-react';
+import { Radio, Keyboard, Palette, Undo2, Redo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettings } from '../contexts/settings';
 import type { Board, StickyColor, BoardSummary } from '../../shared/whiteboard-types';
@@ -62,6 +62,8 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
   const [mcpRunning, setMcpRunning] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showColorLegend, setShowColorLegend] = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const { settings } = useSettings();
 
   // === STATE REF — always current, lets stable callbacks read latest values ===
@@ -124,7 +126,7 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
   useEffect(() => {
     const cleanupChanged = window.electronAPI.whiteboard.onBoardChanged((b: unknown) => {
       const updated = b as Board;
-      if (updated.id === stateRef.current.activeBoardId) setBoard(updated);
+      if (updated.id === stateRef.current.activeBoardId) { setBoard(updated); refreshUndoRedo(); }
       setBoards((prev) =>
         prev.map((bs) =>
           bs.id === updated.id
@@ -215,6 +217,20 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const { editingSticky, editingFrame, selectedIds, activeBoardId, board } = stateRef.current;
+
+      // Undo: Ctrl+Z
+      if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey && !editingSticky && !editingFrame) {
+        e.preventDefault();
+        if (activeBoardId) window.electronAPI.whiteboard.undo(activeBoardId);
+        return;
+      }
+      // Redo: Ctrl+Shift+Z or Ctrl+Y
+      if (((e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey) || (e.key === 'y' && (e.ctrlKey || e.metaKey))) && !editingSticky && !editingFrame) {
+        e.preventDefault();
+        if (activeBoardId) window.electronAPI.whiteboard.redo(activeBoardId);
+        return;
+      }
+
       if (e.key === 'Escape') {
         setTool('select');
         setConnectFrom(null);
@@ -712,6 +728,31 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     persistViewport(-newPos.x, -newPos.y, newScale);
   }, [persistViewport]);
 
+  // Undo/redo helpers
+  const refreshUndoRedo = useCallback(async () => {
+    const { activeBoardId } = stateRef.current;
+    if (!activeBoardId) { setCanUndo(false); setCanRedo(false); return; }
+    const [u, r] = await Promise.all([
+      window.electronAPI.whiteboard.canUndo(activeBoardId),
+      window.electronAPI.whiteboard.canRedo(activeBoardId),
+    ]);
+    setCanUndo(u); setCanRedo(r);
+  }, []);
+
+  const handleUndo = useCallback(async () => {
+    const { activeBoardId } = stateRef.current;
+    if (!activeBoardId) return;
+    await window.electronAPI.whiteboard.undo(activeBoardId);
+    refreshUndoRedo();
+  }, [refreshUndoRedo]);
+
+  const handleRedo = useCallback(async () => {
+    const { activeBoardId } = stateRef.current;
+    if (!activeBoardId) return;
+    await window.electronAPI.whiteboard.redo(activeBoardId);
+    refreshUndoRedo();
+  }, [refreshUndoRedo]);
+
   // Context menu action handlers (stable)
   const handleStickyColorChange = useCallback((stickyId: string, color: string) => {
     const { activeBoardId } = stateRef.current;
@@ -968,12 +1009,16 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         stageScale={stageScale}
         preCreationStickyColor={preCreationStickyColor}
         preCreationFrameColor={preCreationFrameColor}
+        canUndo={canUndo}
+        canRedo={canRedo}
         onToolChange={handleToolChange}
         onStickyColorChange={setPreCreationStickyColor}
         onFrameColorChange={setPreCreationFrameColor}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onFitToScreen={fitToScreen}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
       />
 
       <BoardMenu

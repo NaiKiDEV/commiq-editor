@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { Plus, Trash2, Globe, FolderOpen, Loader2, Upload, Check, ChevronDown } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { Plus, Trash2, Globe, FolderOpen, Loader2, Upload, Check, ChevronDown, Copy } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -19,6 +19,24 @@ type HttpRequestBody = {
   content: string;
 };
 
+type AuthConfig = {
+  type: 'none' | 'bearer' | 'basic' | 'apikey';
+  bearer: { token: string };
+  basic: { username: string; password: string };
+  apikey: { key: string; value: string; addTo: 'header' | 'query' };
+};
+
+function defaultAuth(): AuthConfig {
+  return {
+    type: 'none',
+    bearer: { token: '' },
+    basic: { username: '', password: '' },
+    apikey: { key: 'X-API-Key', value: '', addTo: 'header' },
+  };
+}
+
+type QueryParam = { key: string; value: string; enabled: boolean };
+
 type HttpRequestRecord = {
   id: string;
   collectionId: string | null;
@@ -28,7 +46,75 @@ type HttpRequestRecord = {
   url: string;
   headers: { key: string; value: string; enabled: boolean }[];
   body: HttpRequestBody;
+  auth?: AuthConfig;
+  queryParams?: QueryParam[];
 };
+
+/** Parse query string from URL into param array */
+function parseQueryParams(url: string): QueryParam[] {
+  try {
+    const u = new URL(url.includes('://') ? url : `http://${url}`);
+    return Array.from(u.searchParams.entries()).map(([key, value]) => ({ key, value, enabled: true }));
+  } catch {
+    return [];
+  }
+}
+
+/** Rebuild URL from base + query params */
+function buildUrl(baseUrl: string, params: QueryParam[]): string {
+  try {
+    const u = new URL(baseUrl.includes('://') ? baseUrl : `http://${baseUrl}`);
+    // Clear existing params
+    u.search = '';
+    for (const p of params) {
+      if (p.enabled && p.key.trim()) u.searchParams.append(p.key, p.value);
+    }
+    // Return with original protocol prefix
+    if (!baseUrl.includes('://')) return u.toString().replace('http://', '');
+    return u.toString();
+  } catch {
+    return baseUrl;
+  }
+}
+
+/** Get the base URL without query string */
+function getBaseUrl(url: string): string {
+  try {
+    const u = new URL(url.includes('://') ? url : `http://${url}`);
+    u.search = '';
+    if (!url.includes('://')) return u.toString().replace('http://', '');
+    return u.toString();
+  } catch {
+    return url.split('?')[0];
+  }
+}
+
+/** Build auth headers from config */
+function buildAuthHeaders(auth: AuthConfig): { key: string; value: string }[] {
+  switch (auth.type) {
+    case 'bearer':
+      return auth.bearer.token ? [{ key: 'Authorization', value: `Bearer ${auth.bearer.token}` }] : [];
+    case 'basic': {
+      if (!auth.basic.username) return [];
+      const encoded = btoa(`${auth.basic.username}:${auth.basic.password}`);
+      return [{ key: 'Authorization', value: `Basic ${encoded}` }];
+    }
+    case 'apikey':
+      return auth.apikey.addTo === 'header' && auth.apikey.key && auth.apikey.value
+        ? [{ key: auth.apikey.key, value: auth.apikey.value }]
+        : [];
+    default:
+      return [];
+  }
+}
+
+/** Build auth query params from config */
+function buildAuthQueryParams(auth: AuthConfig): QueryParam[] {
+  if (auth.type === 'apikey' && auth.apikey.addTo === 'query' && auth.apikey.key && auth.apikey.value) {
+    return [{ key: auth.apikey.key, value: auth.apikey.value, enabled: true }];
+  }
+  return [];
+}
 
 type HttpResponse = {
   status: number;
@@ -67,7 +153,7 @@ export function HttpClientPanel({ panelId: _panelId }: HttpClientPanelProps) {
   const [response, setResponse] = useState<HttpResponse | HttpError | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [responseTab, setResponseTab] = useState<'body' | 'headers' | 'info'>('body');
-  const [requestTab, setRequestTab] = useState<'headers' | 'body'>('headers');
+  const [requestTab, setRequestTab] = useState<'params' | 'headers' | 'auth' | 'body'>('params');
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
 
@@ -293,8 +379,8 @@ export function HttpClientPanel({ panelId: _panelId }: HttpClientPanelProps) {
 
 type RequestEditorProps = {
   request: HttpRequestRecord;
-  requestTab: 'headers' | 'body';
-  setRequestTab: (t: 'headers' | 'body') => void;
+  requestTab: 'params' | 'headers' | 'auth' | 'body';
+  setRequestTab: (t: 'params' | 'headers' | 'auth' | 'body') => void;
   response: HttpResponse | HttpError | null;
   responseTab: 'body' | 'headers' | 'info';
   setResponseTab: (t: 'body' | 'headers' | 'info') => void;
@@ -332,15 +418,33 @@ function RequestEditor({
   isLoading, setIsLoading, setResponse,
   onRequestChange,
 }: RequestEditorProps) {
+  const auth = request.auth ?? defaultAuth();
+  const queryParams = request.queryParams ?? parseQueryParams(request.url);
+  const [copiedResponse, setCopiedResponse] = useState(false);
+
   const update = (patch: Partial<HttpRequestRecord>) =>
     onRequestChange({ ...request, ...patch });
+
+  const updateAuth = (patch: Partial<AuthConfig>) =>
+    update({ auth: { ...auth, ...patch } });
 
   const sendRequest = async () => {
     setIsLoading(true);
     setResponse(null);
     try {
-      const result = await window.electronAPI.http.request(request) as HttpResponse | HttpError | { cancelled: true };
-      // If user cancelled, leave response null (silently clear)
+      // Build the final URL with query params + auth query params
+      const enabledParams = [...queryParams.filter(p => p.enabled && p.key.trim()), ...buildAuthQueryParams(auth)];
+      const finalUrl = enabledParams.length > 0 ? buildUrl(getBaseUrl(request.url), enabledParams) : request.url;
+
+      // Merge auth headers into request
+      const authHeaders = buildAuthHeaders(auth);
+      const mergedHeaders = [
+        ...request.headers,
+        ...authHeaders.map(h => ({ ...h, enabled: true })),
+      ];
+
+      const requestToSend = { ...request, url: finalUrl, headers: mergedHeaders };
+      const result = await window.electronAPI.http.request(requestToSend) as HttpResponse | HttpError | { cancelled: true };
       if ('cancelled' in result) return;
       setResponse(result as HttpResponse | HttpError);
     } finally {
@@ -363,11 +467,42 @@ function RequestEditor({
   const removeHeader = (idx: number) =>
     update({ headers: request.headers.filter((_, i) => i !== idx) });
 
+  // Query params
+  const addQueryParam = () =>
+    update({ queryParams: [...queryParams, { key: '', value: '', enabled: true }] });
+
+  const updateQueryParam = (idx: number, patch: Partial<QueryParam>) => {
+    const params = queryParams.map((p, i) => i === idx ? { ...p, ...patch } : p);
+    update({ queryParams: params, url: buildUrl(getBaseUrl(request.url), params) });
+  };
+
+  const removeQueryParam = (idx: number) => {
+    const params = queryParams.filter((_, i) => i !== idx);
+    update({ queryParams: params, url: buildUrl(getBaseUrl(request.url), params) });
+  };
+
+  // Sync query params when URL is manually edited
+  const handleUrlChange = (newUrl: string) => {
+    const parsed = parseQueryParams(newUrl);
+    update({ url: newUrl, queryParams: parsed.length > 0 ? parsed : queryParams });
+  };
+
   const isError = response && 'error' in response;
   const okResponse = !isError ? response as HttpResponse | null : null;
   const responseBody = okResponse
     ? prettyPrint(okResponse.body, okResponse.headers['content-type'] ?? '')
     : null;
+
+  const enabledParamCount = queryParams.filter(p => p.enabled && p.key.trim()).length;
+  const enabledHeaderCount = request.headers.filter(h => h.enabled && h.key).length;
+
+  const handleCopyResponse = useCallback(() => {
+    if (responseBody) {
+      navigator.clipboard.writeText(responseBody);
+      setCopiedResponse(true);
+      setTimeout(() => setCopiedResponse(false), 2000);
+    }
+  }, [responseBody]);
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -402,7 +537,7 @@ function RequestEditor({
           className="flex-1 text-xs font-mono"
           placeholder="https://api.example.com/endpoint"
           value={request.url}
-          onChange={(e) => update({ url: e.target.value })}
+          onChange={(e) => handleUrlChange(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) sendRequest(); }}
         />
         {isLoading ? (
@@ -418,19 +553,49 @@ function RequestEditor({
 
       {/* Request tabs */}
       <div className="flex border-b border-border px-3 gap-3">
-        {(['headers', 'body'] as const).map((tab) => (
+        {(['params', 'headers', 'auth', 'body'] as const).map((tab) => (
           <button key={tab} onClick={() => setRequestTab(tab)}
             className={cn('pb-1 text-xs capitalize border-b-2 -mb-px transition-colors',
               requestTab === tab ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}>
-            {tab}
-            {tab === 'headers' && request.headers.filter(h => h.enabled && h.key).length > 0 &&
-              <span className="ml-1 text-[10px] text-muted-foreground">({request.headers.filter(h => h.enabled && h.key).length})</span>}
+            {tab === 'params' ? 'Params' : tab}
+            {tab === 'params' && enabledParamCount > 0 &&
+              <span className="ml-1 text-[10px] text-muted-foreground">({enabledParamCount})</span>}
+            {tab === 'headers' && enabledHeaderCount > 0 &&
+              <span className="ml-1 text-[10px] text-muted-foreground">({enabledHeaderCount})</span>}
+            {tab === 'auth' && auth.type !== 'none' &&
+              <span className="ml-1 text-[10px] text-primary">●</span>}
           </button>
         ))}
       </div>
 
       {/* Request tab content — fixed height */}
       <div className="h-36 overflow-y-auto px-3 py-2 shrink-0">
+        {/* Query Params */}
+        {requestTab === 'params' && (
+          <div className="space-y-1">
+            {queryParams.map((p, i) => (
+              <div key={i} className="flex items-center gap-1">
+                <input type="checkbox" checked={p.enabled}
+                  onChange={(e) => updateQueryParam(i, { enabled: e.target.checked })}
+                  className="h-3 w-3 shrink-0 accent-primary" />
+                <Input className="flex-1 h-6 text-xs font-mono"
+                  placeholder="Key" value={p.key}
+                  onChange={(e) => updateQueryParam(i, { key: e.target.value })} />
+                <Input className="flex-1 h-6 text-xs font-mono"
+                  placeholder="Value" value={p.value}
+                  onChange={(e) => updateQueryParam(i, { value: e.target.value })} />
+                <Button variant="ghost" size="icon-xs" onClick={() => removeQueryParam(i)}>
+                  <Trash2 />
+                </Button>
+              </div>
+            ))}
+            <Button variant="ghost" size="xs" className="mt-1" onClick={addQueryParam}>
+              <Plus /> Add Param
+            </Button>
+          </div>
+        )}
+
+        {/* Headers */}
         {requestTab === 'headers' && (
           <div className="space-y-1">
             {request.headers.map((h, i) => (
@@ -454,6 +619,103 @@ function RequestEditor({
             </Button>
           </div>
         )}
+
+        {/* Auth */}
+        {requestTab === 'auth' && (
+          <div className="space-y-3">
+            {/* Auth type selector */}
+            <div className="flex rounded-md border border-border overflow-hidden text-xs w-fit">
+              {(['none', 'bearer', 'basic', 'apikey'] as const).map((type, i) => (
+                <button
+                  key={type}
+                  className={cn('px-2.5 py-1 transition-colors',
+                    i > 0 && 'border-l border-border',
+                    auth.type === type ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                  )}
+                  onClick={() => updateAuth({ type })}
+                >
+                  {type === 'none' ? 'None' : type === 'bearer' ? 'Bearer' : type === 'basic' ? 'Basic' : 'API Key'}
+                </button>
+              ))}
+            </div>
+
+            {/* Bearer */}
+            {auth.type === 'bearer' && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Token</label>
+                <Input className="h-7 text-xs font-mono"
+                  placeholder="eyJhbGciOiJIUzI1NiIs..."
+                  value={auth.bearer.token}
+                  onChange={(e) => updateAuth({ bearer: { token: e.target.value } })}
+                />
+              </div>
+            )}
+
+            {/* Basic */}
+            {auth.type === 'basic' && (
+              <div className="flex gap-2">
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Username</label>
+                  <Input className="h-7 text-xs font-mono"
+                    placeholder="username"
+                    value={auth.basic.username}
+                    onChange={(e) => updateAuth({ basic: { ...auth.basic, username: e.target.value } })}
+                  />
+                </div>
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Password</label>
+                  <Input className="h-7 text-xs font-mono" type="password"
+                    placeholder="password"
+                    value={auth.basic.password}
+                    onChange={(e) => updateAuth({ basic: { ...auth.basic, password: e.target.value } })}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* API Key */}
+            {auth.type === 'apikey' && (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <div className="flex-1 flex flex-col gap-1.5">
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Key</label>
+                    <Input className="h-7 text-xs font-mono"
+                      placeholder="X-API-Key"
+                      value={auth.apikey.key}
+                      onChange={(e) => updateAuth({ apikey: { ...auth.apikey, key: e.target.value } })}
+                    />
+                  </div>
+                  <div className="flex-1 flex flex-col gap-1.5">
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Value</label>
+                    <Input className="h-7 text-xs font-mono"
+                      placeholder="your-api-key"
+                      value={auth.apikey.value}
+                      onChange={(e) => updateAuth({ apikey: { ...auth.apikey, value: e.target.value } })}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Add to</label>
+                  <div className="flex rounded-md border border-border overflow-hidden text-xs">
+                    {(['header', 'query'] as const).map((loc, i) => (
+                      <button key={loc}
+                        className={cn('px-2.5 py-1 capitalize transition-colors',
+                          i > 0 && 'border-l border-border',
+                          auth.apikey.addTo === loc ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                        )}
+                        onClick={() => updateAuth({ apikey: { ...auth.apikey, addTo: loc } })}
+                      >
+                        {loc}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Body */}
         {requestTab === 'body' && (
           <div className="flex flex-col gap-1.5 h-full">
             <div className="flex rounded-md border border-border overflow-hidden text-xs w-fit">
@@ -494,13 +756,16 @@ function RequestEditor({
               </button>
             ))}
             {okResponse && (
-              <span className={cn('ml-auto text-xs font-mono font-bold', statusColor(okResponse.status))}>
-                {okResponse.status} {okResponse.statusText}
-              </span>
+              <div className="flex items-center gap-2 ml-auto">
+                <span className={cn('text-xs font-mono font-bold', statusColor(okResponse.status))}>
+                  {okResponse.status} {okResponse.statusText}
+                </span>
+                <span className="text-xs text-muted-foreground">{okResponse.timing.duration}ms</span>
+              </div>
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3 text-xs font-mono">
+          <div className="flex-1 overflow-y-auto p-3 text-xs font-mono relative">
             {isLoading && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" /> Sending...
@@ -510,7 +775,18 @@ function RequestEditor({
               <span className="text-destructive">{(response as HttpError).error}</span>
             )}
             {!isLoading && okResponse && responseTab === 'body' && (
-              <pre className="whitespace-pre-wrap break-words">{responseBody}</pre>
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="absolute top-2 right-2 opacity-60 hover:opacity-100"
+                  onClick={handleCopyResponse}
+                  title="Copy response body"
+                >
+                  {copiedResponse ? <Check className="size-3 text-green-400" /> : <Copy className="size-3" />}
+                </Button>
+                <pre className="whitespace-pre-wrap break-words">{responseBody}</pre>
+              </>
             )}
             {!isLoading && okResponse && responseTab === 'headers' && (
               <div className="space-y-0.5">

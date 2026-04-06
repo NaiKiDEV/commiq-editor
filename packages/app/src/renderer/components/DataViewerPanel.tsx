@@ -1,11 +1,12 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Copy, Check, WrapText, ArrowRightLeft, Braces, Table2, FileText } from 'lucide-react';
+import { Copy, Check, WrapText, ArrowRightLeft, Braces, Table2, FileText, Network } from 'lucide-react';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { DataEditor } from './data-viewer/DataEditor';
 import { TypeScriptPanel } from './data-viewer/TypeScriptPanel';
 import { CsvTable } from './data-viewer/CsvTable';
+import { JsonTreeView } from './data-viewer/JsonTreeView';
 import { detectFormat, validateFormat, parseData, type DataFormat } from './data-viewer/detect';
 import { convertData, serialize } from './data-viewer/convert';
 import { parseCsv, objectsToCsv, type CsvData } from './data-viewer/csv';
@@ -31,6 +32,7 @@ export function DataViewerPanel({ panelId: _panelId }: { panelId: string }) {
   const [format, setFormat] = useState<DataFormat>('json');
   const [showTs, setShowTs] = useState(false);
   const [showTable, setShowTable] = useState(false);
+  const [showTree, setShowTree] = useState(false);
   const [copied, setCopied] = useState(false);
   const [convertError, setConvertError] = useState<string | null>(null);
 
@@ -127,6 +129,7 @@ export function DataViewerPanel({ panelId: _panelId }: { panelId: string }) {
   const canPrettify = !error && !!content.trim() && !isCsvFormat;
   const canTs = !error && !!parsedData && format === 'json';
   const canTable = !error && csvData !== null;
+  const canTree = !error && parsedData !== null && (format === 'json' || format === 'yaml' || format === 'toml');
 
   return (
     <div className="flex flex-col h-full bg-background text-foreground text-sm">
@@ -222,6 +225,20 @@ export function DataViewerPanel({ panelId: _panelId }: { panelId: string }) {
             </Button>
           )}
 
+          {/* Tree view toggle — JSON/YAML/TOML */}
+          {(format === 'json' || format === 'yaml' || format === 'toml') && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => { setShowTree((v) => !v); if (!showTree) setShowTable(false); }}
+              disabled={!canTree}
+              title={showTree ? 'Show raw text' : 'Show tree view'}
+              className={showTree ? 'text-primary' : ''}
+            >
+              <Network />
+            </Button>
+          )}
+
           {/* Table view toggle */}
           <Button
             variant="ghost"
@@ -238,8 +255,12 @@ export function DataViewerPanel({ panelId: _panelId }: { panelId: string }) {
 
       {/* Main area */}
       <div className="flex flex-1 min-h-0">
-        {/* Table view */}
-        {showTable && csvData ? (
+        {/* Tree view */}
+        {showTree && parsedData !== null ? (
+          <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
+            <JsonTreeView data={parsedData} />
+          </div>
+        ) : showTable && csvData ? (
           <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
             <CsvTable data={csvData} />
           </div>

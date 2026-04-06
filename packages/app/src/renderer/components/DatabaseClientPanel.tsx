@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef, memo } from 'react';
 import {
   Plus, Trash2, Play, Database, Table2, ChevronRight, ChevronDown,
   Plug, Unplug, Loader2, History, KeyRound, Copy, Check, X,
-  Hash, Link2, Search,
+  Hash, Link2, Search, Download,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -12,6 +12,9 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription,
 } from './ui/dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
 // CodeMirror
@@ -122,6 +125,88 @@ function emptyProfile(): DbConnectionProfile {
 
 function createQueryTab(n: number): QueryTab {
   return { id: crypto.randomUUID(), label: `Query ${n}`, result: null, error: null, executing: false };
+}
+
+// ---------------------------------------------------------------------------
+// Export helpers
+// ---------------------------------------------------------------------------
+
+function exportAsCsv(result: DbQueryResult): string {
+  const escape = (v: unknown) => {
+    const s = v === null ? '' : String(v);
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const header = result.columns.map(escape).join(',');
+  const rows = result.rows.map(row => result.columns.map(col => escape(row[col])).join(','));
+  return [header, ...rows].join('\n');
+}
+
+function exportAsJson(result: DbQueryResult): string {
+  return JSON.stringify(result.rows, null, 2);
+}
+
+function exportAsInsert(result: DbQueryResult, tableName: string): string {
+  if (result.rows.length === 0) return '-- No rows to export';
+  const cols = result.columns.join(', ');
+  return result.rows.map(row => {
+    const values = result.columns.map(col => {
+      const v = row[col];
+      if (v === null) return 'NULL';
+      if (typeof v === 'number') return String(v);
+      if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+      return `'${String(v).replace(/'/g, "''")}'`;
+    }).join(', ');
+    return `INSERT INTO ${tableName} (${cols}) VALUES (${values});`;
+  }).join('\n');
+}
+
+function downloadText(content: string, filename: string): void {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------------------
+// Resizable SQL editor wrapper
+// ---------------------------------------------------------------------------
+
+function ResizableEditor({ sqlEditorContainerRef }: { sqlEditorContainerRef: React.RefObject<HTMLDivElement | null> }) {
+  const [height, setHeight] = useState(160);
+  const dragging = useRef(false);
+  const startY = useRef(0);
+  const startH = useRef(0);
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (!dragging.current) return;
+      const delta = e.clientY - startY.current;
+      setHeight(Math.max(80, Math.min(500, startH.current + delta)));
+    };
+    const onUp = () => { dragging.current = false; };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
+  }, []);
+
+  return (
+    <>
+      <div className="shrink-0 border-b border-border overflow-hidden" style={{ height }}>
+        <div ref={sqlEditorContainerRef} className="h-full w-full" />
+      </div>
+      <div
+        className="h-1 shrink-0 cursor-row-resize bg-border hover:bg-primary/40 transition-colors"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          dragging.current = true;
+          startY.current = e.clientY;
+          startH.current = height;
+          (e.target as HTMLElement).setPointerCapture(e.pointerId);
+        }}
+      />
+    </>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -1091,10 +1176,8 @@ export function DatabaseClientPanel({ panelId: _panelId }: DatabaseClientPanelPr
             </button>
           </div>
 
-          {/* SQL Editor */}
-          <div className="h-40 shrink-0 border-b border-border overflow-hidden">
-            <div ref={sqlEditorContainerRef} className="h-full w-full" />
-          </div>
+          {/* SQL Editor — resizable */}
+          <ResizableEditor sqlEditorContainerRef={sqlEditorContainerRef} />
 
           {/* Results */}
           <div className="flex-1 overflow-auto min-h-0">
@@ -1120,6 +1203,35 @@ export function DatabaseClientPanel({ panelId: _panelId }: DatabaseClientPanelPr
                     <span>{activeTab.result.affectedRows} row{activeTab.result.affectedRows !== 1 ? 's' : ''} affected</span>
                   )}
                   <span>{activeTab.result.duration}ms</span>
+                  {activeTab.result.columns.length > 0 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger render={
+                        <Button variant="ghost" size="icon-xs" title="Export results" className="ml-auto" />
+                      }>
+                        <Download className="size-3.5" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => downloadText(exportAsCsv(activeTab.result!), 'results.csv')}>
+                          Export as CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => downloadText(exportAsJson(activeTab.result!), 'results.json')}>
+                          Export as JSON
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          const name = prompt('Table name for INSERT statements:', 'table_name');
+                          if (name) downloadText(exportAsInsert(activeTab.result!, name), 'inserts.sql');
+                        }}>
+                          Export as INSERT
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigator.clipboard.writeText(exportAsCsv(activeTab.result!))}>
+                          Copy as CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigator.clipboard.writeText(exportAsJson(activeTab.result!))}>
+                          Copy as JSON
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
 
                 {activeTab.result.columns.length > 0 && (

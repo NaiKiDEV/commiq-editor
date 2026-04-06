@@ -63,6 +63,7 @@ const electronAPI = {
           id: string;
           title: string;
           content: string;
+          tags: string[];
           createdAt: string;
           updatedAt: string;
         }>
@@ -73,15 +74,17 @@ const electronAPI = {
         id: string;
         title: string;
         content: string;
+        tags: string[];
         createdAt: string;
         updatedAt: string;
       }>,
 
-    update: (id: string, data: { title?: string; content?: string }) =>
+    update: (id: string, data: { title?: string; content?: string; tags?: string[] }) =>
       ipcRenderer.invoke("notes:update", id, data) as Promise<{
         id: string;
         title: string;
         content: string;
+        tags: string[];
         createdAt: string;
         updatedAt: string;
       } | null>,
@@ -366,6 +369,14 @@ const electronAPI = {
       ipcRenderer.invoke("whiteboard:start-mcp-server", port),
     stopMcpServer: () => ipcRenderer.invoke("whiteboard:stop-mcp-server"),
     getMcpStatus: () => ipcRenderer.invoke("whiteboard:mcp-status"),
+    undo: (boardId: string) =>
+      ipcRenderer.invoke("whiteboard:undo", boardId),
+    redo: (boardId: string) =>
+      ipcRenderer.invoke("whiteboard:redo", boardId),
+    canUndo: (boardId: string) =>
+      ipcRenderer.invoke("whiteboard:can-undo", boardId) as Promise<boolean>,
+    canRedo: (boardId: string) =>
+      ipcRenderer.invoke("whiteboard:can-redo", boardId) as Promise<boolean>,
   },
 
   registers: {

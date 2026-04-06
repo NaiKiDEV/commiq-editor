@@ -28,6 +28,8 @@ export const FRAME_COLORS = [
 ];
 
 export const SHORTCUT_LABELS = [
+  ['Undo', 'Ctrl+Z'],
+  ['Redo', 'Ctrl+Shift+Z'],
   ['Pan', 'Middle mouse button'],
   ['Multi-select', 'Shift+click / drag'],
   ['Select all', 'Ctrl+A'],

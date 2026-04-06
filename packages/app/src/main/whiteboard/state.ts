@@ -14,12 +14,17 @@ import type {
 
 const SAVE_DEBOUNCE_MS = 1500;
 const VIEWPORT_SAVE_DEBOUNCE_MS = 3000;
+const MAX_UNDO_STACK = 50;
 
 export class WhiteboardStateManager extends EventEmitter {
   private boards = new Map<string, Board>();
   private saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private viewportSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private storageDir: string;
+  /** Undo stack per board — stores deep copies of board state */
+  private undoStacks = new Map<string, string[]>();
+  /** Redo stack per board */
+  private redoStacks = new Map<string, string[]>();
 
   constructor() {
     super();
@@ -135,6 +140,7 @@ export class WhiteboardStateManager extends EventEmitter {
   ): Sticky | null {
     const board = this.boards.get(boardId);
     if (!board) return null;
+    this.pushUndo(boardId);
     const now = new Date().toISOString();
     const sticky: Sticky = {
       id: randomUUID(),
@@ -192,6 +198,7 @@ export class WhiteboardStateManager extends EventEmitter {
     if (!board) return null;
     const sticky = board.stickies.find((s) => s.id === stickyId);
     if (!sticky) return null;
+    this.pushUndo(boardId);
     Object.assign(sticky, patch, { updatedAt: new Date().toISOString() });
     board.updatedAt = sticky.updatedAt;
     this.scheduleSave(boardId);
@@ -204,6 +211,7 @@ export class WhiteboardStateManager extends EventEmitter {
     if (!board) return false;
     const idx = board.stickies.findIndex((s) => s.id === stickyId);
     if (idx === -1) return false;
+    this.pushUndo(boardId);
     board.stickies.splice(idx, 1);
     board.connections = board.connections.filter(
       (c) => c.fromStickyId !== stickyId && c.toStickyId !== stickyId,
@@ -229,6 +237,7 @@ export class WhiteboardStateManager extends EventEmitter {
   ): Frame | null {
     const board = this.boards.get(boardId);
     if (!board) return null;
+    this.pushUndo(boardId);
     const now = new Date().toISOString();
     const frame: Frame = {
       id: randomUUID(),
@@ -259,6 +268,7 @@ export class WhiteboardStateManager extends EventEmitter {
     if (!board) return null;
     const frame = board.frames.find((f) => f.id === frameId);
     if (!frame) return null;
+    this.pushUndo(boardId);
     Object.assign(frame, patch, { updatedAt: new Date().toISOString() });
     board.updatedAt = frame.updatedAt;
     this.scheduleSave(boardId);
@@ -271,6 +281,7 @@ export class WhiteboardStateManager extends EventEmitter {
     if (!board) return false;
     const idx = board.frames.findIndex((f) => f.id === frameId);
     if (idx === -1) return false;
+    this.pushUndo(boardId);
     board.frames.splice(idx, 1);
     for (const sticky of board.stickies) {
       if (sticky.frameId === frameId) sticky.frameId = null;
@@ -296,6 +307,7 @@ export class WhiteboardStateManager extends EventEmitter {
       !board.stickies.some((s) => s.id === toStickyId)
     )
       return null;
+    this.pushUndo(boardId);
     const now = new Date().toISOString();
     const connection: Connection = {
       id: randomUUID(),
@@ -321,6 +333,7 @@ export class WhiteboardStateManager extends EventEmitter {
     if (!board) return null;
     const connection = board.connections.find((c) => c.id === connectionId);
     if (!connection) return null;
+    this.pushUndo(boardId);
     if (patch.label !== undefined) connection.label = patch.label;
     connection.updatedAt = new Date().toISOString();
     board.updatedAt = connection.updatedAt;
@@ -334,11 +347,103 @@ export class WhiteboardStateManager extends EventEmitter {
     if (!board) return false;
     const idx = board.connections.findIndex((c) => c.id === connectionId);
     if (idx === -1) return false;
+    this.pushUndo(boardId);
     board.connections.splice(idx, 1);
     board.updatedAt = new Date().toISOString();
     this.scheduleSave(boardId);
     this.emit("board-changed", board);
     return true;
+  }
+
+  // --- Undo / Redo ---
+
+  /** Take a snapshot of the board state for undo (call BEFORE mutating) */
+  private pushUndo(boardId: string): void {
+    const board = this.boards.get(boardId);
+    if (!board) return;
+    // Snapshot without viewport (undo shouldn't change viewport)
+    const snapshot = JSON.stringify({
+      stickies: board.stickies,
+      frames: board.frames,
+      connections: board.connections,
+      colorMeanings: board.colorMeanings,
+    });
+    let stack = this.undoStacks.get(boardId);
+    if (!stack) { stack = []; this.undoStacks.set(boardId, stack); }
+    stack.push(snapshot);
+    if (stack.length > MAX_UNDO_STACK) stack.shift();
+    // Clear redo when new action happens
+    this.redoStacks.set(boardId, []);
+  }
+
+  undo(boardId: string): Board | null {
+    const board = this.boards.get(boardId);
+    if (!board) return null;
+    const undoStack = this.undoStacks.get(boardId);
+    if (!undoStack || undoStack.length === 0) return null;
+
+    // Push current state to redo stack
+    const currentSnapshot = JSON.stringify({
+      stickies: board.stickies,
+      frames: board.frames,
+      connections: board.connections,
+      colorMeanings: board.colorMeanings,
+    });
+    let redoStack = this.redoStacks.get(boardId);
+    if (!redoStack) { redoStack = []; this.redoStacks.set(boardId, redoStack); }
+    redoStack.push(currentSnapshot);
+
+    // Restore previous state
+    const snapshot = undoStack.pop()!;
+    const state = JSON.parse(snapshot);
+    board.stickies = state.stickies;
+    board.frames = state.frames;
+    board.connections = state.connections;
+    board.colorMeanings = state.colorMeanings;
+    board.updatedAt = new Date().toISOString();
+
+    this.scheduleSave(boardId);
+    this.emit("board-changed", board);
+    return board;
+  }
+
+  redo(boardId: string): Board | null {
+    const board = this.boards.get(boardId);
+    if (!board) return null;
+    const redoStack = this.redoStacks.get(boardId);
+    if (!redoStack || redoStack.length === 0) return null;
+
+    // Push current state to undo stack
+    const currentSnapshot = JSON.stringify({
+      stickies: board.stickies,
+      frames: board.frames,
+      connections: board.connections,
+      colorMeanings: board.colorMeanings,
+    });
+    let undoStack = this.undoStacks.get(boardId);
+    if (!undoStack) { undoStack = []; this.undoStacks.set(boardId, undoStack); }
+    undoStack.push(currentSnapshot);
+
+    // Restore redo state
+    const snapshot = redoStack.pop()!;
+    const state = JSON.parse(snapshot);
+    board.stickies = state.stickies;
+    board.frames = state.frames;
+    board.connections = state.connections;
+    board.colorMeanings = state.colorMeanings;
+    board.updatedAt = new Date().toISOString();
+
+    this.scheduleSave(boardId);
+    this.emit("board-changed", board);
+    return board;
+  }
+
+  canUndo(boardId: string): boolean {
+    return (this.undoStacks.get(boardId)?.length ?? 0) > 0;
+  }
+
+  canRedo(boardId: string): boolean {
+    return (this.redoStacks.get(boardId)?.length ?? 0) > 0;
   }
 
   // --- Auto-positioning ---

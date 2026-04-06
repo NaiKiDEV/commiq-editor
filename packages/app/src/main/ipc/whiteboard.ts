@@ -146,6 +146,20 @@ export function registerWhiteboardIpc(): void {
   );
   ipcMain.handle("whiteboard:stop-mcp-server", () => stopMcpServer());
   ipcMain.handle("whiteboard:mcp-status", () => getMcpStatus());
+
+  // Undo / Redo
+  ipcMain.handle("whiteboard:undo", (_e, boardId: string) =>
+    whiteboardState.undo(boardId),
+  );
+  ipcMain.handle("whiteboard:redo", (_e, boardId: string) =>
+    whiteboardState.redo(boardId),
+  );
+  ipcMain.handle("whiteboard:can-undo", (_e, boardId: string) =>
+    whiteboardState.canUndo(boardId),
+  );
+  ipcMain.handle("whiteboard:can-redo", (_e, boardId: string) =>
+    whiteboardState.canRedo(boardId),
+  );
 }
 
 export function registerWhiteboardPush(mainWindow: BrowserWindow): void {
