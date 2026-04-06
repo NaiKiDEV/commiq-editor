@@ -39,10 +39,12 @@ export function PodShell({ context, namespace, podName, onBack }: PodShellProps)
 
   // Load containers
   useEffect(() => {
-    window.electronAPI.k8s.getPodContainers(context, namespace, podName).then((c) => {
-      setContainers(c);
-      if (c.length > 0) setActiveContainer(c[0]);
-    });
+    window.electronAPI.k8s.getPodContainers(context, namespace, podName)
+      .then((c) => {
+        setContainers(c);
+        if (c.length > 0) setActiveContainer(c[0]);
+      })
+      .catch(() => {});
   }, [context, namespace, podName]);
 
   const startExec = useCallback(() => {

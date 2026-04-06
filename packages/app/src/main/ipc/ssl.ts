@@ -1,27 +1,10 @@
 import { ipcMain } from 'electron';
 import * as tls from 'node:tls';
 import * as crypto from 'node:crypto';
+import type { CertInfo } from '../../shared/ssl-types';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+export type { CertInfo };
 
-export type CertInfo = {
-  subject: Record<string, string>;
-  issuer: Record<string, string>;
-  sans: string[];
-  notBefore: string;
-  notAfter: string;
-  serialNumber: string;
-  fingerprint: string;
-  signatureAlgorithm: string;
-  publicKeyAlgorithm: string;
-  keyBits: number;
-  isCA: boolean;
-  pem: string;
-};
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/** Parse an X.509 distinguished-name string like "CN=example.com, O=Acme" into a record */
 function parseDN(dn: string): Record<string, string> {
   const result: Record<string, string> = {};
   if (!dn) return result;
@@ -39,7 +22,6 @@ function parseDN(dn: string): Record<string, string> {
   return result;
 }
 
-/** Extract key bit length from an X509Certificate */
 function getKeyBits(cert: crypto.X509Certificate): number {
   try {
     const keyObj = cert.publicKey;
@@ -59,7 +41,6 @@ function getKeyBits(cert: crypto.X509Certificate): number {
   return 0;
 }
 
-/** Build a CertInfo from a crypto.X509Certificate */
 function certToInfo(cert: crypto.X509Certificate): CertInfo {
   const sans: string[] = [];
   if (cert.subjectAltName) {
@@ -87,7 +68,6 @@ function certToInfo(cert: crypto.X509Certificate): CertInfo {
   };
 }
 
-/** Walk the TLS peer certificate chain and return structured info */
 function buildChainFromTls(
   peerCert: tls.DetailedPeerCertificate,
 ): { chain: CertInfo[]; errors: string[] } {
@@ -122,11 +102,7 @@ function buildChainFromTls(
   return { chain, errors };
 }
 
-// ── IPC Registration ──────────────────────────────────────────────────────────
-
 export function registerSslIpc(): void {
-  // ── Inspect remote host ────────────────────────────────────────────────────
-
   ipcMain.handle(
     'ssl:inspect',
     async (_event, host: string, port: number): Promise<CertInfo[] | { error: string }> => {
@@ -179,8 +155,6 @@ export function registerSslIpc(): void {
     },
   );
 
-  // ── Decode PEM/DER blob ────────────────────────────────────────────────────
-
   ipcMain.handle(
     'ssl:decode-pem',
     async (_event, pem: string): Promise<CertInfo[] | { error: string }> => {
@@ -209,8 +183,6 @@ export function registerSslIpc(): void {
     },
   );
 
-  // ── Generate self-signed certificate ───────────────────────────────────────
-
   ipcMain.handle(
     'ssl:generate-self-signed',
     async (
@@ -220,7 +192,6 @@ export function registerSslIpc(): void {
       try {
         const { commonName, sans, days, keyAlgorithm } = opts;
 
-        // Generate key pair
         let keyPair: { publicKey: string; privateKey: string };
         if (keyAlgorithm === 'ec') {
           const pair = crypto.generateKeyPairSync('ec', {
@@ -238,7 +209,6 @@ export function registerSslIpc(): void {
           keyPair = pair;
         }
 
-        // Build SAN entries for the certificate
         const sanEntries: Array<{ type: number; value: string }> = [];
         for (const san of sans) {
           // IP addresses use type 7, DNS names use type 2
@@ -270,7 +240,6 @@ export function registerSslIpc(): void {
 
         fs.writeFileSync(keyFile, keyPair.privateKey);
 
-        // Build OpenSSL config for SAN support
         const sanLines = sanEntries.map((s, i) => {
           if (s.type === 7) return `IP.${i} = ${s.value}`;
           return `DNS.${i} = ${s.value}`;
@@ -304,12 +273,9 @@ export function registerSslIpc(): void {
         const certPem = fs.readFileSync(certFile, 'utf-8');
         const keyPem = keyPair.privateKey;
 
-        // Cleanup
         try {
           fs.rmSync(tmpDir, { recursive: true });
-        } catch {
-          // ignore cleanup errors
-        }
+        } catch { /* ignore */ }
 
         return { cert: certPem, key: keyPem };
       } catch (err) {

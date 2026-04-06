@@ -232,15 +232,17 @@ export function TimerPanel({ panelId: _panelId }: { panelId: string }) {
 
   // Load and reconcile on mount
   useEffect(() => {
-    window.electronAPI.timer.list().then((raw) => {
-      const loaded = (raw as TimerData[])
-        .sort((a, b) => a.createdAt - b.createdAt)
-        .map(reconcileTimer);
-      setTimers(loaded);
-      for (const t of loaded) {
-        window.electronAPI.timer.save(t);
-      }
-    });
+    window.electronAPI.timer.list()
+      .then((raw) => {
+        const loaded = (raw as TimerData[])
+          .sort((a, b) => a.createdAt - b.createdAt)
+          .map(reconcileTimer);
+        setTimers(loaded);
+        for (const t of loaded) {
+          window.electronAPI.timer.save(t);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const addTimer = useCallback((type: TimerType) => {

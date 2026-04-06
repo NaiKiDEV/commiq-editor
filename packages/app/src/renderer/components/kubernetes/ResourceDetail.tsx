@@ -19,30 +19,27 @@ type ResourceDetailProps = {
   onDeleted: () => void;
 };
 
-function statusColor(status: string): string {
+type StatusClasses = { text: string; bg: string };
+
+function statusClasses(status: string): StatusClasses {
   const s = status.toLowerCase();
   if (s === 'running' || s === 'ready' || s === 'active' || s === 'bound' || s === 'complete' || s === 'succeeded')
-    return 'text-green-400';
+    return { text: 'text-green-400', bg: 'bg-green-400' };
   if (s === 'pending' || s === 'progressing' || s === 'containercreating')
-    return 'text-yellow-400';
+    return { text: 'text-yellow-400', bg: 'bg-yellow-400' };
   if (s === 'failed' || s === 'error' || s === 'crashloopbackoff' || s === 'notready')
-    return 'text-red-400';
+    return { text: 'text-red-400', bg: 'bg-red-400' };
   if (s === 'terminating' || s === 'evicted')
-    return 'text-orange-400';
-  return 'text-muted-foreground';
+    return { text: 'text-orange-400', bg: 'bg-orange-400' };
+  return { text: 'text-muted-foreground', bg: 'bg-muted-foreground' };
+}
+
+function statusColor(status: string): string {
+  return statusClasses(status).text;
 }
 
 function statusDot(status: string): string {
-  const s = status.toLowerCase();
-  if (s === 'running' || s === 'ready' || s === 'active' || s === 'bound' || s === 'complete' || s === 'succeeded')
-    return 'bg-green-400';
-  if (s === 'pending' || s === 'progressing' || s === 'containercreating')
-    return 'bg-yellow-400';
-  if (s === 'failed' || s === 'error' || s === 'crashloopbackoff' || s === 'notready')
-    return 'bg-red-400';
-  if (s === 'terminating' || s === 'evicted')
-    return 'bg-orange-400';
-  return 'bg-muted-foreground';
+  return statusClasses(status).bg;
 }
 
 function formatAge(createdAt: string): string {
@@ -1148,8 +1145,6 @@ function Field({ label, value, mono }: { label: string; value?: string; mono?: b
   );
 }
 
-// ── Env Vars Tab ────────────────────────────────────────────────────────────
-
 type EnvVar = {
   name: string;
   value?: string;
@@ -1215,7 +1210,6 @@ function EnvVarsTab({
       )
     : allVars;
 
-  // Group by container
   const grouped = new Map<string, EnvVar[]>();
   for (const v of filtered) {
     const list = grouped.get(v.containerName) ?? [];

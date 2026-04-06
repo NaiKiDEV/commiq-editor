@@ -41,6 +41,14 @@ type WorkflowPanelProps = {
   panelId: string;
 };
 
+/**
+ * Delay before navigating a newly-created browser tab.
+ * The browser panel needs a tick to register its IPC listener after the tab mounts.
+ * There is currently no ready-state event from the browser panel, so we use a
+ * short delay as a practical workaround.
+ */
+const BROWSER_TAB_READY_DELAY_MS = 100;
+
 export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
   const workspaceId = useActiveWorkspaceId();
   const { createTab } = useWorkspaceActions();
@@ -86,19 +94,21 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
 
   useEffect(() => {
     if (!workspaceId) return;
-    window.electronAPI.workflow.list(workspaceId).then((list) => {
-      const migrated = list.map((w: any) => ({
-        ...w,
-        mode: w.mode || "parallel",
-        commands: (w.commands || []).map((c: any) => ({
-          ...c,
-          type: c.type || "terminal",
-        })),
-      }));
-      setWorkflows(migrated);
-      if (migrated.length > 0) setActiveWorkflowId(migrated[0].id);
-      setLoaded(true);
-    });
+    window.electronAPI.workflow.list(workspaceId)
+      .then((list) => {
+        const migrated = list.map((w: Workflow & { mode?: string; commands?: Array<WorkflowCommand & { type?: string }> }) => ({
+          ...w,
+          mode: (w.mode as Workflow['mode']) || "parallel",
+          commands: (w.commands || []).map((c) => ({
+            ...c,
+            type: (c.type as WorkflowCommand['type']) || "terminal",
+          })),
+        }));
+        setWorkflows(migrated);
+        if (migrated.length > 0) setActiveWorkflowId(migrated[0].id);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
   }, [workspaceId]);
 
   const scheduleSave = useCallback(
@@ -304,7 +314,7 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
       if (cmd.type === "browser") {
         const tabName = cmd.name.trim() || cmd.command;
         const panelId = createTab("browser", tabName, { background: true });
-        setTimeout(() => navigateBrowser(panelId, cmd.command.trim()), 100);
+        setTimeout(() => navigateBrowser(panelId, cmd.command.trim()), BROWSER_TAB_READY_DELAY_MS);
 
         setRunState((prev) => {
           if (!prev) return prev;
@@ -366,7 +376,7 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
     if (runState.stepStatuses[runState.currentStepIndex] === "running") {
       executeStep(activeWorkflow, runState.currentStepIndex);
     }
-  }, [runState?.currentStepIndex, runState?.stepStatuses]);
+  }, [runState?.currentStepIndex, runState?.stepStatuses, activeWorkflow, executeStep]);
 
   const startSequentialRun = useCallback(
     (workflow: Workflow) => {
@@ -424,7 +434,7 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
           if (cmd.type === "browser") {
             const tabName = cmd.name.trim() || cmd.command;
             const panelId = createTab("browser", tabName, { background: true });
-            setTimeout(() => navigateBrowser(panelId, cmd.command.trim()), 100);
+            setTimeout(() => navigateBrowser(panelId, cmd.command.trim()), BROWSER_TAB_READY_DELAY_MS);
           } else {
             const tabName = cmd.name.trim() || workflow.name;
             const panelId = createTab("terminal", tabName, { background: true });
@@ -482,22 +492,23 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
     if (!workspaceId) return;
     try {
       const text = await file.text();
-      const parsed = JSON.parse(text);
+      const parsed = JSON.parse(text) as Workflow & { mode?: string; commands?: Array<WorkflowCommand & { type?: string }> };
       const workflow: Workflow = {
         ...parsed,
         id: crypto.randomUUID(),
         scope: "global",
-        mode: parsed.mode || "parallel",
-        commands: (parsed.commands || []).map((c: any) => ({
+        mode: (parsed.mode as Workflow['mode']) || "parallel",
+        commands: (parsed.commands || []).map((c) => ({
           ...c,
           id: crypto.randomUUID(),
-          type: c.type || "terminal",
+          type: (c.type as WorkflowCommand['type']) || "terminal",
         })),
       };
       await window.electronAPI.workflow.save(workflow, workspaceId);
       setWorkflows((prev) => [...prev, workflow]);
       setActiveWorkflowId(workflow.id);
-    } catch {
+    } catch (err) {
+      console.error('[WorkflowPanel] Import failed:', err);
     }
   }, [workspaceId]);
 

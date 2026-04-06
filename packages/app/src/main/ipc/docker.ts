@@ -1,18 +1,13 @@
 import { ipcMain, type WebContents } from 'electron';
-import { exec, spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import * as pty from 'node-pty';
 
-const execAsync = promisify(exec);
-
-// ── Session tracking ──────────────────────────────────────────────────────────
+const execFileAsync = promisify(execFile);
 
 const logStreams = new Map<string, { kill: () => void }>();
 const execSessions = new Map<string, pty.IPty>();
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/** Parse docker output where each line is a JSON object */
 function parseJsonLines<T>(stdout: string): T[] {
   return stdout
     .split('\n')
@@ -21,19 +16,15 @@ function parseJsonLines<T>(stdout: string): T[] {
     .map((l) => JSON.parse(l) as T);
 }
 
-async function dockerExec(cmd: string): Promise<string> {
-  const { stdout } = await execAsync(cmd);
+async function dockerExec(...args: string[]): Promise<string> {
+  const { stdout } = await execFileAsync('docker', args);
   return stdout;
 }
 
-// ── IPC Registration ──────────────────────────────────────────────────────────
-
 export function registerDockerIpc(): void {
-  // ── Check ──────────────────────────────────────────────────────────────────
-
   ipcMain.handle('docker:check', async () => {
     try {
-      await execAsync('docker info');
+      await dockerExec('info');
       return { available: true };
     } catch (err) {
       const msg = String(err);
@@ -47,11 +38,9 @@ export function registerDockerIpc(): void {
     }
   });
 
-  // ── Containers ─────────────────────────────────────────────────────────────
-
   ipcMain.handle('docker:containers:list', async () => {
     try {
-      const stdout = await dockerExec('docker ps -a --format "{{json .}}"');
+      const stdout = await dockerExec('ps', '-a', '--format', '{{json .}}');
       return parseJsonLines(stdout);
     } catch (err) {
       return { error: String(err) };
@@ -60,7 +49,7 @@ export function registerDockerIpc(): void {
 
   ipcMain.handle('docker:container:start', async (_event, id: string) => {
     try {
-      await execAsync(`docker start ${id}`);
+      await dockerExec('start', id);
       return { success: true };
     } catch (err) {
       return { error: String(err) };
@@ -69,7 +58,7 @@ export function registerDockerIpc(): void {
 
   ipcMain.handle('docker:container:stop', async (_event, id: string) => {
     try {
-      await execAsync(`docker stop ${id}`);
+      await dockerExec('stop', id);
       return { success: true };
     } catch (err) {
       return { error: String(err) };
@@ -78,7 +67,7 @@ export function registerDockerIpc(): void {
 
   ipcMain.handle('docker:container:restart', async (_event, id: string) => {
     try {
-      await execAsync(`docker restart ${id}`);
+      await dockerExec('restart', id);
       return { success: true };
     } catch (err) {
       return { error: String(err) };
@@ -87,14 +76,13 @@ export function registerDockerIpc(): void {
 
   ipcMain.handle('docker:container:remove', async (_event, id: string, force: boolean) => {
     try {
-      await execAsync(`docker rm ${force ? '-f' : ''} ${id}`);
+      const args = force ? ['rm', '-f', id] : ['rm', id];
+      await dockerExec(...args);
       return { success: true };
     } catch (err) {
       return { error: String(err) };
     }
   });
-
-  // ── Container logs ─────────────────────────────────────────────────────────
 
   ipcMain.handle(
     'docker:logs:start',
@@ -129,11 +117,9 @@ export function registerDockerIpc(): void {
     }
   });
 
-  // ── Images ─────────────────────────────────────────────────────────────────
-
   ipcMain.handle('docker:images:list', async () => {
     try {
-      const stdout = await dockerExec('docker images --format "{{json .}}"');
+      const stdout = await dockerExec('images', '--format', '{{json .}}');
       return parseJsonLines(stdout);
     } catch (err) {
       return { error: String(err) };
@@ -142,7 +128,7 @@ export function registerDockerIpc(): void {
 
   ipcMain.handle('docker:image:remove', async (_event, id: string) => {
     try {
-      await execAsync(`docker rmi ${id}`);
+      await dockerExec('rmi', id);
       return { success: true };
     } catch (err) {
       return { error: String(err) };
@@ -151,18 +137,16 @@ export function registerDockerIpc(): void {
 
   ipcMain.handle('docker:image:prune', async () => {
     try {
-      const { stdout } = await execAsync('docker image prune -f');
+      const stdout = await dockerExec('image', 'prune', '-f');
       return { success: true, output: stdout };
     } catch (err) {
       return { error: String(err) };
     }
   });
 
-  // ── Docker Compose ─────────────────────────────────────────────────────────
-
   ipcMain.handle('docker:compose:list', async () => {
     try {
-      const { stdout } = await execAsync('docker compose ls --format json');
+      const stdout = await dockerExec('compose', 'ls', '--format', 'json');
       const trimmed = stdout.trim();
       if (!trimmed || trimmed === 'null') return [];
       return JSON.parse(trimmed);
@@ -178,7 +162,7 @@ export function registerDockerIpc(): void {
     'docker:compose:up',
     async (_event, projectName: string, configFile: string) => {
       try {
-        await execAsync(`docker compose -p "${projectName}" --file "${configFile}" up -d`);
+        await dockerExec('compose', '-p', projectName, '--file', configFile, 'up', '-d');
         return { success: true };
       } catch (err) {
         return { error: String(err) };
@@ -190,7 +174,7 @@ export function registerDockerIpc(): void {
     'docker:compose:down',
     async (_event, projectName: string, configFile: string) => {
       try {
-        await execAsync(`docker compose -p "${projectName}" --file "${configFile}" down`);
+        await dockerExec('compose', '-p', projectName, '--file', configFile, 'down');
         return { success: true };
       } catch (err) {
         return { error: String(err) };
@@ -202,7 +186,7 @@ export function registerDockerIpc(): void {
     'docker:compose:restart',
     async (_event, projectName: string, configFile: string) => {
       try {
-        await execAsync(`docker compose -p "${projectName}" --file "${configFile}" restart`);
+        await dockerExec('compose', '-p', projectName, '--file', configFile, 'restart');
         return { success: true };
       } catch (err) {
         return { error: String(err) };
@@ -210,11 +194,9 @@ export function registerDockerIpc(): void {
     },
   );
 
-  // ── Volumes ────────────────────────────────────────────────────────────────
-
   ipcMain.handle('docker:volumes:list', async () => {
     try {
-      const stdout = await dockerExec('docker volume ls --format "{{json .}}"');
+      const stdout = await dockerExec('volume', 'ls', '--format', '{{json .}}');
       return parseJsonLines(stdout);
     } catch (err) {
       return { error: String(err) };
@@ -223,7 +205,7 @@ export function registerDockerIpc(): void {
 
   ipcMain.handle('docker:volume:remove', async (_event, name: string) => {
     try {
-      await execAsync(`docker volume rm "${name}"`);
+      await dockerExec('volume', 'rm', name);
       return { success: true };
     } catch (err) {
       return { error: String(err) };
@@ -232,25 +214,21 @@ export function registerDockerIpc(): void {
 
   ipcMain.handle('docker:volume:prune', async () => {
     try {
-      const { stdout } = await execAsync('docker volume prune -f');
+      const stdout = await dockerExec('volume', 'prune', '-f');
       return { success: true, output: stdout };
     } catch (err) {
       return { error: String(err) };
     }
   });
 
-  // ── Container inspect ──────────────────────────────────────────────────────
-
   ipcMain.handle('docker:container:inspect', async (_event, id: string) => {
     try {
-      const { stdout } = await execAsync(`docker inspect ${id}`);
+      const stdout = await dockerExec('inspect', id);
       return JSON.parse(stdout)?.[0] ?? null;
     } catch (err) {
       return { error: String(err) };
     }
   });
-
-  // ── Container exec (node-pty) ──────────────────────────────────────────────
 
   ipcMain.handle(
     'docker:exec:start',
@@ -305,56 +283,46 @@ export function registerDockerIpc(): void {
     }
   });
 
-  // ── Files ──────────────────────────────────────────────────────────────────
-
-  ipcMain.handle('docker:files:list', async (_event, id: string, path: string) => {
+  ipcMain.handle('docker:files:list', async (_event, id: string, filePath: string) => {
     try {
-      const { stdout } = await execAsync(`docker exec ${id} ls -la "${path.replace(/"/g, '\\"')}"`);
+      const stdout = await dockerExec('exec', id, 'ls', '-la', filePath);
       return { output: stdout };
     } catch (err) {
       return { error: String(err) };
     }
   });
 
-  ipcMain.handle('docker:files:read', async (_event, id: string, path: string) => {
+  ipcMain.handle('docker:files:read', async (_event, id: string, filePath: string) => {
     try {
       // Limit reads to 512KB to avoid flooding the IPC channel
-      const { stdout } = await execAsync(
-        `docker exec ${id} head -c 524288 "${path.replace(/"/g, '\\"')}"`,
-      );
+      const stdout = await dockerExec('exec', id, 'head', '-c', '524288', filePath);
       return { content: stdout };
     } catch (err) {
       return { error: String(err) };
     }
   });
 
-  // ── Image history ──────────────────────────────────────────────────────────
-
   ipcMain.handle('docker:image:history', async (_event, id: string) => {
     try {
-      const stdout = await dockerExec(`docker history --no-trunc --format "{{json .}}" ${id}`);
+      const stdout = await dockerExec('history', '--no-trunc', '--format', '{{json .}}', id);
       return parseJsonLines(stdout);
     } catch (err) {
       return { error: String(err) };
     }
   });
 
-  // ── Volume inspect ─────────────────────────────────────────────────────────
-
   ipcMain.handle('docker:volume:inspect', async (_event, name: string) => {
     try {
-      const { stdout } = await execAsync(`docker volume inspect "${name}"`);
+      const stdout = await dockerExec('volume', 'inspect', name);
       return JSON.parse(stdout)?.[0] ?? null;
     } catch (err) {
       return { error: String(err) };
     }
   });
 
-  // ── Networks ───────────────────────────────────────────────────────────────
-
   ipcMain.handle('docker:networks:list', async () => {
     try {
-      const stdout = await dockerExec('docker network ls --format "{{json .}}"');
+      const stdout = await dockerExec('network', 'ls', '--format', '{{json .}}');
       return parseJsonLines(stdout);
     } catch (err) {
       return { error: String(err) };
@@ -363,15 +331,13 @@ export function registerDockerIpc(): void {
 
   ipcMain.handle('docker:network:remove', async (_event, id: string) => {
     try {
-      await execAsync(`docker network rm "${id}"`);
+      await dockerExec('network', 'rm', id);
       return { success: true };
     } catch (err) {
       return { error: String(err) };
     }
   });
 }
-
-// ── Cleanup ───────────────────────────────────────────────────────────────────
 
 export function stopAllDockerStreams(): void {
   for (const [id, entry] of logStreams) {

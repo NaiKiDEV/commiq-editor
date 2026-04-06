@@ -16,6 +16,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import type { DbDriver, DbConnectionProfile, DbTable, DbQueryResult } from '../../shared/db-types';
 
 // CodeMirror
 import { EditorView, keymap, lineNumbers, placeholder as cmPlaceholder } from '@codemirror/view';
@@ -29,54 +30,6 @@ import { tags } from '@lezer/highlight';
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-type DbDriver = 'sqlite' | 'postgresql' | 'mysql';
-
-type DbConnectionProfile = {
-  id: string;
-  name: string;
-  driver: DbDriver;
-  host: string;
-  port: number;
-  database: string;
-  username: string;
-  password: string;
-};
-
-type DbTableIndex = {
-  name: string;
-  unique: boolean;
-  columns: string[];
-};
-
-type DbTableForeignKey = {
-  columns: string[];
-  referencedSchema: string;
-  referencedTable: string;
-  referencedColumns: string[];
-};
-
-type DbTable = {
-  name: string;
-  schema: string;
-  columns: Array<{
-    name: string;
-    type: string;
-    nullable: boolean;
-    primaryKey: boolean;
-    defaultValue: string | null;
-  }>;
-  indexes: DbTableIndex[];
-  foreignKeys: DbTableForeignKey[];
-};
-
-type DbQueryResult = {
-  columns: string[];
-  rows: Record<string, unknown>[];
-  rowCount: number;
-  affectedRows: number;
-  duration: number;
-};
 
 type HistoryEntry = { id: string; connectionId: string; query: string; timestamp: number };
 
@@ -497,7 +450,7 @@ export function DatabaseClientPanel({ panelId: _panelId }: DatabaseClientPanelPr
 
   // Load profiles on mount
   useEffect(() => {
-    window.electronAPI.db.profilesList().then((p) => setProfiles(p));
+    window.electronAPI.db.profilesList().then((p) => setProfiles(p)).catch(() => {});
   }, []);
 
   // Connect

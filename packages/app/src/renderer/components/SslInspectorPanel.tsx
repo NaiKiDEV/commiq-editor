@@ -15,30 +15,18 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-type CertInfo = {
-  subject: Record<string, string>;
-  issuer: Record<string, string>;
-  sans: string[];
-  notBefore: string;
-  notAfter: string;
-  serialNumber: string;
-  fingerprint: string;
-  signatureAlgorithm: string;
-  publicKeyAlgorithm: string;
-  keyBits: number;
-  isCA: boolean;
-  pem: string;
-};
+import type { CertInfo } from "../../shared/ssl-types";
 
 type TabId = "inspect" | "decode" | "generate" | "chain";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+const CERT_EXPIRY_CRITICAL_DAYS = 7;
+const CERT_EXPIRY_WARNING_DAYS = 30;
+const CERT_EXPIRY_NOTICE_DAYS = 90;
 
-function copyToClipboard(text: string) {
-  navigator.clipboard.writeText(text);
+function copyToClipboard(text: string): void {
+  navigator.clipboard.writeText(text).catch((err) => {
+    console.error('[SSL] Clipboard write failed:', err);
+  });
 }
 
 function formatDate(iso: string) {
@@ -57,22 +45,22 @@ function daysUntil(iso: string): number {
   );
 }
 
-function expiryColor(iso: string): string {
+type ExpiryStyle = { bg: string; text: string };
+
+function expiryStyle(iso: string): ExpiryStyle {
   const d = daysUntil(iso);
-  if (d < 0) return "bg-red-500";
-  if (d < 7) return "bg-red-500";
-  if (d < 30) return "bg-orange-500";
-  if (d < 90) return "bg-yellow-500";
-  return "bg-emerald-500";
+  if (d < CERT_EXPIRY_CRITICAL_DAYS) return { bg: "bg-red-500", text: "text-red-400" };
+  if (d < CERT_EXPIRY_WARNING_DAYS) return { bg: "bg-orange-500", text: "text-orange-400" };
+  if (d < CERT_EXPIRY_NOTICE_DAYS) return { bg: "bg-yellow-500", text: "text-yellow-400" };
+  return { bg: "bg-emerald-500", text: "text-emerald-400" };
+}
+
+function expiryColor(iso: string): string {
+  return expiryStyle(iso).bg;
 }
 
 function expiryTextColor(iso: string): string {
-  const d = daysUntil(iso);
-  if (d < 0) return "text-red-400";
-  if (d < 7) return "text-red-400";
-  if (d < 30) return "text-orange-400";
-  if (d < 90) return "text-yellow-400";
-  return "text-emerald-400";
+  return expiryStyle(iso).text;
 }
 
 function expiryLabel(iso: string): string {
@@ -91,8 +79,6 @@ function expiryPercent(notBefore: string, notAfter: string): number {
   if (now <= start) return 0;
   return Math.round(((now - start) / (end - start)) * 100);
 }
-
-// ── Copy Button ───────────────────────────────────────────────────────────────
 
 function CopyButton({ text, className }: { text: string; className?: string }) {
   const [copied, setCopied] = useState(false);
@@ -114,8 +100,6 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
     </button>
   );
 }
-
-// ── Cert Card ─────────────────────────────────────────────────────────────────
 
 function CertCard({
   cert,
@@ -734,7 +718,7 @@ function TrustChainViewer({ chain }: { chain: CertInfo[] | null }) {
       // Check expired
       if (daysUntil(cert.notAfter) < 0) {
         warnings.push({ index: i, message: "Certificate is expired" });
-      } else if (daysUntil(cert.notAfter) < 7) {
+      } else if (daysUntil(cert.notAfter) < CERT_EXPIRY_CRITICAL_DAYS) {
         warnings.push({
           index: i,
           message: `Expires in ${daysUntil(cert.notAfter)} days`,

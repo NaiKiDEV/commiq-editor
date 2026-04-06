@@ -1,85 +1,25 @@
 import { ipcMain, app } from 'electron';
-import fs from 'node:fs';
+import fsp from 'node:fs/promises';
 import path from 'node:path';
+import type { DbDriver, DbConnectionProfile, DbColumn, DbTableIndex, DbTableForeignKey, DbTable, DbQueryResult } from '../../shared/db-types';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export type DbDriver = 'sqlite' | 'postgresql' | 'mysql';
-
-export type DbConnectionProfile = {
-  id: string;
-  name: string;
-  driver: DbDriver;
-  host: string;
-  port: number;
-  database: string;
-  username: string;
-  password: string;
-  /** For SQLite – path to the .db file (stored in `database`) */
-};
-
-export type DbColumn = {
-  name: string;
-  type: string;
-  nullable: boolean;
-  primaryKey: boolean;
-  defaultValue: string | null;
-};
-
-export type DbTableIndex = {
-  name: string;
-  unique: boolean;
-  columns: string[];
-};
-
-export type DbTableForeignKey = {
-  columns: string[];
-  referencedSchema: string;
-  referencedTable: string;
-  referencedColumns: string[];
-};
-
-export type DbTable = {
-  name: string;
-  schema: string;
-  columns: DbColumn[];
-  indexes: DbTableIndex[];
-  foreignKeys: DbTableForeignKey[];
-};
-
-export type DbQueryResult = {
-  columns: string[];
-  rows: Record<string, unknown>[];
-  rowCount: number;
-  affectedRows: number;
-  duration: number;
-};
-
-// ---------------------------------------------------------------------------
-// Persistence helpers (connection profiles stored as JSON)
-// ---------------------------------------------------------------------------
+export type { DbDriver, DbConnectionProfile, DbColumn, DbTableIndex, DbTableForeignKey, DbTable, DbQueryResult };
 
 function getProfilesPath(): string {
   return path.join(app.getPath('userData'), 'db-connections.json');
 }
 
-function readProfiles(): DbConnectionProfile[] {
+async function readProfiles(): Promise<DbConnectionProfile[]> {
   try {
-    return JSON.parse(fs.readFileSync(getProfilesPath(), 'utf-8'));
+    return JSON.parse(await fsp.readFile(getProfilesPath(), 'utf-8'));
   } catch {
     return [];
   }
 }
 
-function writeProfiles(profiles: DbConnectionProfile[]): void {
-  fs.writeFileSync(getProfilesPath(), JSON.stringify(profiles, null, 2));
+async function writeProfiles(profiles: DbConnectionProfile[]): Promise<void> {
+  await fsp.writeFile(getProfilesPath(), JSON.stringify(profiles, null, 2));
 }
-
-// ---------------------------------------------------------------------------
-// Query history persistence
-// ---------------------------------------------------------------------------
 
 function getHistoryPath(): string {
   return path.join(app.getPath('userData'), 'db-query-history.json');
@@ -87,21 +27,17 @@ function getHistoryPath(): string {
 
 type HistoryEntry = { id: string; connectionId: string; query: string; timestamp: number };
 
-function readHistory(): HistoryEntry[] {
+async function readHistory(): Promise<HistoryEntry[]> {
   try {
-    return JSON.parse(fs.readFileSync(getHistoryPath(), 'utf-8'));
+    return JSON.parse(await fsp.readFile(getHistoryPath(), 'utf-8'));
   } catch {
     return [];
   }
 }
 
-function writeHistory(entries: HistoryEntry[]): void {
-  fs.writeFileSync(getHistoryPath(), JSON.stringify(entries, null, 2));
+async function writeHistory(entries: HistoryEntry[]): Promise<void> {
+  await fsp.writeFile(getHistoryPath(), JSON.stringify(entries, null, 2));
 }
-
-// ---------------------------------------------------------------------------
-// Active connection pool (kept alive for the app session)
-// ---------------------------------------------------------------------------
 
 type ActiveConnection = {
   driver: DbDriver;
@@ -179,10 +115,6 @@ async function closeConnection(profileId: string): Promise<void> {
   connections.delete(profileId);
 }
 
-// ---------------------------------------------------------------------------
-// Query execution
-// ---------------------------------------------------------------------------
-
 async function executeQuery(conn: ActiveConnection, sql: string): Promise<DbQueryResult> {
   const start = Date.now();
 
@@ -204,9 +136,6 @@ async function executeQuery(conn: ActiveConnection, sql: string): Promise<DbQuer
           duration: Date.now() - start,
         };
       } else {
-        const result = db.exec(trimmed);
-        // exec returns an array, but for non-SELECT it's usually empty
-        // Use run() for single statements to get changes count
         try {
           const info = db.prepare(trimmed).run();
           return {
@@ -257,7 +186,6 @@ async function executeQuery(conn: ActiveConnection, sql: string): Promise<DbQuer
           duration: Date.now() - start,
         };
       }
-      // Non-select result
       const info = resultOrRows as { affectedRows?: number };
       return {
         columns: [],
@@ -269,10 +197,6 @@ async function executeQuery(conn: ActiveConnection, sql: string): Promise<DbQuer
     }
   }
 }
-
-// ---------------------------------------------------------------------------
-// Schema introspection
-// ---------------------------------------------------------------------------
 
 async function getSchema(conn: ActiveConnection): Promise<DbTable[]> {
   switch (conn.driver) {
@@ -475,35 +399,28 @@ async function getSchema(conn: ActiveConnection): Promise<DbTable[]> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// IPC Registration
-// ---------------------------------------------------------------------------
-
 export function registerDbIpc(): void {
-  // --- Connection profiles ---
-
-  ipcMain.handle('db:profiles:list', () => {
+  ipcMain.handle('db:profiles:list', async () => {
     return readProfiles();
   });
 
-  ipcMain.handle('db:profiles:save', (_event, profile: DbConnectionProfile) => {
-    const profiles = readProfiles();
+  ipcMain.handle('db:profiles:save', async (_event, profile: DbConnectionProfile) => {
+    const profiles = await readProfiles();
     const idx = profiles.findIndex((p) => p.id === profile.id);
     if (idx !== -1) {
       profiles[idx] = profile;
     } else {
       profiles.push(profile);
     }
-    writeProfiles(profiles);
+    await writeProfiles(profiles);
     return profile;
   });
 
   ipcMain.handle('db:profiles:delete', async (_event, id: string) => {
     await closeConnection(id);
-    writeProfiles(readProfiles().filter((p) => p.id !== id));
+    const profiles = await readProfiles();
+    await writeProfiles(profiles.filter((p) => p.id !== id));
   });
-
-  // --- Connect / Disconnect / Test ---
 
   ipcMain.handle('db:connect', async (_event, profile: DbConnectionProfile): Promise<{ success: true } | { error: string }> => {
     try {
@@ -521,7 +438,6 @@ export function registerDbIpc(): void {
   ipcMain.handle('db:test', async (_event, profile: DbConnectionProfile): Promise<{ success: true; duration: number } | { error: string }> => {
     const start = Date.now();
     try {
-      // Temporarily connect, run a trivial query, then close
       const conn = await getConnection(profile);
       switch (profile.driver) {
         case 'sqlite':
@@ -536,16 +452,13 @@ export function registerDbIpc(): void {
       }
       return { success: true, duration: Date.now() - start };
     } catch (err: unknown) {
-      // Clean up failed connection
       connections.delete(profile.id);
       return { error: err instanceof Error ? err.message : String(err) };
     }
   });
 
-  // --- Query ---
-
   ipcMain.handle('db:query', async (_event, profileId: string, sql: string): Promise<DbQueryResult | { error: string }> => {
-    const profiles = readProfiles();
+    const profiles = await readProfiles();
     const profile = profiles.find((p) => p.id === profileId);
     if (!profile) return { error: 'Connection profile not found' };
 
@@ -553,16 +466,14 @@ export function registerDbIpc(): void {
       const conn = await getConnection(profile);
       const result = await executeQuery(conn, sql);
 
-      // Save to history
-      const history = readHistory();
+      const history = await readHistory();
       history.unshift({
         id: crypto.randomUUID(),
         connectionId: profileId,
         query: sql.trim(),
         timestamp: Date.now(),
       });
-      // Keep last 200 entries
-      writeHistory(history.slice(0, 200));
+      await writeHistory(history.slice(0, 200));
 
       return result;
     } catch (err: unknown) {
@@ -574,10 +485,8 @@ export function registerDbIpc(): void {
     }
   });
 
-  // --- Schema ---
-
   ipcMain.handle('db:schema', async (_event, profileId: string): Promise<DbTable[] | { error: string }> => {
-    const profiles = readProfiles();
+    const profiles = await readProfiles();
     const profile = profiles.find((p) => p.id === profileId);
     if (!profile) return { error: 'Connection profile not found' };
 
@@ -589,22 +498,19 @@ export function registerDbIpc(): void {
     }
   });
 
-  // --- History ---
-
-  ipcMain.handle('db:history:list', (_event, connectionId?: string) => {
-    const all = readHistory();
+  ipcMain.handle('db:history:list', async (_event, connectionId?: string) => {
+    const all = await readHistory();
     if (connectionId) return all.filter((e) => e.connectionId === connectionId);
     return all;
   });
 
-  ipcMain.handle('db:history:clear', () => {
-    writeHistory([]);
+  ipcMain.handle('db:history:clear', async () => {
+    await writeHistory([]);
   });
 }
 
-// Cleanup on app quit
 export function closeAllDbConnections(): void {
   for (const [id] of connections) {
-    closeConnection(id);
+    void closeConnection(id);
   }
 }

@@ -98,28 +98,21 @@ export function initPersistence(
 export async function loadPersistedState(
   workspaceStore: SealedStore<EditorState>,
 ): Promise<Record<string, string> | null> {
-  console.log('[persistence] loading…');
   let raw: PersistedState | null = null;
   try {
     raw = await window.electronAPI.workspace.load() as PersistedState | null;
-  } catch (err) {
-    console.error('[persistence] load IPC failed:', err);
+  } catch {
     return null;
   }
 
-  console.log('[persistence] raw:', raw);
+  if (!raw) return null;
+  if (raw.version !== 1) return null;
+  if (!raw.editor?.workspaces?.length) return null;
 
-  if (!raw) { console.warn('[persistence] no data on disk'); return null; }
-  if (raw.version !== 1) { console.warn('[persistence] version mismatch:', raw.version); return null; }
-  if (!raw.editor?.workspaces?.length) { console.warn('[persistence] empty workspaces'); return null; }
-
-  console.log('[persistence] hydrating', raw.editor.workspaces.length, 'workspace(s)');
   try {
     workspaceStore.queue(hydrateWorkspace(raw.editor));
     await workspaceStore.flush();
-    console.log('[persistence] hydration complete');
-  } catch (err) {
-    console.error('[persistence] hydration failed:', err);
+  } catch {
     return null;
   }
 

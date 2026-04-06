@@ -19,7 +19,6 @@ type Tool = 'select' | 'sticky' | 'frame' | 'connect' | 'delete';
 type WhiteboardPanelProps = { panelId: string };
 
 export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
-  // === REFS ===
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -33,7 +32,6 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
   const justDragSelected = useRef(false);
   const frameDragStartPos = useRef<Record<string, { x: number; y: number }>>({});
 
-  // === STATE ===
   const [stageSize, setStageSize] = useState({ width: 800, height: 600 });
   const [boards, setBoards] = useState<BoardSummary[]>([]);
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
@@ -66,7 +64,6 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
   const [canRedo, setCanRedo] = useState(false);
   const { settings } = useSettings();
 
-  // === STATE REF — always current, lets stable callbacks read latest values ===
   const stateRef = useRef({
     tool, activeBoardId, board, selectedIds, stageScale, stageSize,
     connectFrom, preCreationStickyColor, preCreationFrameColor,
@@ -79,8 +76,6 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     editingSticky, editText, editingFrame, editFrameLabel, boards,
     frameDrawing, selectionRect,
   };
-
-  // === EFFECTS ===
 
   useEffect(() => {
     const el = containerRef.current;
@@ -97,32 +92,35 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
   }, []);
 
   useEffect(() => {
-    window.electronAPI.whiteboard.listBoards().then(async (list: BoardSummary[]) => {
-      if (list.length > 0) {
-        setBoards(list);
-        setActiveBoardId(list[0].id);
-      } else {
-        const b: Board = await window.electronAPI.whiteboard.createBoard('Board 1', null);
-        setBoards([{ id: b.id, name: b.name, workspaceId: b.workspaceId, createdAt: b.createdAt, updatedAt: b.updatedAt }]);
-        setActiveBoardId(b.id);
-      }
-    });
+    window.electronAPI.whiteboard.listBoards()
+      .then(async (list: BoardSummary[]) => {
+        if (list.length > 0) {
+          setBoards(list);
+          setActiveBoardId(list[0].id);
+        } else {
+          const b: Board = await window.electronAPI.whiteboard.createBoard('Board 1', null);
+          setBoards([{ id: b.id, name: b.name, workspaceId: b.workspaceId, createdAt: b.createdAt, updatedAt: b.updatedAt }]);
+          setActiveBoardId(b.id);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
     if (!activeBoardId) return;
-    window.electronAPI.whiteboard.getBoard(activeBoardId).then((b: Board | null) => {
-      if (b) {
-        setBoard(b);
-        const newPos = { x: -b.viewport.x, y: -b.viewport.y };
-        stagePanRef.current = newPos;
-        setStagePos(newPos);
-        setStageScale(b.viewport.zoom);
-      }
-    });
+    window.electronAPI.whiteboard.getBoard(activeBoardId)
+      .then((b: Board | null) => {
+        if (b) {
+          setBoard(b);
+          const newPos = { x: -b.viewport.x, y: -b.viewport.y };
+          stagePanRef.current = newPos;
+          setStagePos(newPos);
+          setStageScale(b.viewport.zoom);
+        }
+      })
+      .catch(() => {});
   }, [activeBoardId]);
 
-  // Board IPC events — stable via stateRef
   useEffect(() => {
     const cleanupChanged = window.electronAPI.whiteboard.onBoardChanged((b: unknown) => {
       const updated = b as Board;
@@ -146,9 +144,9 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
   }, []);
 
   useEffect(() => {
-    window.electronAPI.whiteboard.getMcpStatus().then((s: { running: boolean }) => {
-      setMcpRunning(s.running);
-    });
+    window.electronAPI.whiteboard.getMcpStatus()
+      .then((s: { running: boolean }) => setMcpRunning(s.running))
+      .catch(() => {});
   }, []);
 
   // Middle mouse pan — imperative Konva update, no React re-render during drag
@@ -199,7 +197,6 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     };
   }, []);
 
-  // Transformer: attach to selected nodes
   useEffect(() => {
     const tr = transformerRef.current;
     const stage = stageRef.current;
@@ -213,18 +210,15 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     tr.getLayer()?.batchDraw();
   }, [selectedIds, board]);
 
-  // Keyboard shortcuts — stable via stateRef
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const { editingSticky, editingFrame, selectedIds, activeBoardId, board } = stateRef.current;
 
-      // Undo: Ctrl+Z
       if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey && !editingSticky && !editingFrame) {
         e.preventDefault();
         if (activeBoardId) window.electronAPI.whiteboard.undo(activeBoardId);
         return;
       }
-      // Redo: Ctrl+Shift+Z or Ctrl+Y
       if (((e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey) || (e.key === 'y' && (e.ctrlKey || e.metaKey))) && !editingSticky && !editingFrame) {
         e.preventDefault();
         if (activeBoardId) window.electronAPI.whiteboard.redo(activeBoardId);
@@ -272,8 +266,6 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
-
-  // === STABLE CALLBACKS (read from stateRef / stagePanRef) ===
 
   const persistViewport = useCallback((x: number, y: number, zoom: number) => {
     const { activeBoardId } = stateRef.current;
@@ -625,11 +617,13 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
 
   const handleCreateBoard = useCallback(() => {
     const { boards } = stateRef.current;
-    window.electronAPI.whiteboard.createBoard(`Board ${boards.length + 1}`, null).then((b: Board) => {
-      setBoards((prev) => [...prev, { id: b.id, name: b.name, workspaceId: b.workspaceId, createdAt: b.createdAt, updatedAt: b.updatedAt }]);
-      setActiveBoardId(b.id);
-      setBoardMenuOpen(false);
-    });
+    window.electronAPI.whiteboard.createBoard(`Board ${boards.length + 1}`, null)
+      .then((b: Board) => {
+        setBoards((prev) => [...prev, { id: b.id, name: b.name, workspaceId: b.workspaceId, createdAt: b.createdAt, updatedAt: b.updatedAt }]);
+        setActiveBoardId(b.id);
+        setBoardMenuOpen(false);
+      })
+      .catch(() => {});
   }, []);
 
   const handleDeleteBoard = useCallback((boardId: string) => {
@@ -728,7 +722,6 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     persistViewport(-newPos.x, -newPos.y, newScale);
   }, [persistViewport]);
 
-  // Undo/redo helpers
   const refreshUndoRedo = useCallback(async () => {
     const { activeBoardId } = stateRef.current;
     if (!activeBoardId) { setCanUndo(false); setCanRedo(false); return; }
@@ -753,7 +746,6 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     refreshUndoRedo();
   }, [refreshUndoRedo]);
 
-  // Context menu action handlers (stable)
   const handleStickyColorChange = useCallback((stickyId: string, color: string) => {
     const { activeBoardId } = stateRef.current;
     if (activeBoardId) window.electronAPI.whiteboard.updateSticky(activeBoardId, stickyId, { color: color as StickyColor });
@@ -829,7 +821,6 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     window.electronAPI.whiteboard.updateSticky(activeBoardId, stickyId, { metadata: { ...(sticky.metadata ?? {}), '': '' } });
   }, []);
 
-  // === COMPUTED ===
   const stickyMap = useMemo(() => new Map(board?.stickies.map((s) => [s.id, s]) ?? []), [board]);
   const isDraggable = tool === 'select';
   const connectFromSticky = connectFrom ? board?.stickies.find((s) => s.id === connectFrom) : null;
@@ -863,7 +854,6 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
 
   const cursorClass = tool === 'sticky' || tool === 'frame' ? 'cursor-crosshair' : tool === 'connect' || tool === 'delete' ? 'cursor-pointer' : 'cursor-default';
 
-  // === RENDER ===
   return (
     <div
       ref={containerRef}

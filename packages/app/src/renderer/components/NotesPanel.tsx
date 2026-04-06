@@ -32,8 +32,6 @@ type NotesPanelProps = {
   panelId: string;
 };
 
-// ── Lightweight Markdown → HTML ─────────────────────────────────────────────
-
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -88,23 +86,21 @@ function renderMarkdown(md: string): string {
 
   const inline = (text: string): string => {
     let result = escapeHtml(text);
-    // Code spans (before other inline formatting)
     result = result.replace(/`([^`]+)`/g, '<code class="bg-muted/50 px-1 py-0.5 rounded text-[11px] font-mono">$1</code>');
-    // Bold + italic
     result = result.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
     result = result.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     result = result.replace(/\*(.+?)\*/g, '<em>$1</em>');
-    // Strikethrough
     result = result.replace(/~~(.+?)~~/g, '<del>$1</del>');
-    // Links
-    result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary underline" target="_blank" rel="noopener">$1</a>');
-    // Auto-links
-    result = result.replace(/(^|[^"=])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" class="text-primary underline" target="_blank" rel="noopener">$2</a>');
+    // only allow safe URL schemes to prevent javascript: injection
+    const safeHref = (url: string) => /^(https?:|mailto:)/i.test(url) ? url : '#';
+    result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) =>
+      `<a href="${safeHref(url)}" class="text-primary underline" target="_blank" rel="noopener noreferrer">${text}</a>`,
+    );
+    result = result.replace(/(^|[^"=])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" class="text-primary underline" target="_blank" rel="noopener noreferrer">$2</a>');
     return result;
   };
 
   for (const line of lines) {
-    // Code blocks
     if (line.startsWith('```')) {
       if (inCodeBlock) {
         const langBadge = codeLang ? `<span class="absolute top-1.5 right-2 text-[10px] text-muted-foreground/40 uppercase select-none">${escapeHtml(codeLang)}</span>` : '';
@@ -120,10 +116,8 @@ function renderMarkdown(md: string): string {
     }
     if (inCodeBlock) { codeLines.push(line); continue; }
 
-    // Blank line
     if (!line.trim()) { flushAll(); html.push(''); continue; }
 
-    // Headings
     const headingMatch = line.match(/^(#{1,6})\s+(.+)/);
     if (headingMatch) {
       flushAll();
@@ -133,21 +127,18 @@ function renderMarkdown(md: string): string {
       continue;
     }
 
-    // Horizontal rule
     if (/^(-{3,}|\*{3,}|_{3,})$/.test(line.trim())) {
       flushAll();
       html.push('<hr class="border-border my-3" />');
       continue;
     }
 
-    // Blockquote
     if (line.startsWith('> ')) {
       flushAll();
       html.push(`<blockquote class="border-l-2 border-primary/40 pl-3 my-1 text-muted-foreground italic">${inline(line.slice(2))}</blockquote>`);
       continue;
     }
 
-    // Unordered list
     const ulMatch = line.match(/^(\s*)[-*+]\s+(.+)/);
     if (ulMatch) {
       if (inList !== 'ul') { flushAll(); html.push('<ul class="list-disc list-inside space-y-0.5 my-1 ml-2">'); inList = 'ul'; }
@@ -155,7 +146,6 @@ function renderMarkdown(md: string): string {
       continue;
     }
 
-    // Ordered list
     const olMatch = line.match(/^(\s*)\d+\.\s+(.+)/);
     if (olMatch) {
       if (inList !== 'ol') { flushAll(); html.push('<ol class="list-decimal list-inside space-y-0.5 my-1 ml-2">'); inList = 'ol'; }
@@ -163,7 +153,6 @@ function renderMarkdown(md: string): string {
       continue;
     }
 
-    // Checkbox
     const cbMatch = line.match(/^- \[([ xX])\]\s+(.+)/);
     if (cbMatch) {
       flushAll();
@@ -172,14 +161,12 @@ function renderMarkdown(md: string): string {
       continue;
     }
 
-    // Table rows (lines that start and end with |)
     if (line.trimStart().startsWith('|') && line.trimEnd().endsWith('|')) {
       flushList();
       tableRows.push(line);
       continue;
     }
 
-    // Paragraph
     flushAll();
     html.push(`<p class="my-1">${inline(line)}</p>`);
   }
@@ -191,8 +178,6 @@ function renderMarkdown(md: string): string {
   }
   return html.join('\n');
 }
-
-// ── Component ───────────────────────────────────────────────────────────────
 
 export function NotesPanel({ panelId: _panelId }: NotesPanelProps) {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -210,14 +195,12 @@ export function NotesPanel({ panelId: _panelId }: NotesPanelProps) {
 
   const activeNote = notes.find((n) => n.id === activeNoteId) ?? null;
 
-  // Collect all unique tags
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
     for (const n of notes) for (const t of (n.tags ?? [])) tagSet.add(t);
     return Array.from(tagSet).sort();
   }, [notes]);
 
-  // Filter notes by search + active tag
   const filteredNotes = useMemo(() => {
     let filtered = notes;
     if (activeTag) filtered = filtered.filter((n) => (n.tags ?? []).includes(activeTag));
@@ -231,25 +214,25 @@ export function NotesPanel({ panelId: _panelId }: NotesPanelProps) {
     return filtered;
   }, [notes, searchQuery, activeTag]);
 
-  // Rendered markdown (memoized)
   const renderedHtml = useMemo(
     () => activeNote ? renderMarkdown(activeNote.content) : '',
     [activeNote?.content],
   );
 
   useEffect(() => {
-    window.electronAPI.notes.list().then((list) => {
-      setNotes(list);
-      if (list.length > 0) setActiveNoteId(list[0].id);
-      setLoaded(true);
-    });
+    window.electronAPI.notes.list()
+      .then((list) => {
+        setNotes(list);
+        if (list.length > 0) setActiveNoteId(list[0].id);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
   }, []);
 
   const createNote = useCallback(async () => {
     const note = await window.electronAPI.notes.create('Untitled');
     setNotes((prev) => [note, ...prev]);
     setActiveNoteId(note.id);
-    // Focus title input after render
     setTimeout(() => {
       titleInputRef.current?.focus();
       titleInputRef.current?.select();
@@ -274,7 +257,6 @@ export function NotesPanel({ panelId: _panelId }: NotesPanelProps) {
 
     setSaveState('saving');
 
-    // Debounced save to disk
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
       await window.electronAPI.notes.update(id, data);
@@ -297,13 +279,11 @@ export function NotesPanel({ panelId: _panelId }: NotesPanelProps) {
     if (!note) return;
     const newTags = (note.tags ?? []).filter((t) => t !== tag);
     updateNote(noteId, { tags: newTags });
-    // If the removed tag was the active filter and no notes have it anymore, clear filter
     if (activeTag === tag && !notes.some((n) => n.id !== noteId && (n.tags ?? []).includes(tag))) {
       setActiveTag(null);
     }
   }, [notes, updateNote, activeTag]);
 
-  // Ctrl+N to create note when panel is focused
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'n' && (e.ctrlKey || e.metaKey)) {

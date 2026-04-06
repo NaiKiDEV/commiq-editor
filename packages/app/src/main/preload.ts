@@ -111,7 +111,8 @@ const electronAPI = {
           id: string;
           name: string;
           scope: "workspace" | "global";
-          commands: Array<{ id: string; name: string; command: string }>;
+          mode: "parallel" | "sequential";
+          commands: Array<{ id: string; name: string; command: string; type: "terminal" | "browser"; signal?: string }>;
         }>
       >,
 
@@ -120,7 +121,8 @@ const electronAPI = {
         id: string;
         name: string;
         scope: "workspace" | "global";
-        commands: Array<{ id: string; name: string; command: string }>;
+        mode: "parallel" | "sequential";
+        commands: Array<{ id: string; name: string; command: string; type: "terminal" | "browser"; signal?: string }>;
       },
       workspaceId: string,
     ) =>

@@ -130,19 +130,24 @@ export function ResourceList({ context, namespace, kind, onSelect, onOpenLogs, o
     setError(null);
     setResources(new Map());
 
-    window.electronAPI.k8s.list(context, kind, namespace).then((result) => {
-      if ('error' in result) {
-        setError(result.error);
+    window.electronAPI.k8s.list(context, kind, namespace)
+      .then((result) => {
+        if ('error' in result) {
+          setError(result.error);
+          setLoading(false);
+          return;
+        }
+        const map = new Map<string, K8sResource>();
+        for (const item of result as K8sResource[]) {
+          map.set(item.uid, item);
+        }
+        setResources(map);
         setLoading(false);
-        return;
-      }
-      const map = new Map<string, K8sResource>();
-      for (const item of result as K8sResource[]) {
-        map.set(item.uid, item);
-      }
-      setResources(map);
-      setLoading(false);
-    });
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : String(err));
+        setLoading(false);
+      });
 
     const newWatchId = crypto.randomUUID();
 

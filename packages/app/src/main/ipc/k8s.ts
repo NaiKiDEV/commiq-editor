@@ -1,8 +1,6 @@
 import { ipcMain, type WebContents } from 'electron';
 import * as k8s from '@kubernetes/client-node';
 
-// ── Types (mirrored from renderer) ──────────────────────────────────────────
-
 type K8sContext = {
   name: string;
   cluster: string;
@@ -33,8 +31,6 @@ type ResourceKind =
   | 'services' | 'ingresses'
   | 'configmaps' | 'secrets' | 'pvcs' | 'pvs';
 
-// ── Resource path mapping ───────────────────────────────────────────────────
-
 const RESOURCE_PATHS: Record<ResourceKind, {
   path: (ns?: string) => string;
   clusterScoped?: boolean;
@@ -55,8 +51,6 @@ const RESOURCE_PATHS: Record<ResourceKind, {
   pvcs:         { path: (ns) => ns ? `/api/v1/namespaces/${ns}/persistentvolumeclaims` : '/api/v1/persistentvolumeclaims', apiGroup: 'core' },
   pvs:          { path: () => '/api/v1/persistentvolumes', clusterScoped: true, apiGroup: 'core' },
 };
-
-// ── Client cache ────────────────────────────────────────────────────────────
 
 function loadKubeConfig(contextName?: string): k8s.KubeConfig {
   const kc = new k8s.KubeConfig();
@@ -81,8 +75,6 @@ function getKc(contextName: string): k8s.KubeConfig {
 function getCoreApi(contextName: string): k8s.CoreV1Api {
   return getKc(contextName).makeApiClient(k8s.CoreV1Api);
 }
-
-// ── Resource serialization ──────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function serializeResource(obj: any, kind: ResourceKind): K8sResource {
@@ -163,8 +155,6 @@ function extractStatus(obj: any, kind: ResourceKind): string {
       return 'Unknown';
   }
 }
-
-// ── Watch management ────────────────────────────────────────────────────────
 
 type WatchEntry = {
   abort: () => void;
@@ -251,10 +241,7 @@ async function startWatch(
   await makeWatch();
 }
 
-// ── IPC Registration ────────────────────────────────────────────────────────
-
 export function registerK8sIpc(): void {
-  // List available contexts from kubeconfig
   ipcMain.handle('k8s:config:reload', () => {
     kcCache.clear();
   });
@@ -273,7 +260,6 @@ export function registerK8sIpc(): void {
     }
   });
 
-  // List namespaces for a context
   ipcMain.handle('k8s:namespaces', async (_event, contextName: string) => {
     try {
       const api = getCoreApi(contextName);
@@ -285,7 +271,6 @@ export function registerK8sIpc(): void {
     }
   });
 
-  // List resources
   ipcMain.handle(
     'k8s:list',
     async (_event, contextName: string, kind: ResourceKind, namespace?: string) => {
@@ -299,7 +284,6 @@ export function registerK8sIpc(): void {
     },
   );
 
-  // Start watching resources
   ipcMain.handle(
     'k8s:watch:start',
     async (event, contextName: string, kind: ResourceKind, watchId: string, namespace?: string) => {
@@ -307,7 +291,6 @@ export function registerK8sIpc(): void {
     },
   );
 
-  // Stop watching
   ipcMain.handle('k8s:watch:stop', (_event, watchId: string) => {
     const entry = watches.get(watchId);
     if (entry) {
@@ -316,7 +299,6 @@ export function registerK8sIpc(): void {
     }
   });
 
-  // Get pod containers
   ipcMain.handle(
     'k8s:pod:containers',
     async (_event, contextName: string, namespace: string, podName: string) => {
@@ -331,7 +313,6 @@ export function registerK8sIpc(): void {
     },
   );
 
-  // Start log streaming
   ipcMain.handle(
     'k8s:logs:start',
     async (event, contextName: string, namespace: string, podName: string, container: string, streamId: string) => {
@@ -380,7 +361,6 @@ export function registerK8sIpc(): void {
     },
   );
 
-  // Stop log streaming
   ipcMain.handle('k8s:logs:stop', (_event, streamId: string) => {
     const entry = logStreams.get(streamId);
     if (entry) {
@@ -389,7 +369,6 @@ export function registerK8sIpc(): void {
     }
   });
 
-  // Delete pod
   ipcMain.handle(
     'k8s:pod:delete',
     async (_event, contextName: string, namespace: string, podName: string) => {
@@ -404,7 +383,6 @@ export function registerK8sIpc(): void {
     },
   );
 
-  // Exec into pod (interactive shell)
   ipcMain.handle(
     'k8s:exec:start',
     async (
@@ -467,7 +445,6 @@ export function registerK8sIpc(): void {
           },
         });
 
-        // Listen for stdin writes from renderer
         const writeChannel = `k8s:exec:write:${execId}`;
         const writeListener = (_e: Electron.IpcMainEvent, data: string) => {
           try {
@@ -476,16 +453,13 @@ export function registerK8sIpc(): void {
         };
         ipcMain.on(writeChannel, writeListener);
 
-        // Listen for resize
         const resizeChannel = `k8s:exec:resize:${execId}`;
         const resizeListener = (_e: Electron.IpcMainEvent, cols: number, rows: number) => {
           try {
-            // Send resize message via WebSocket channel 4 (resize)
             const resizeMsg = JSON.stringify({ Width: cols, Height: rows });
-            // WebSocket channel 4 is the resize channel in k8s exec protocol
             if (ws.readyState === ws.OPEN) {
               const buf = Buffer.alloc(resizeMsg.length + 1);
-              buf.writeUInt8(4, 0); // channel 4 = resize
+              buf.writeUInt8(4, 0); // k8s exec WebSocket channel 4 = resize
               buf.write(resizeMsg, 1);
               ws.send(buf);
             }
@@ -493,7 +467,6 @@ export function registerK8sIpc(): void {
         };
         ipcMain.on(resizeChannel, resizeListener);
 
-        // Cleanup listeners when session ends
         const origDestroy = execSessions.get(execId)?.destroy;
         execSessions.set(execId, {
           destroy: () => {
@@ -514,7 +487,6 @@ export function registerK8sIpc(): void {
     },
   );
 
-  // Stop exec session
   ipcMain.handle('k8s:exec:stop', (_event, execId: string) => {
     const entry = execSessions.get(execId);
     if (entry) {
@@ -523,8 +495,6 @@ export function registerK8sIpc(): void {
     }
   });
 }
-
-// ── List resources using typed APIs ─────────────────────────────────────────
 
 async function listResources(
   kc: k8s.KubeConfig,
@@ -628,8 +598,6 @@ async function listResources(
       return [];
   }
 }
-
-// ── Cleanup ─────────────────────────────────────────────────────────────────
 
 export function stopAllK8sWatches(): void {
   for (const [id, entry] of watches) {

@@ -32,10 +32,12 @@ export function PodLogs({ context, namespace, podName, onBack }: PodLogsProps) {
   const pausedLinesRef = useRef<string[]>([]);
 
   useEffect(() => {
-    window.electronAPI.k8s.getPodContainers(context, namespace, podName).then((c) => {
-      setContainers(c);
-      if (c.length > 0) setActiveContainer(c[0]);
-    });
+    window.electronAPI.k8s.getPodContainers(context, namespace, podName)
+      .then((c) => {
+        setContainers(c);
+        if (c.length > 0) setActiveContainer(c[0]);
+      })
+      .catch(() => {});
   }, [context, namespace, podName]);
 
   useEffect(() => {

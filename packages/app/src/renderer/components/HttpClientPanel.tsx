@@ -6,25 +6,10 @@ import { Textarea } from './ui/textarea';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useActiveWorkspaceId } from '../hooks/use-workspace';
+import type { HttpCollection, HttpRequestBody, HttpRequestRecord } from '../../shared/http-types';
 
-type HttpCollection = {
-  id: string;
-  name: string;
-  scope: 'workspace' | 'global';
-  workspaceId: string | null;
-};
-
-type HttpRequestBody = {
-  type: 'none' | 'json' | 'text';
-  content: string;
-};
-
-type AuthConfig = {
-  type: 'none' | 'bearer' | 'basic' | 'apikey';
-  bearer: { token: string };
-  basic: { username: string; password: string };
-  apikey: { key: string; value: string; addTo: 'header' | 'query' };
-};
+type AuthConfig = NonNullable<HttpRequestRecord['auth']>;
+type QueryParam = NonNullable<HttpRequestRecord['queryParams']>[number];
 
 function defaultAuth(): AuthConfig {
   return {
@@ -34,21 +19,6 @@ function defaultAuth(): AuthConfig {
     apikey: { key: 'X-API-Key', value: '', addTo: 'header' },
   };
 }
-
-type QueryParam = { key: string; value: string; enabled: boolean };
-
-type HttpRequestRecord = {
-  id: string;
-  collectionId: string | null;
-  workspaceId: string | null;
-  name: string;
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
-  url: string;
-  headers: { key: string; value: string; enabled: boolean }[];
-  body: HttpRequestBody;
-  auth?: AuthConfig;
-  queryParams?: QueryParam[];
-};
 
 /** Parse query string from URL into param array */
 function parseQueryParams(url: string): QueryParam[] {

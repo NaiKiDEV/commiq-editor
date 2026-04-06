@@ -5,8 +5,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 
-// ── types ──────────────────────────────────────────────────────────────────────
-
 type BitWidth = 8 | 16 | 32 | 64;
 
 export interface EnumEntry {
@@ -32,8 +30,6 @@ export interface RegisterDef {
   fields: FieldDef[];
 }
 
-// ── colors ─────────────────────────────────────────────────────────────────────
-
 const FIELD_COLORS = [
   { bg: 'bg-blue-500/20',   border: 'border-blue-500/40',   text: 'text-blue-300',   bitBg: 'bg-blue-500/25',   bitText: 'text-blue-200'   },
   { bg: 'bg-green-500/20',  border: 'border-green-500/40',  text: 'text-green-300',  bitBg: 'bg-green-500/25',  bitText: 'text-green-200'  },
@@ -46,8 +42,6 @@ const FIELD_COLORS = [
 ];
 
 const RESERVED_COLOR = { bg: 'bg-muted/10', border: 'border-border', text: 'text-muted-foreground/30', bitBg: 'bg-muted/15', bitText: 'text-muted-foreground/30' };
-
-// ── math ───────────────────────────────────────────────────────────────────────
 
 function mask(width: BitWidth): bigint {
   return (1n << BigInt(width)) - 1n;
@@ -74,8 +68,6 @@ function parseHex(s: string, width: BitWidth): bigint | null {
   try { return BigInt('0x' + clean) & mask(width); } catch { return null; }
 }
 
-// ── field color assignment ─────────────────────────────────────────────────────
-
 function buildColorMap(fields: FieldDef[]): Map<string, typeof FIELD_COLORS[0]> {
   const map = new Map<string, typeof FIELD_COLORS[0]>();
   let idx = 0;
@@ -86,8 +78,6 @@ function buildColorMap(fields: FieldDef[]): Map<string, typeof FIELD_COLORS[0]> 
   return map;
 }
 
-// ── bit ownership ──────────────────────────────────────────────────────────────
-
 function buildBitOwner(fields: FieldDef[], width: BitWidth): (FieldDef | null)[] {
   const owner: (FieldDef | null)[] = Array(width).fill(null);
   for (const f of fields) {
@@ -97,8 +87,6 @@ function buildBitOwner(fields: FieldDef[], width: BitWidth): (FieldDef | null)[]
   }
   return owner;
 }
-
-// ── field map segments ─────────────────────────────────────────────────────────
 
 interface Segment {
   label: string;
@@ -127,8 +115,6 @@ function buildSegments(fields: FieldDef[], width: BitWidth): Segment[] {
   }
   return segs;
 }
-
-// ── save modal ─────────────────────────────────────────────────────────────────
 
 function SaveModal({
   initial,
@@ -178,8 +164,6 @@ function SaveModal({
   );
 }
 
-// ── add/edit field form ────────────────────────────────────────────────────────
-
 function FieldForm({
   initial,
   width,
@@ -209,7 +193,6 @@ function FieldForm({
     !isNaN(msbN) && !isNaN(lsbN) &&
     msbN >= lsbN &&
     msbN < width && lsbN >= 0 &&
-    // no overlap with existing (excluding self)
     !Array.from({ length: msbN - lsbN + 1 }, (_, i) => lsbN + i)
       .some((b) => usedBits.has(b));
 
@@ -352,8 +335,6 @@ function FieldForm({
   );
 }
 
-// ── library view ───────────────────────────────────────────────────────────────
-
 function LibraryView({
   library,
   onLoad,
@@ -413,8 +394,6 @@ function LibraryView({
   );
 }
 
-// ── main component ─────────────────────────────────────────────────────────────
-
 export function BitFieldPanel({ panelId: _panelId }: { panelId: string }) {
   const [view, setView] = useState<'editor' | 'library'>('editor');
   const [width, setWidth] = useState<BitWidth>(32);
@@ -429,7 +408,6 @@ export function BitFieldPanel({ panelId: _panelId }: { panelId: string }) {
   const [savedDesc, setSavedDesc] = useState('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // Load library on mount
   useEffect(() => {
     window.electronAPI.registers.load().then((raw) => {
       if (Array.isArray(raw)) setLibrary(raw as RegisterDef[]);
@@ -493,7 +471,6 @@ export function BitFieldPanel({ panelId: _panelId }: { panelId: string }) {
     setSavedName(name);
     setSavedDesc(desc);
     const reg: RegisterDef = { id: uuidv4(), name, description: desc, width, fields };
-    // Replace existing with same name if present, else append
     const existing = library.findIndex((r) => r.name === name);
     const updated = existing >= 0
       ? library.map((r, i) => i === existing ? { ...reg, id: r.id } : r)
@@ -517,7 +494,6 @@ export function BitFieldPanel({ panelId: _panelId }: { panelId: string }) {
     saveLibrary(library.filter((r) => r.id !== id));
   }, [library, saveLibrary]);
 
-  // Derived
   const colorMap = useMemo(() => buildColorMap(fields), [fields]);
   const bitOwner = useMemo(() => buildBitOwner(fields, width), [fields, width]);
   const segments = useMemo(() => buildSegments(fields, width), [fields, width]);

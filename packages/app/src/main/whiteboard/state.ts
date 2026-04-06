@@ -35,8 +35,6 @@ export class WhiteboardStateManager extends EventEmitter {
     this.loadAll();
   }
 
-  // --- Board CRUD ---
-
   listBoards(): BoardSummary[] {
     return Array.from(this.boards.values()).map(
       ({ id, name, workspaceId, createdAt, updatedAt }) => ({
@@ -123,8 +121,6 @@ export class WhiteboardStateManager extends EventEmitter {
     this.emit("board-changed", board);
     return board;
   }
-
-  // --- Sticky CRUD ---
 
   createSticky(
     boardId: string,
@@ -222,8 +218,6 @@ export class WhiteboardStateManager extends EventEmitter {
     return true;
   }
 
-  // --- Frame CRUD ---
-
   createFrame(
     boardId: string,
     data: {
@@ -292,8 +286,6 @@ export class WhiteboardStateManager extends EventEmitter {
     return true;
   }
 
-  // --- Connection CRUD ---
-
   connect(
     boardId: string,
     fromStickyId: string,
@@ -355,13 +347,10 @@ export class WhiteboardStateManager extends EventEmitter {
     return true;
   }
 
-  // --- Undo / Redo ---
-
-  /** Take a snapshot of the board state for undo (call BEFORE mutating) */
   private pushUndo(boardId: string): void {
     const board = this.boards.get(boardId);
     if (!board) return;
-    // Snapshot without viewport (undo shouldn't change viewport)
+    // viewport excluded — undo shouldn't change viewport
     const snapshot = JSON.stringify({
       stickies: board.stickies,
       frames: board.frames,
@@ -372,7 +361,6 @@ export class WhiteboardStateManager extends EventEmitter {
     if (!stack) { stack = []; this.undoStacks.set(boardId, stack); }
     stack.push(snapshot);
     if (stack.length > MAX_UNDO_STACK) stack.shift();
-    // Clear redo when new action happens
     this.redoStacks.set(boardId, []);
   }
 
@@ -382,7 +370,6 @@ export class WhiteboardStateManager extends EventEmitter {
     const undoStack = this.undoStacks.get(boardId);
     if (!undoStack || undoStack.length === 0) return null;
 
-    // Push current state to redo stack
     const currentSnapshot = JSON.stringify({
       stickies: board.stickies,
       frames: board.frames,
@@ -393,7 +380,6 @@ export class WhiteboardStateManager extends EventEmitter {
     if (!redoStack) { redoStack = []; this.redoStacks.set(boardId, redoStack); }
     redoStack.push(currentSnapshot);
 
-    // Restore previous state
     const snapshot = undoStack.pop()!;
     const state = JSON.parse(snapshot);
     board.stickies = state.stickies;
@@ -413,7 +399,6 @@ export class WhiteboardStateManager extends EventEmitter {
     const redoStack = this.redoStacks.get(boardId);
     if (!redoStack || redoStack.length === 0) return null;
 
-    // Push current state to undo stack
     const currentSnapshot = JSON.stringify({
       stickies: board.stickies,
       frames: board.frames,
@@ -424,7 +409,6 @@ export class WhiteboardStateManager extends EventEmitter {
     if (!undoStack) { undoStack = []; this.undoStacks.set(boardId, undoStack); }
     undoStack.push(currentSnapshot);
 
-    // Restore redo state
     const snapshot = redoStack.pop()!;
     const state = JSON.parse(snapshot);
     board.stickies = state.stickies;
@@ -446,8 +430,6 @@ export class WhiteboardStateManager extends EventEmitter {
     return (this.redoStacks.get(boardId)?.length ?? 0) > 0;
   }
 
-  // --- Auto-positioning ---
-
   private autoPositionX(board: Board): number {
     const cx = board.viewport.x + 400;
     const cols = board.stickies.length % 5;
@@ -459,8 +441,6 @@ export class WhiteboardStateManager extends EventEmitter {
     const rows = Math.floor(board.stickies.length / 5);
     return cy + rows * 170;
   }
-
-  // --- Persistence ---
 
   private boardFilePath(boardId: string): string {
     return path.join(this.storageDir, `${boardId}.json`);
@@ -508,9 +488,7 @@ export class WhiteboardStateManager extends EventEmitter {
         const raw = fs.readFileSync(path.join(this.storageDir, file), "utf-8");
         const board: Board = JSON.parse(raw);
         this.boards.set(board.id, board);
-      } catch {
-        // Skip corrupted files
-      }
+      } catch { /* corrupted file */ }
     }
   }
 

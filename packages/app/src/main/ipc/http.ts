@@ -1,41 +1,9 @@
 import { ipcMain, app } from 'electron';
-import fs from 'node:fs';
+import fsp from 'node:fs/promises';
 import path from 'node:path';
+import type { HttpCollection, HttpRequestBody, HttpRequestRecord, HttpResponse, HttpError } from '../../shared/http-types';
 
-export type HttpCollection = {
-  id: string;
-  name: string;
-  scope: 'workspace' | 'global';
-  workspaceId: string | null;
-};
-
-export type HttpRequestBody = {
-  type: 'none' | 'json' | 'text';
-  content: string;
-};
-
-export type HttpRequestRecord = {
-  id: string;
-  collectionId: string | null;
-  workspaceId: string | null; // set when collectionId is null (uncategorized)
-  name: string;
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
-  url: string;
-  headers: { key: string; value: string; enabled: boolean }[];
-  body: HttpRequestBody;
-};
-
-export type HttpResponse = {
-  status: number;
-  statusText: string;
-  headers: Record<string, string>;
-  body: string;
-  timing: { start: number; end: number; duration: number };
-};
-
-export type HttpError = {
-  error: string;
-};
+export type { HttpCollection, HttpRequestBody, HttpRequestRecord, HttpResponse, HttpError };
 
 function getCollectionsPath(): string {
   return path.join(app.getPath('userData'), 'http-collections.json');
@@ -45,45 +13,43 @@ function getRequestsPath(): string {
   return path.join(app.getPath('userData'), 'http-requests.json');
 }
 
-function readCollections(): HttpCollection[] {
+async function readCollections(): Promise<HttpCollection[]> {
   try {
-    return JSON.parse(fs.readFileSync(getCollectionsPath(), 'utf-8'));
+    return JSON.parse(await fsp.readFile(getCollectionsPath(), 'utf-8'));
   } catch {
     return [];
   }
 }
 
-function writeCollections(collections: HttpCollection[]): void {
-  fs.writeFileSync(getCollectionsPath(), JSON.stringify(collections, null, 2));
+async function writeCollections(collections: HttpCollection[]): Promise<void> {
+  await fsp.writeFile(getCollectionsPath(), JSON.stringify(collections, null, 2));
 }
 
-function readRequests(): HttpRequestRecord[] {
+async function readRequests(): Promise<HttpRequestRecord[]> {
   try {
-    return JSON.parse(fs.readFileSync(getRequestsPath(), 'utf-8'));
+    return JSON.parse(await fsp.readFile(getRequestsPath(), 'utf-8'));
   } catch {
     return [];
   }
 }
 
-function writeRequests(requests: HttpRequestRecord[]): void {
-  fs.writeFileSync(getRequestsPath(), JSON.stringify(requests, null, 2));
+async function writeRequests(requests: HttpRequestRecord[]): Promise<void> {
+  await fsp.writeFile(getRequestsPath(), JSON.stringify(requests, null, 2));
 }
 
 const inflight = new Map<string, AbortController>();
 
 export function registerHttpIpc(): void {
-  // --- Collections ---
-
-  ipcMain.handle('http:collections:list', (_event, workspaceId: string) => {
-    return readCollections().filter(
+  ipcMain.handle('http:collections:list', async (_event, workspaceId: string) => {
+    return (await readCollections()).filter(
       (c) => c.scope === 'global' || c.workspaceId === workspaceId,
     );
   });
 
   ipcMain.handle(
     'http:collections:create',
-    (_event, workspaceId: string, name: string, scope: 'workspace' | 'global') => {
-      const collections = readCollections();
+    async (_event, workspaceId: string, name: string, scope: 'workspace' | 'global') => {
+      const collections = await readCollections();
       const collection: HttpCollection = {
         id: crypto.randomUUID(),
         name,
@@ -91,51 +57,43 @@ export function registerHttpIpc(): void {
         workspaceId: scope === 'global' ? null : workspaceId,
       };
       collections.push(collection);
-      writeCollections(collections);
+      await writeCollections(collections);
       return collection;
     },
   );
 
-  ipcMain.handle('http:collections:delete', (_event, id: string) => {
-    writeCollections(readCollections().filter((c) => c.id !== id));
-    // Cascade: delete all requests belonging to this collection
-    writeRequests(readRequests().filter((r) => r.collectionId !== id));
+  ipcMain.handle('http:collections:delete', async (_event, id: string) => {
+    await writeCollections((await readCollections()).filter((c) => c.id !== id));
+    await writeRequests((await readRequests()).filter((r) => r.collectionId !== id));
   });
 
-  // --- Requests ---
-
-  ipcMain.handle('http:requests:list', (_event, workspaceId: string) => {
-    const collections = readCollections().filter(
+  ipcMain.handle('http:requests:list', async (_event, workspaceId: string) => {
+    const collections = (await readCollections()).filter(
       (c) => c.scope === 'global' || c.workspaceId === workspaceId,
     );
     const visibleCollectionIds = new Set(collections.map((c) => c.id));
 
-    return readRequests().filter((r) => {
-      if (r.collectionId !== null) {
-        return visibleCollectionIds.has(r.collectionId);
-      }
-      // Uncategorized: must match workspaceId
+    return (await readRequests()).filter((r) => {
+      if (r.collectionId !== null) return visibleCollectionIds.has(r.collectionId);
       return r.workspaceId === workspaceId;
     });
   });
 
-  ipcMain.handle('http:requests:save', (_event, request: HttpRequestRecord) => {
-    const requests = readRequests();
+  ipcMain.handle('http:requests:save', async (_event, request: HttpRequestRecord) => {
+    const requests = await readRequests();
     const idx = requests.findIndex((r) => r.id === request.id);
     if (idx !== -1) {
       requests[idx] = request;
     } else {
       requests.push(request);
     }
-    writeRequests(requests);
+    await writeRequests(requests);
     return request;
   });
 
-  ipcMain.handle('http:requests:delete', (_event, id: string) => {
-    writeRequests(readRequests().filter((r) => r.id !== id));
+  ipcMain.handle('http:requests:delete', async (_event, id: string) => {
+    await writeRequests((await readRequests()).filter((r) => r.id !== id));
   });
-
-  // --- HTTP Execution ---
 
   ipcMain.handle('http:request', async (_event, request: HttpRequestRecord): Promise<HttpResponse | HttpError | { cancelled: true }> => {
     const controller = new AbortController();
@@ -152,7 +110,6 @@ export function registerHttpIpc(): void {
         }
       }
 
-      // Set Content-Type for json bodies if not already set
       if (request.body.type === 'json' && !headers['Content-Type'] && !headers['content-type']) {
         headers['Content-Type'] = 'application/json';
       }
@@ -175,7 +132,6 @@ export function registerHttpIpc(): void {
         responseHeaders[key] = value;
       });
 
-      // Check if binary
       const contentType = res.headers.get('content-type') ?? '';
       const isText = contentType.includes('text') || contentType.includes('json') || contentType.includes('xml') || contentType.includes('javascript');
 
@@ -210,12 +166,32 @@ export function registerHttpIpc(): void {
     inflight.get(requestId)?.abort(new Error('Request cancelled'));
   });
 
-  // --- Postman Import ---
+  ipcMain.handle('http:import-postman', async (_event, workspaceId: string, json: string): Promise<{ imported: number; skipped: number }> => {
+    type PostmanHeader = { key: string; value?: string; disabled?: boolean };
+    type PostmanBody = {
+      mode?: string;
+      raw?: string;
+      options?: { raw?: { language?: string } };
+    };
+    type PostmanRequest = {
+      method?: string;
+      url?: string | { raw?: string };
+      header?: PostmanHeader[];
+      body?: PostmanBody;
+    };
+    type PostmanItem = {
+      name?: string;
+      request?: PostmanRequest;
+      item?: PostmanItem[];
+    };
+    type PostmanCollection = {
+      info?: { name?: string };
+      item?: PostmanItem[];
+    };
 
-  ipcMain.handle('http:import-postman', (_event, workspaceId: string, json: string): { imported: number; skipped: number } => {
-    let parsed: any;
+    let parsed: PostmanCollection;
     try {
-      parsed = JSON.parse(json);
+      parsed = JSON.parse(json) as PostmanCollection;
     } catch {
       throw new Error('Invalid JSON');
     }
@@ -228,18 +204,16 @@ export function registerHttpIpc(): void {
       workspaceId,
     };
 
-    const collections = readCollections();
+    const collections = await readCollections();
     collections.push(collection);
-    writeCollections(collections);
+    await writeCollections(collections);
 
-    // Flatten items recursively, collect leaf requests only
-    function flattenItems(items: any[]): { requests: HttpRequestRecord[]; skipped: number } {
+    function flattenItems(items: PostmanItem[]): { requests: HttpRequestRecord[]; skipped: number } {
       let skipped = 0;
       const requests: HttpRequestRecord[] = [];
 
       for (const item of items ?? []) {
         if (Array.isArray(item.item)) {
-          // It's a folder — recurse and flatten
           const nested = flattenItems(item.item);
           requests.push(...nested.requests);
           skipped += nested.skipped;
@@ -258,8 +232,8 @@ export function registerHttpIpc(): void {
               : req.url?.raw ?? '';
 
           const headers = (req.header ?? [])
-            .filter((h: any) => h.key && !h.disabled)
-            .map((h: any) => ({ key: h.key, value: h.value ?? '', enabled: true }));
+            .filter((h) => h.key && !h.disabled)
+            .map((h) => ({ key: h.key, value: h.value ?? '', enabled: true }));
 
           let body: HttpRequestBody = { type: 'none', content: '' };
           if (req.body?.mode === 'raw') {
@@ -290,8 +264,8 @@ export function registerHttpIpc(): void {
     }
 
     const { requests, skipped } = flattenItems(parsed?.item ?? []);
-    const existing = readRequests();
-    writeRequests([...existing, ...requests]);
+    const existing = await readRequests();
+    await writeRequests([...existing, ...requests]);
 
     return { imported: requests.length, skipped };
   });

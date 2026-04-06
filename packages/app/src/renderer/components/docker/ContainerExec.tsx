@@ -109,14 +109,18 @@ export function ContainerExec({ container }: Props) {
     });
     if (containerRef.current) ro.observe(containerRef.current);
 
-    window.electronAPI.docker.execStart(container.ID, execId, shell.value).then((result) => {
-      if ('success' in result) {
-        setConnected(true);
-        window.electronAPI.docker.execResize(execId, terminal.cols, terminal.rows);
-      } else {
-        terminal.write(`\r\n\x1b[31mError: ${(result as { error: string }).error}\x1b[0m\r\n`);
-      }
-    });
+    window.electronAPI.docker.execStart(container.ID, execId, shell.value)
+      .then((result) => {
+        if ('success' in result) {
+          setConnected(true);
+          window.electronAPI.docker.execResize(execId, terminal.cols, terminal.rows);
+        } else {
+          terminal.write(`\r\n\x1b[31mError: ${(result as { error: string }).error}\x1b[0m\r\n`);
+        }
+      })
+      .catch((err: unknown) => {
+        terminal.write(`\r\n\x1b[31mError: ${err instanceof Error ? err.message : String(err)}\x1b[0m\r\n`);
+      });
 
     cleanupRef.current = () => {
       ro.disconnect();

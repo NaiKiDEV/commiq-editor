@@ -97,25 +97,29 @@ export function KubernetesPanel({ panelId: _panelId }: { panelId: string }) {
 
   useEffect(() => {
     setLoadingContexts(true);
-    window.electronAPI.k8s.contexts().then((result) => {
-      if ('error' in result) {
-        setError(result.error);
-      } else {
-        setContexts(result.contexts);
-        setActiveContext(result.currentContext);
-      }
-      setLoadingContexts(false);
-    });
+    window.electronAPI.k8s.contexts()
+      .then((result) => {
+        if ('error' in result) {
+          setError(result.error);
+        } else {
+          setContexts(result.contexts);
+          setActiveContext(result.currentContext);
+        }
+        setLoadingContexts(false);
+      })
+      .catch(() => setLoadingContexts(false));
   }, []);
 
   useEffect(() => {
     if (!activeContext) return;
-    window.electronAPI.k8s.namespaces(activeContext).then((ns) => {
-      setNamespaces(ns);
-      if (ns.length > 0 && !ns.includes(activeNamespace)) {
-        setActiveNamespace(ns.includes('default') ? 'default' : ns[0]);
-      }
-    });
+    window.electronAPI.k8s.namespaces(activeContext)
+      .then((ns) => {
+        setNamespaces(ns);
+        if (ns.length > 0 && !ns.includes(activeNamespace)) {
+          setActiveNamespace(ns.includes('default') ? 'default' : ns[0]);
+        }
+      })
+      .catch(() => {});
   }, [activeContext]);
 
   const handleContextChange = useCallback((name: string) => {

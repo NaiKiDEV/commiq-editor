@@ -4,8 +4,6 @@ import { Copy, Check, Download, Eye, EyeOff, Settings, Trash2, ChevronDown, Chev
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 
-// ── plugin definitions ─────────────────────────────────────────────────────────
-
 interface PluginDef {
   id: string;
   label: string;
@@ -18,7 +16,6 @@ interface PluginDef {
 }
 
 const PLUGINS: PluginDef[] = [
-  // ── Safe ──────────────────────────────────────────────────────────────────
   { id: 'removeDoctype',              label: 'Remove DOCTYPE',          description: 'Remove the XML DOCTYPE declaration.',                                         group: 'safe',       inPreset: true,  defaultOn: true  },
   { id: 'removeXMLProcInst',          label: 'Remove XML declaration',  description: 'Remove the <?xml version="1.0"?> processing instruction.',                  group: 'safe',       inPreset: true,  defaultOn: true  },
   { id: 'removeComments',             label: 'Remove comments',         description: 'Remove all XML comments.',                                                   group: 'safe',       inPreset: true,  defaultOn: true  },
@@ -33,7 +30,6 @@ const PLUGINS: PluginDef[] = [
   { id: 'removeUnusedNS',             label: 'Remove unused namespaces',description: 'Remove unused XML namespace declarations.',                                   group: 'safe',       inPreset: true,  defaultOn: true  },
   { id: 'sortAttrs',                  label: 'Sort attributes',         description: 'Sort element attributes for better gzip compression.',                        group: 'safe',       inPreset: true,  defaultOn: true  },
   { id: 'sortDefsChildren',           label: 'Sort defs children',      description: 'Sort children of <defs> for better gzip compression.',                       group: 'safe',       inPreset: true,  defaultOn: true  },
-  // ── Moderate ──────────────────────────────────────────────────────────────
   { id: 'convertColors',              label: 'Convert colors',          description: 'Convert color values to the shortest equivalent (e.g. rgb(255,0,0) → red).',  group: 'moderate',   inPreset: true,  defaultOn: true  },
   { id: 'collapseGroups',             label: 'Collapse groups',         description: 'Collapse/merge unnecessary <g> group elements.',                              group: 'moderate',   inPreset: true,  defaultOn: true  },
   { id: 'convertPathData',            label: 'Optimize path data',      description: 'Round and simplify path coordinates.',                                        group: 'moderate',   inPreset: true,  defaultOn: true  },
@@ -44,7 +40,6 @@ const PLUGINS: PluginDef[] = [
   { id: 'minifyStyles',               label: 'Minify styles',           description: 'Minify CSS inside <style> elements.',                                         group: 'moderate',   inPreset: true,  defaultOn: true  },
   { id: 'convertEllipseToCircle',     label: 'Ellipse → circle',        description: 'Convert <ellipse rx="r" ry="r"> to the shorter <circle>.',                   group: 'moderate',   inPreset: true,  defaultOn: true  },
   { id: 'removeEmptyText',            label: 'Remove empty text',       description: 'Remove empty <text> and <tspan> elements.',                                   group: 'moderate',   inPreset: true,  defaultOn: true  },
-  // ── Aggressive ────────────────────────────────────────────────────────────
   { id: 'cleanupIds',                 label: 'Shorten IDs',             description: '⚠ Renames/removes IDs. Breaks SVGs referenced by external CSS or JS.',       group: 'aggressive', inPreset: true,  defaultOn: false },
   { id: 'inlineStyles',               label: 'Inline styles',           description: '⚠ Moves CSS class styles to inline attributes. Can increase size.',          group: 'aggressive', inPreset: true,  defaultOn: false },
   { id: 'convertShapeToPath',         label: 'Shapes → paths',          description: '⚠ Converts rect, circle, polygon etc. to <path>. Breaks shape-targeted CSS/JS.', group: 'aggressive', inPreset: true, defaultOn: false },
@@ -55,8 +50,6 @@ const PLUGINS: PluginDef[] = [
 ];
 
 const DEFAULT_STATE = Object.fromEntries(PLUGINS.map((p) => [p.id, p.defaultOn]));
-
-// ── helpers ────────────────────────────────────────────────────────────────────
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -274,9 +267,10 @@ export function SvgOptimizerPanel({ panelId: _panelId }: { panelId: string }) {
           </div>
           <div className="flex-1 min-h-0 overflow-auto flex items-center justify-center p-4 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Crect%20width%3D%228%22%20height%3D%228%22%20fill%3D%22%23333%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%228%22%20width%3D%228%22%20height%3D%228%22%20fill%3D%22%23333%22%2F%3E%3C%2Fsvg%3E')]">
             {previewSvg ? (
-              <div
+              <img
                 className="max-w-full max-h-full"
-                dangerouslySetInnerHTML={{ __html: previewSvg }}
+                src={`data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`}
+                alt="SVG preview"
                 style={{ lineHeight: 0 }}
               />
             ) : (

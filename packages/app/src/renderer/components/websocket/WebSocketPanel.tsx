@@ -9,8 +9,6 @@ import { cn } from '@/lib/utils';
 import { MessageLog } from './MessageLog';
 import { MessageComposer } from './MessageComposer';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type WsProfile = {
   id: string;
   name: string;
@@ -40,8 +38,6 @@ const DEFAULT_STATUS: WsLiveStatus = {
   latency: null,
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function newProfile(): WsProfile {
   return {
     id: crypto.randomUUID(),
@@ -68,8 +64,6 @@ function useUptime(connectedAt: number | null): string {
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
-
 export function WebSocketPanel({ panelId: _panelId }: { panelId: string }) {
   const [profiles, setProfiles] = useState<WsProfile[]>([]);
   const [templates, setTemplates] = useState<WsTemplate[]>([]);
@@ -78,17 +72,13 @@ export function WebSocketPanel({ panelId: _panelId }: { panelId: string }) {
   const [configTab, setConfigTab] = useState<'headers' | 'options'>('headers');
   const [configOpen, setConfigOpen] = useState(false);
 
-  // Status-only live state — messages live in MessageLog instances
   const [liveStatuses, setLiveStatuses] = useState<Record<string, WsLiveStatus>>({});
-
-  // Per-connection clear tokens driven by the "Clear" button
   const [clearTokens, setClearTokens] = useState<Record<string, number>>({});
 
   // Always-current draft ref — avoids stale-closure bugs in async callbacks
   const draftRef = useRef<WsProfile | null>(null);
   useEffect(() => { draftRef.current = draft; }, [draft]);
 
-  // Keep sidebar in sync with form edits in real-time
   useEffect(() => {
     if (!draft) return;
     setProfiles(prev => {
@@ -97,7 +87,6 @@ export function WebSocketPanel({ panelId: _panelId }: { panelId: string }) {
     });
   }, [draft]);
 
-  // IPC subscription tracking
   const subscribedRef = useRef<Set<string>>(new Set());
   const unsubscribersRef = useRef<Map<string, () => void>>(new Map());
 
@@ -134,7 +123,6 @@ export function WebSocketPanel({ panelId: _panelId }: { panelId: string }) {
     return () => { unsubStatus(); unsubFrame(); };
   }, []);
 
-  // Load persisted data on mount
   useEffect(() => {
     Promise.all([
       window.electronAPI.ws.profilesList(),
@@ -145,7 +133,6 @@ export function WebSocketPanel({ panelId: _panelId }: { panelId: string }) {
     });
   }, []);
 
-  // Subscribe to events for newly loaded profiles
   useEffect(() => {
     for (const profile of profiles) {
       if (!subscribedRef.current.has(profile.id)) {
@@ -156,14 +143,11 @@ export function WebSocketPanel({ panelId: _panelId }: { panelId: string }) {
     }
   }, [profiles, subscribeToConnection]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       for (const unsub of unsubscribersRef.current.values()) unsub();
     };
   }, []);
-
-  // ─── Actions ────────────────────────────────────────────────────────────────
 
   const selectProfile = (id: string) => {
     setSelectedId(id);
@@ -245,8 +229,6 @@ export function WebSocketPanel({ panelId: _panelId }: { panelId: string }) {
     if (!selectedId) return;
     await window.electronAPI.ws.ping(selectedId);
   };
-
-  // ─── Derived ────────────────────────────────────────────────────────────────
 
   const selectedStatus = selectedId ? (liveStatuses[selectedId] ?? DEFAULT_STATUS) : DEFAULT_STATUS;
   const isConnected = selectedStatus.status === 'connected';
@@ -538,8 +520,6 @@ export function WebSocketPanel({ panelId: _panelId }: { panelId: string }) {
     </div>
   );
 }
-
-// ─── Status helpers ───────────────────────────────────────────────────────────
 
 function StatusDot({ status }: { status: WsStatus }) {
   return (
