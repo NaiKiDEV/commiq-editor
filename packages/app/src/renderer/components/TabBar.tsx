@@ -32,6 +32,7 @@ import {
   Database,
   Package,
   ShieldAlert,
+  Server,
 } from "lucide-react";
 import {
   useTabs,
@@ -119,6 +120,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <Package className="size-3" />;
     case "ssl":
       return <ShieldAlert className="size-3" />;
+    case "mockserver":
+      return <Server className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -442,9 +445,17 @@ export function TabBar() {
                 <Package />
                 Docker
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => createTab("ssl", "SSL Inspector")}>
+              <DropdownMenuItem
+                onClick={() => createTab("ssl", "SSL Inspector")}
+              >
                 <ShieldAlert />
                 SSL Inspector
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => createTab("mockserver", "Mock Server")}
+              >
+                <Server />
+                Mock Server
               </DropdownMenuItem>
             </DropdownMenuGroup>
 

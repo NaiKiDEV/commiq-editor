@@ -1,25 +1,33 @@
-import { app, BrowserWindow, Menu, shell, ipcMain } from 'electron';
-import path from 'node:path';
-import started from 'electron-squirrel-startup';
-import { registerTerminalIpc, killAllSessions } from './ipc/terminal';
-import { registerBrowserIpc, destroyAllViews } from './ipc/browser';
-import { registerNotesIpc } from './ipc/notes';
-import { registerWorkspaceIpc } from './ipc/workspace';
-import { registerWorkflowIpc } from './ipc/workflow';
-import { registerTimerIpc } from './ipc/timer';
-import { registerPortsIpc } from './ipc/ports';
-import { registerProcessesIpc } from './ipc/processes';
-import { registerEnvIpc } from './ipc/env';
-import { registerSettingsIpc } from './ipc/settings';
-import { registerHttpIpc } from './ipc/http';
-import { registerWhiteboardIpc, registerWhiteboardPush } from './ipc/whiteboard';
-import { whiteboardState } from './whiteboard/state';
-import { registerRegistersIpc } from './ipc/registers';
-import { registerK8sIpc, stopAllK8sWatches } from './ipc/k8s';
-import { registerWsIpc, stopAllWsConnections } from './ipc/ws';
-import { registerDbIpc, closeAllDbConnections } from './ipc/db';
-import { registerDockerIpc, stopAllDockerStreams } from './ipc/docker';
-import { registerSslIpc } from './ipc/ssl';
+import { app, BrowserWindow, Menu, shell, ipcMain } from "electron";
+import path from "node:path";
+import started from "electron-squirrel-startup";
+import { registerTerminalIpc, killAllSessions } from "./ipc/terminal";
+import { registerBrowserIpc, destroyAllViews } from "./ipc/browser";
+import { registerNotesIpc } from "./ipc/notes";
+import { registerWorkspaceIpc } from "./ipc/workspace";
+import { registerWorkflowIpc } from "./ipc/workflow";
+import { registerTimerIpc } from "./ipc/timer";
+import { registerPortsIpc } from "./ipc/ports";
+import { registerProcessesIpc } from "./ipc/processes";
+import { registerEnvIpc } from "./ipc/env";
+import { registerSettingsIpc } from "./ipc/settings";
+import { registerHttpIpc } from "./ipc/http";
+import {
+  registerWhiteboardIpc,
+  registerWhiteboardPush,
+} from "./ipc/whiteboard";
+import { whiteboardState } from "./whiteboard/state";
+import { registerRegistersIpc } from "./ipc/registers";
+import { registerK8sIpc, stopAllK8sWatches } from "./ipc/k8s";
+import { registerWsIpc, stopAllWsConnections } from "./ipc/ws";
+import { registerDbIpc, closeAllDbConnections } from "./ipc/db";
+import { registerDockerIpc, stopAllDockerStreams } from "./ipc/docker";
+import { registerSslIpc } from "./ipc/ssl";
+import {
+  registerMockServerIpc,
+  registerMockServerPush,
+  stopAllMockServers,
+} from "./ipc/mock-server";
 
 if (started) {
   app.quit();
@@ -30,21 +38,23 @@ if (started) {
 Menu.setApplicationMenu(
   Menu.buildFromTemplate([
     {
-      label: 'Edit',
+      label: "Edit",
       submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
-        { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'selectAll' },
+        { role: "undo" },
+        { role: "redo" },
+        { type: "separator" },
+        { role: "cut" },
+        { role: "copy" },
+        { role: "paste" },
+        { role: "selectAll" },
       ],
     },
   ]),
 );
 
-ipcMain.handle('app:openExternal', (_event, url: string) => shell.openExternal(url));
+ipcMain.handle("app:openExternal", (_event, url: string) =>
+  shell.openExternal(url),
+);
 
 registerTerminalIpc();
 registerNotesIpc();
@@ -63,25 +73,28 @@ registerWsIpc();
 registerDbIpc();
 registerDockerIpc();
 registerSslIpc();
+registerMockServerIpc();
 
 const createWindow = () => {
-  const isMac = process.platform === 'darwin';
+  const isMac = process.platform === "darwin";
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 800,
     minHeight: 600,
     autoHideMenuBar: true,
-    titleBarStyle: 'hidden',
-    ...(isMac ? {} : {
-      titleBarOverlay: {
-        color: '#1a1a1a',
-        symbolColor: '#e5e5e5',
-        height: 36,
-      },
-    }),
+    titleBarStyle: "hidden",
+    ...(isMac
+      ? {}
+      : {
+          titleBarOverlay: {
+            color: "#1a1a1a",
+            symbolColor: "#e5e5e5",
+            height: 36,
+          },
+        }),
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -89,6 +102,7 @@ const createWindow = () => {
 
   registerBrowserIpc(mainWindow);
   registerWhiteboardPush(mainWindow);
+  registerMockServerPush(mainWindow);
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
@@ -97,28 +111,28 @@ const createWindow = () => {
       path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
     );
   }
-
 };
 
-app.on('ready', createWindow);
+app.on("ready", createWindow);
 
-app.on('before-quit', () => {
+app.on("before-quit", () => {
   whiteboardState.flushAll();
 });
 
-app.on('window-all-closed', () => {
+app.on("window-all-closed", () => {
   killAllSessions();
   destroyAllViews();
   stopAllK8sWatches();
   stopAllWsConnections();
   closeAllDbConnections();
   stopAllDockerStreams();
-  if (process.platform !== 'darwin') {
+  stopAllMockServers();
+  if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
-app.on('activate', () => {
+app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }

@@ -41,6 +41,7 @@ import {
   Database,
   Package,
   ShieldAlert,
+  Server,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -90,6 +91,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "db") return <Database />;
   if (type === "docker") return <Package />;
   if (type === "ssl") return <ShieldAlert />;
+  if (type === "mockserver") return <Server />;
   return <NotepadText />;
 }
 
@@ -230,7 +232,9 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
               <span>New HTTP Client Tab</span>
             </CommandItem>
             <CommandItem
-              onSelect={() => runAction(() => createTab("ws", "WebSocket Client"))}
+              onSelect={() =>
+                runAction(() => createTab("ws", "WebSocket Client"))
+              }
             >
               <Unplug />
               <span>New WebSocket Client Tab</span>
@@ -280,7 +284,9 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
               <span>New Diff Viewer Tab</span>
             </CommandItem>
             <CommandItem
-              onSelect={() => runAction(() => createTab("color", "Color Picker"))}
+              onSelect={() =>
+                runAction(() => createTab("color", "Color Picker"))
+              }
             >
               <Pipette />
               <span>New Color Picker Tab</span>
@@ -292,13 +298,17 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
               <span>New Epoch / DateTime Tab</span>
             </CommandItem>
             <CommandItem
-              onSelect={() => runAction(() => createTab("uuid", "UUID Generator"))}
+              onSelect={() =>
+                runAction(() => createTab("uuid", "UUID Generator"))
+              }
             >
               <Fingerprint />
               <span>New UUID Generator Tab</span>
             </CommandItem>
             <CommandItem
-              onSelect={() => runAction(() => createTab("numbase", "Number Base"))}
+              onSelect={() =>
+                runAction(() => createTab("numbase", "Number Base"))
+              }
             >
               <Binary />
               <span>New Number Base Tab</span>
@@ -316,19 +326,25 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
               <span>New Hex Dump Viewer Tab</span>
             </CommandItem>
             <CommandItem
-              onSelect={() => runAction(() => createTab("endian", "Endianness"))}
+              onSelect={() =>
+                runAction(() => createTab("endian", "Endianness"))
+              }
             >
               <ArrowLeftRight />
               <span>New Endianness Converter Tab</span>
             </CommandItem>
             <CommandItem
-              onSelect={() => runAction(() => createTab("bitfield", "Bit Field Editor"))}
+              onSelect={() =>
+                runAction(() => createTab("bitfield", "Bit Field Editor"))
+              }
             >
               <Layers2 />
               <span>New Bit Field Editor Tab</span>
             </CommandItem>
             <CommandItem
-              onSelect={() => runAction(() => createTab("svg", "SVG Optimizer"))}
+              onSelect={() =>
+                runAction(() => createTab("svg", "SVG Optimizer"))
+              }
             >
               <ImagePlay />
               <span>New SVG Optimizer Tab</span>
@@ -368,6 +384,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <ShieldAlert />
               <span>New SSL Inspector Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() =>
+                runAction(() => createTab("mockserver", "Mock Server"))
+              }
+            >
+              <Server />
+              <span>New Mock Server Tab</span>
             </CommandItem>
           </CommandGroup>
 

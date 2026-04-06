@@ -11,7 +11,7 @@ const electronAPI = {
   platform: process.platform,
 
   openExternal: (url: string) =>
-    ipcRenderer.invoke('app:openExternal', url) as Promise<void>,
+    ipcRenderer.invoke("app:openExternal", url) as Promise<void>,
 
   onShortcut: (callback: (action: string) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, action: string) =>
@@ -79,7 +79,10 @@ const electronAPI = {
         updatedAt: string;
       }>,
 
-    update: (id: string, data: { title?: string; content?: string; tags?: string[] }) =>
+    update: (
+      id: string,
+      data: { title?: string; content?: string; tags?: string[] },
+    ) =>
       ipcRenderer.invoke("notes:update", id, data) as Promise<{
         id: string;
         title: string;
@@ -112,7 +115,13 @@ const electronAPI = {
           name: string;
           scope: "workspace" | "global";
           mode: "parallel" | "sequential";
-          commands: Array<{ id: string; name: string; command: string; type: "terminal" | "browser"; signal?: string }>;
+          commands: Array<{
+            id: string;
+            name: string;
+            command: string;
+            type: "terminal" | "browser";
+            signal?: string;
+          }>;
         }>
       >,
 
@@ -122,7 +131,13 @@ const electronAPI = {
         name: string;
         scope: "workspace" | "global";
         mode: "parallel" | "sequential";
-        commands: Array<{ id: string; name: string; command: string; type: "terminal" | "browser"; signal?: string }>;
+        commands: Array<{
+          id: string;
+          name: string;
+          command: string;
+          type: "terminal" | "browser";
+          signal?: string;
+        }>;
       },
       workspaceId: string,
     ) =>
@@ -371,10 +386,8 @@ const electronAPI = {
       ipcRenderer.invoke("whiteboard:start-mcp-server", port),
     stopMcpServer: () => ipcRenderer.invoke("whiteboard:stop-mcp-server"),
     getMcpStatus: () => ipcRenderer.invoke("whiteboard:mcp-status"),
-    undo: (boardId: string) =>
-      ipcRenderer.invoke("whiteboard:undo", boardId),
-    redo: (boardId: string) =>
-      ipcRenderer.invoke("whiteboard:redo", boardId),
+    undo: (boardId: string) => ipcRenderer.invoke("whiteboard:undo", boardId),
+    redo: (boardId: string) => ipcRenderer.invoke("whiteboard:redo", boardId),
     canUndo: (boardId: string) =>
       ipcRenderer.invoke("whiteboard:can-undo", boardId) as Promise<boolean>,
     canRedo: (boardId: string) =>
@@ -382,14 +395,14 @@ const electronAPI = {
   },
 
   registers: {
-    load: () => ipcRenderer.invoke('registers:load') as Promise<unknown[]>,
+    load: () => ipcRenderer.invoke("registers:load") as Promise<unknown[]>,
     save: (registers: unknown[]) =>
-      ipcRenderer.invoke('registers:save', registers) as Promise<void>,
+      ipcRenderer.invoke("registers:save", registers) as Promise<void>,
   },
 
   ws: {
     profilesList: () =>
-      ipcRenderer.invoke('ws:profiles:list') as Promise<
+      ipcRenderer.invoke("ws:profiles:list") as Promise<
         Array<{
           id: string;
           name: string;
@@ -410,21 +423,23 @@ const electronAPI = {
       autoReconnect: boolean;
       reconnectDelay: number;
     }) =>
-      ipcRenderer.invoke('ws:profiles:save', profile) as Promise<typeof profile>,
+      ipcRenderer.invoke("ws:profiles:save", profile) as Promise<
+        typeof profile
+      >,
 
     profilesDelete: (id: string) =>
-      ipcRenderer.invoke('ws:profiles:delete', id) as Promise<void>,
+      ipcRenderer.invoke("ws:profiles:delete", id) as Promise<void>,
 
     templatesList: () =>
-      ipcRenderer.invoke('ws:templates:list') as Promise<
+      ipcRenderer.invoke("ws:templates:list") as Promise<
         Array<{ id: string; name: string; payload: string }>
       >,
 
     templatesSave: (tpl: { id: string; name: string; payload: string }) =>
-      ipcRenderer.invoke('ws:templates:save', tpl) as Promise<typeof tpl>,
+      ipcRenderer.invoke("ws:templates:save", tpl) as Promise<typeof tpl>,
 
     templatesDelete: (id: string) =>
-      ipcRenderer.invoke('ws:templates:delete', id) as Promise<void>,
+      ipcRenderer.invoke("ws:templates:delete", id) as Promise<void>,
 
     connect: (
       connId: string,
@@ -437,19 +452,19 @@ const electronAPI = {
         autoReconnect: boolean;
         reconnectDelay: number;
       },
-    ) => ipcRenderer.invoke('ws:connect', connId, profile) as Promise<void>,
+    ) => ipcRenderer.invoke("ws:connect", connId, profile) as Promise<void>,
 
     disconnect: (connId: string) =>
-      ipcRenderer.invoke('ws:disconnect', connId) as Promise<void>,
+      ipcRenderer.invoke("ws:disconnect", connId) as Promise<void>,
 
     send: (connId: string, payload: string) =>
-      ipcRenderer.invoke('ws:send', connId, payload) as Promise<{
+      ipcRenderer.invoke("ws:send", connId, payload) as Promise<{
         success?: boolean;
         error?: string;
       }>,
 
     ping: (connId: string) =>
-      ipcRenderer.invoke('ws:ping', connId) as Promise<{
+      ipcRenderer.invoke("ws:ping", connId) as Promise<{
         success?: boolean;
         error?: string;
       }>,
@@ -467,7 +482,13 @@ const electronAPI = {
       const channel = `ws:${connId}:status`;
       const listener = (
         _e: Electron.IpcRendererEvent,
-        event: { status: string; at?: number; code?: number; reason?: string; error?: string },
+        event: {
+          status: string;
+          at?: number;
+          code?: number;
+          reason?: string;
+          error?: string;
+        },
       ) => callback(event);
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
@@ -477,7 +498,7 @@ const electronAPI = {
       connId: string,
       callback: (msg: {
         id: string;
-        direction: 'sent' | 'received';
+        direction: "sent" | "received";
         payload: string;
         binary: boolean;
         byteLen: number;
@@ -489,7 +510,7 @@ const electronAPI = {
         _e: Electron.IpcRendererEvent,
         msg: {
           id: string;
-          direction: 'sent' | 'received';
+          direction: "sent" | "received";
           payload: string;
           binary: boolean;
           byteLen: number;
@@ -502,12 +523,20 @@ const electronAPI = {
 
     onFrame: (
       connId: string,
-      callback: (frame: { type: 'ping' | 'pong'; latency?: number | null; timestamp: number }) => void,
+      callback: (frame: {
+        type: "ping" | "pong";
+        latency?: number | null;
+        timestamp: number;
+      }) => void,
     ) => {
       const channel = `ws:${connId}:frame`;
       const listener = (
         _e: Electron.IpcRendererEvent,
-        frame: { type: 'ping' | 'pong'; latency?: number | null; timestamp: number },
+        frame: {
+          type: "ping" | "pong";
+          latency?: number | null;
+          timestamp: number;
+        },
       ) => callback(frame);
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
@@ -516,11 +545,11 @@ const electronAPI = {
 
   db: {
     profilesList: () =>
-      ipcRenderer.invoke('db:profiles:list') as Promise<
+      ipcRenderer.invoke("db:profiles:list") as Promise<
         Array<{
           id: string;
           name: string;
-          driver: 'sqlite' | 'postgresql' | 'mysql';
+          driver: "sqlite" | "postgresql" | "mysql";
           host: string;
           port: number;
           database: string;
@@ -532,51 +561,53 @@ const electronAPI = {
     profilesSave: (profile: {
       id: string;
       name: string;
-      driver: 'sqlite' | 'postgresql' | 'mysql';
+      driver: "sqlite" | "postgresql" | "mysql";
       host: string;
       port: number;
       database: string;
       username: string;
       password: string;
     }) =>
-      ipcRenderer.invoke('db:profiles:save', profile) as Promise<typeof profile>,
+      ipcRenderer.invoke("db:profiles:save", profile) as Promise<
+        typeof profile
+      >,
 
     profilesDelete: (id: string) =>
-      ipcRenderer.invoke('db:profiles:delete', id) as Promise<void>,
+      ipcRenderer.invoke("db:profiles:delete", id) as Promise<void>,
 
     connect: (profile: {
       id: string;
       name: string;
-      driver: 'sqlite' | 'postgresql' | 'mysql';
+      driver: "sqlite" | "postgresql" | "mysql";
       host: string;
       port: number;
       database: string;
       username: string;
       password: string;
     }) =>
-      ipcRenderer.invoke('db:connect', profile) as Promise<
+      ipcRenderer.invoke("db:connect", profile) as Promise<
         { success: true } | { error: string }
       >,
 
     disconnect: (profileId: string) =>
-      ipcRenderer.invoke('db:disconnect', profileId) as Promise<void>,
+      ipcRenderer.invoke("db:disconnect", profileId) as Promise<void>,
 
     test: (profile: {
       id: string;
       name: string;
-      driver: 'sqlite' | 'postgresql' | 'mysql';
+      driver: "sqlite" | "postgresql" | "mysql";
       host: string;
       port: number;
       database: string;
       username: string;
       password: string;
     }) =>
-      ipcRenderer.invoke('db:test', profile) as Promise<
+      ipcRenderer.invoke("db:test", profile) as Promise<
         { success: true; duration: number } | { error: string }
       >,
 
     query: (profileId: string, sql: string) =>
-      ipcRenderer.invoke('db:query', profileId, sql) as Promise<
+      ipcRenderer.invoke("db:query", profileId, sql) as Promise<
         | {
             columns: string[];
             rows: Record<string, unknown>[];
@@ -588,7 +619,7 @@ const electronAPI = {
       >,
 
     schema: (profileId: string) =>
-      ipcRenderer.invoke('db:schema', profileId) as Promise<
+      ipcRenderer.invoke("db:schema", profileId) as Promise<
         | Array<{
             name: string;
             schema: string;
@@ -615,230 +646,384 @@ const electronAPI = {
       >,
 
     historyList: (connectionId?: string) =>
-      ipcRenderer.invoke('db:history:list', connectionId) as Promise<
-        Array<{ id: string; connectionId: string; query: string; timestamp: number }>
+      ipcRenderer.invoke("db:history:list", connectionId) as Promise<
+        Array<{
+          id: string;
+          connectionId: string;
+          query: string;
+          timestamp: number;
+        }>
       >,
 
-    historyClear: () =>
-      ipcRenderer.invoke('db:history:clear') as Promise<void>,
+    historyClear: () => ipcRenderer.invoke("db:history:clear") as Promise<void>,
   },
 
   docker: {
     check: () =>
-      ipcRenderer.invoke('docker:check') as Promise<{
+      ipcRenderer.invoke("docker:check") as Promise<{
         available: boolean;
         reason?: string;
       }>,
 
     listContainers: () =>
-      ipcRenderer.invoke('docker:containers:list') as Promise<unknown[] | { error: string }>,
+      ipcRenderer.invoke("docker:containers:list") as Promise<
+        unknown[] | { error: string }
+      >,
 
     startContainer: (id: string) =>
-      ipcRenderer.invoke('docker:container:start', id) as Promise<{ success?: boolean; error?: string }>,
+      ipcRenderer.invoke("docker:container:start", id) as Promise<{
+        success?: boolean;
+        error?: string;
+      }>,
 
     stopContainer: (id: string) =>
-      ipcRenderer.invoke('docker:container:stop', id) as Promise<{ success?: boolean; error?: string }>,
+      ipcRenderer.invoke("docker:container:stop", id) as Promise<{
+        success?: boolean;
+        error?: string;
+      }>,
 
     restartContainer: (id: string) =>
-      ipcRenderer.invoke('docker:container:restart', id) as Promise<{ success?: boolean; error?: string }>,
+      ipcRenderer.invoke("docker:container:restart", id) as Promise<{
+        success?: boolean;
+        error?: string;
+      }>,
 
     removeContainer: (id: string, force: boolean) =>
-      ipcRenderer.invoke('docker:container:remove', id, force) as Promise<{ success?: boolean; error?: string }>,
+      ipcRenderer.invoke("docker:container:remove", id, force) as Promise<{
+        success?: boolean;
+        error?: string;
+      }>,
 
     logsStart: (containerId: string, streamId: string) =>
-      ipcRenderer.invoke('docker:logs:start', containerId, streamId) as Promise<{ success?: boolean; error?: string }>,
+      ipcRenderer.invoke(
+        "docker:logs:start",
+        containerId,
+        streamId,
+      ) as Promise<{ success?: boolean; error?: string }>,
 
     logsStop: (streamId: string) =>
-      ipcRenderer.invoke('docker:logs:stop', streamId) as Promise<void>,
+      ipcRenderer.invoke("docker:logs:stop", streamId) as Promise<void>,
 
-    onLogChunk: (streamId: string, callback: (chunk: { text: string }) => void) => {
+    onLogChunk: (
+      streamId: string,
+      callback: (chunk: { text: string }) => void,
+    ) => {
       const channel = `docker:logs:${streamId}`;
-      const listener = (_e: Electron.IpcRendererEvent, chunk: { text: string }) => callback(chunk);
+      const listener = (
+        _e: Electron.IpcRendererEvent,
+        chunk: { text: string },
+      ) => callback(chunk);
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
     },
 
     listImages: () =>
-      ipcRenderer.invoke('docker:images:list') as Promise<unknown[] | { error: string }>,
+      ipcRenderer.invoke("docker:images:list") as Promise<
+        unknown[] | { error: string }
+      >,
 
     removeImage: (id: string) =>
-      ipcRenderer.invoke('docker:image:remove', id) as Promise<{ success?: boolean; error?: string }>,
+      ipcRenderer.invoke("docker:image:remove", id) as Promise<{
+        success?: boolean;
+        error?: string;
+      }>,
 
     pruneImages: () =>
-      ipcRenderer.invoke('docker:image:prune') as Promise<{ success?: boolean; output?: string; error?: string }>,
+      ipcRenderer.invoke("docker:image:prune") as Promise<{
+        success?: boolean;
+        output?: string;
+        error?: string;
+      }>,
 
     listCompose: () =>
-      ipcRenderer.invoke('docker:compose:list') as Promise<unknown[] | { error: string }>,
+      ipcRenderer.invoke("docker:compose:list") as Promise<
+        unknown[] | { error: string }
+      >,
 
     composeUp: (projectName: string, configFile: string) =>
-      ipcRenderer.invoke('docker:compose:up', projectName, configFile) as Promise<{ success?: boolean; error?: string }>,
+      ipcRenderer.invoke(
+        "docker:compose:up",
+        projectName,
+        configFile,
+      ) as Promise<{ success?: boolean; error?: string }>,
 
     composeDown: (projectName: string, configFile: string) =>
-      ipcRenderer.invoke('docker:compose:down', projectName, configFile) as Promise<{ success?: boolean; error?: string }>,
+      ipcRenderer.invoke(
+        "docker:compose:down",
+        projectName,
+        configFile,
+      ) as Promise<{ success?: boolean; error?: string }>,
 
     composeRestart: (projectName: string, configFile: string) =>
-      ipcRenderer.invoke('docker:compose:restart', projectName, configFile) as Promise<{ success?: boolean; error?: string }>,
+      ipcRenderer.invoke(
+        "docker:compose:restart",
+        projectName,
+        configFile,
+      ) as Promise<{ success?: boolean; error?: string }>,
 
     listVolumes: () =>
-      ipcRenderer.invoke('docker:volumes:list') as Promise<unknown[] | { error: string }>,
+      ipcRenderer.invoke("docker:volumes:list") as Promise<
+        unknown[] | { error: string }
+      >,
 
     removeVolume: (name: string) =>
-      ipcRenderer.invoke('docker:volume:remove', name) as Promise<{ success?: boolean; error?: string }>,
+      ipcRenderer.invoke("docker:volume:remove", name) as Promise<{
+        success?: boolean;
+        error?: string;
+      }>,
 
     pruneVolumes: () =>
-      ipcRenderer.invoke('docker:volume:prune') as Promise<{ success?: boolean; output?: string; error?: string }>,
+      ipcRenderer.invoke("docker:volume:prune") as Promise<{
+        success?: boolean;
+        output?: string;
+        error?: string;
+      }>,
 
     listNetworks: () =>
-      ipcRenderer.invoke('docker:networks:list') as Promise<unknown[] | { error: string }>,
+      ipcRenderer.invoke("docker:networks:list") as Promise<
+        unknown[] | { error: string }
+      >,
 
     removeNetwork: (id: string) =>
-      ipcRenderer.invoke('docker:network:remove', id) as Promise<{ success?: boolean; error?: string }>,
+      ipcRenderer.invoke("docker:network:remove", id) as Promise<{
+        success?: boolean;
+        error?: string;
+      }>,
 
     inspectContainer: (id: string) =>
-      ipcRenderer.invoke('docker:container:inspect', id) as Promise<unknown | { error: string }>,
+      ipcRenderer.invoke("docker:container:inspect", id) as Promise<
+        unknown | { error: string }
+      >,
 
     inspectVolume: (name: string) =>
-      ipcRenderer.invoke('docker:volume:inspect', name) as Promise<unknown | { error: string }>,
+      ipcRenderer.invoke("docker:volume:inspect", name) as Promise<
+        unknown | { error: string }
+      >,
 
     imageHistory: (id: string) =>
-      ipcRenderer.invoke('docker:image:history', id) as Promise<unknown[] | { error: string }>,
+      ipcRenderer.invoke("docker:image:history", id) as Promise<
+        unknown[] | { error: string }
+      >,
 
     execStart: (containerId: string, execId: string, shell: string) =>
-      ipcRenderer.invoke('docker:exec:start', containerId, execId, shell) as Promise<{ success?: boolean; error?: string }>,
+      ipcRenderer.invoke(
+        "docker:exec:start",
+        containerId,
+        execId,
+        shell,
+      ) as Promise<{ success?: boolean; error?: string }>,
 
     execStop: (execId: string) =>
-      ipcRenderer.invoke('docker:exec:stop', execId) as Promise<void>,
+      ipcRenderer.invoke("docker:exec:stop", execId) as Promise<void>,
 
     execWrite: (execId: string, data: string) =>
-      ipcRenderer.send('docker:exec:write', execId, data),
+      ipcRenderer.send("docker:exec:write", execId, data),
 
     execResize: (execId: string, cols: number, rows: number) =>
-      ipcRenderer.send('docker:exec:resize', execId, cols, rows),
+      ipcRenderer.send("docker:exec:resize", execId, cols, rows),
 
     onExecData: (execId: string, callback: (data: string) => void) => {
       const channel = `docker:exec:data:${execId}`;
-      const listener = (_e: Electron.IpcRendererEvent, data: string) => callback(data);
+      const listener = (_e: Electron.IpcRendererEvent, data: string) =>
+        callback(data);
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
     },
 
     onExecExit: (execId: string, callback: (code: number) => void) => {
       const channel = `docker:exec:exit:${execId}`;
-      const listener = (_e: Electron.IpcRendererEvent, code: number) => callback(code);
+      const listener = (_e: Electron.IpcRendererEvent, code: number) =>
+        callback(code);
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
     },
 
     filesList: (containerId: string, path: string) =>
-      ipcRenderer.invoke('docker:files:list', containerId, path) as Promise<{ output?: string; error?: string }>,
+      ipcRenderer.invoke("docker:files:list", containerId, path) as Promise<{
+        output?: string;
+        error?: string;
+      }>,
 
     filesRead: (containerId: string, path: string) =>
-      ipcRenderer.invoke('docker:files:read', containerId, path) as Promise<{ content?: string; error?: string }>,
+      ipcRenderer.invoke("docker:files:read", containerId, path) as Promise<{
+        content?: string;
+        error?: string;
+      }>,
   },
 
   ssl: {
     inspect: (host: string, port: number) =>
-      ipcRenderer.invoke('ssl:inspect', host, port) as Promise<
-        Array<{
-          subject: Record<string, string>;
-          issuer: Record<string, string>;
-          sans: string[];
-          notBefore: string;
-          notAfter: string;
-          serialNumber: string;
-          fingerprint: string;
-          signatureAlgorithm: string;
-          publicKeyAlgorithm: string;
-          keyBits: number;
-          isCA: boolean;
-          pem: string;
-        }> | { error: string }
+      ipcRenderer.invoke("ssl:inspect", host, port) as Promise<
+        | Array<{
+            subject: Record<string, string>;
+            issuer: Record<string, string>;
+            sans: string[];
+            notBefore: string;
+            notAfter: string;
+            serialNumber: string;
+            fingerprint: string;
+            signatureAlgorithm: string;
+            publicKeyAlgorithm: string;
+            keyBits: number;
+            isCA: boolean;
+            pem: string;
+          }>
+        | { error: string }
       >,
 
     decodePem: (pem: string) =>
-      ipcRenderer.invoke('ssl:decode-pem', pem) as Promise<
-        Array<{
-          subject: Record<string, string>;
-          issuer: Record<string, string>;
-          sans: string[];
-          notBefore: string;
-          notAfter: string;
-          serialNumber: string;
-          fingerprint: string;
-          signatureAlgorithm: string;
-          publicKeyAlgorithm: string;
-          keyBits: number;
-          isCA: boolean;
-          pem: string;
-        }> | { error: string }
+      ipcRenderer.invoke("ssl:decode-pem", pem) as Promise<
+        | Array<{
+            subject: Record<string, string>;
+            issuer: Record<string, string>;
+            sans: string[];
+            notBefore: string;
+            notAfter: string;
+            serialNumber: string;
+            fingerprint: string;
+            signatureAlgorithm: string;
+            publicKeyAlgorithm: string;
+            keyBits: number;
+            isCA: boolean;
+            pem: string;
+          }>
+        | { error: string }
       >,
 
     generateSelfSigned: (opts: {
       commonName: string;
       sans: string[];
       days: number;
-      keyAlgorithm: 'rsa' | 'ec';
+      keyAlgorithm: "rsa" | "ec";
     }) =>
-      ipcRenderer.invoke('ssl:generate-self-signed', opts) as Promise<
+      ipcRenderer.invoke("ssl:generate-self-signed", opts) as Promise<
         { cert: string; key: string } | { error: string }
       >,
   },
 
   k8s: {
     reloadConfig: () =>
-      ipcRenderer.invoke('k8s:config:reload') as Promise<void>,
+      ipcRenderer.invoke("k8s:config:reload") as Promise<void>,
 
     contexts: () =>
-      ipcRenderer.invoke('k8s:contexts') as Promise<{
-        contexts: Array<{ name: string; cluster: string; namespace: string | null }>;
-        currentContext: string;
-      } | { error: string }>,
+      ipcRenderer.invoke("k8s:contexts") as Promise<
+        | {
+            contexts: Array<{
+              name: string;
+              cluster: string;
+              namespace: string | null;
+            }>;
+            currentContext: string;
+          }
+        | { error: string }
+      >,
 
     namespaces: (context: string) =>
-      ipcRenderer.invoke('k8s:namespaces', context) as Promise<string[]>,
+      ipcRenderer.invoke("k8s:namespaces", context) as Promise<string[]>,
 
     list: (context: string, kind: string, namespace?: string) =>
-      ipcRenderer.invoke('k8s:list', context, kind, namespace) as Promise<unknown[] | { error: string }>,
+      ipcRenderer.invoke("k8s:list", context, kind, namespace) as Promise<
+        unknown[] | { error: string }
+      >,
 
-    watchStart: (context: string, kind: string, watchId: string, namespace?: string) =>
-      ipcRenderer.invoke('k8s:watch:start', context, kind, watchId, namespace) as Promise<void>,
+    watchStart: (
+      context: string,
+      kind: string,
+      watchId: string,
+      namespace?: string,
+    ) =>
+      ipcRenderer.invoke(
+        "k8s:watch:start",
+        context,
+        kind,
+        watchId,
+        namespace,
+      ) as Promise<void>,
 
     watchStop: (watchId: string) =>
-      ipcRenderer.invoke('k8s:watch:stop', watchId) as Promise<void>,
+      ipcRenderer.invoke("k8s:watch:stop", watchId) as Promise<void>,
 
-    onWatchEvent: (watchId: string, callback: (event: { type: string; resource: unknown }) => void) => {
+    onWatchEvent: (
+      watchId: string,
+      callback: (event: { type: string; resource: unknown }) => void,
+    ) => {
       const channel = `k8s:watch:${watchId}`;
-      const listener = (_e: Electron.IpcRendererEvent, evt: { type: string; resource: unknown }) =>
-        callback(evt);
+      const listener = (
+        _e: Electron.IpcRendererEvent,
+        evt: { type: string; resource: unknown },
+      ) => callback(evt);
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
     },
 
-    logsStart: (context: string, namespace: string, pod: string, container: string, streamId: string) =>
-      ipcRenderer.invoke('k8s:logs:start', context, namespace, pod, container, streamId) as Promise<void>,
+    logsStart: (
+      context: string,
+      namespace: string,
+      pod: string,
+      container: string,
+      streamId: string,
+    ) =>
+      ipcRenderer.invoke(
+        "k8s:logs:start",
+        context,
+        namespace,
+        pod,
+        container,
+        streamId,
+      ) as Promise<void>,
 
     logsStop: (streamId: string) =>
-      ipcRenderer.invoke('k8s:logs:stop', streamId) as Promise<void>,
+      ipcRenderer.invoke("k8s:logs:stop", streamId) as Promise<void>,
 
-    onLogChunk: (streamId: string, callback: (chunk: { text: string }) => void) => {
+    onLogChunk: (
+      streamId: string,
+      callback: (chunk: { text: string }) => void,
+    ) => {
       const channel = `k8s:logs:${streamId}`;
-      const listener = (_e: Electron.IpcRendererEvent, chunk: { text: string }) =>
-        callback(chunk);
+      const listener = (
+        _e: Electron.IpcRendererEvent,
+        chunk: { text: string },
+      ) => callback(chunk);
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
     },
 
     deletePod: (context: string, namespace: string, name: string) =>
-      ipcRenderer.invoke('k8s:pod:delete', context, namespace, name) as Promise<{ success?: boolean; error?: string }>,
+      ipcRenderer.invoke(
+        "k8s:pod:delete",
+        context,
+        namespace,
+        name,
+      ) as Promise<{ success?: boolean; error?: string }>,
 
     getPodContainers: (context: string, namespace: string, name: string) =>
-      ipcRenderer.invoke('k8s:pod:containers', context, namespace, name) as Promise<string[]>,
+      ipcRenderer.invoke(
+        "k8s:pod:containers",
+        context,
+        namespace,
+        name,
+      ) as Promise<string[]>,
 
-    execStart: (context: string, namespace: string, pod: string, container: string, execId: string, command?: string[]) =>
-      ipcRenderer.invoke('k8s:exec:start', context, namespace, pod, container, execId, command) as Promise<{ success?: boolean; error?: string }>,
+    execStart: (
+      context: string,
+      namespace: string,
+      pod: string,
+      container: string,
+      execId: string,
+      command?: string[],
+    ) =>
+      ipcRenderer.invoke(
+        "k8s:exec:start",
+        context,
+        namespace,
+        pod,
+        container,
+        execId,
+        command,
+      ) as Promise<{ success?: boolean; error?: string }>,
 
     execStop: (execId: string) =>
-      ipcRenderer.invoke('k8s:exec:stop', execId) as Promise<void>,
+      ipcRenderer.invoke("k8s:exec:stop", execId) as Promise<void>,
 
     execWrite: (execId: string, data: string) =>
       ipcRenderer.send(`k8s:exec:write:${execId}`, data),
@@ -848,14 +1033,16 @@ const electronAPI = {
 
     onExecData: (execId: string, callback: (data: string) => void) => {
       const channel = `k8s:exec:data:${execId}`;
-      const listener = (_e: Electron.IpcRendererEvent, data: string) => callback(data);
+      const listener = (_e: Electron.IpcRendererEvent, data: string) =>
+        callback(data);
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
     },
 
     onExecExit: (execId: string, callback: (code: number) => void) => {
       const channel = `k8s:exec:exit:${execId}`;
-      const listener = (_e: Electron.IpcRendererEvent, code: number) => callback(code);
+      const listener = (_e: Electron.IpcRendererEvent, code: number) =>
+        callback(code);
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
     },
@@ -921,6 +1108,246 @@ const electronAPI = {
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
     },
+  },
+
+  mockServer: {
+    configsList: () =>
+      ipcRenderer.invoke("mock-server:configs:list") as Promise<
+        Array<{
+          id: string;
+          name: string;
+          port: number;
+          corsOrigin: string;
+          routes: Array<{
+            id: string;
+            method: string;
+            path: string;
+            name: string;
+            enabled: boolean;
+            status: number;
+            headers: { key: string; value: string; enabled: boolean }[];
+            body: string;
+            delay: number;
+            rules: Array<{
+              condition: {
+                bodyContains?: string;
+                headerMatch?: { key: string; value: string };
+                queryMatch?: { key: string; value: string };
+              };
+              status: number;
+              headers: { key: string; value: string; enabled: boolean }[];
+              body: string;
+              delay: number;
+            }>;
+          }>;
+          wsEndpoints: Array<{
+            id: string;
+            path: string;
+            name: string;
+            enabled: boolean;
+          }>;
+        }>
+      >,
+
+    configsSave: (config: {
+      id: string;
+      name: string;
+      port: number;
+      corsOrigin: string;
+      routes: Array<{
+        id: string;
+        method: string;
+        path: string;
+        name: string;
+        enabled: boolean;
+        status: number;
+        headers: { key: string; value: string; enabled: boolean }[];
+        body: string;
+        delay: number;
+        rules: Array<{
+          condition: {
+            bodyContains?: string;
+            headerMatch?: { key: string; value: string };
+            queryMatch?: { key: string; value: string };
+          };
+          status: number;
+          headers: { key: string; value: string; enabled: boolean }[];
+          body: string;
+          delay: number;
+        }>;
+      }>;
+      wsEndpoints: Array<{
+        id: string;
+        path: string;
+        name: string;
+        enabled: boolean;
+      }>;
+    }) =>
+      ipcRenderer.invoke("mock-server:configs:save", config) as Promise<
+        typeof config
+      >,
+
+    configsDelete: (configId: string) =>
+      ipcRenderer.invoke(
+        "mock-server:configs:delete",
+        configId,
+      ) as Promise<void>,
+
+    start: (configId: string) =>
+      ipcRenderer.invoke("mock-server:start", configId) as Promise<{
+        configId: string;
+        status: string;
+        error?: string;
+        requestCount: number;
+        recentRequests: Array<{
+          id: string;
+          timestamp: number;
+          method: string;
+          path: string;
+          query: Record<string, string>;
+          headers: Record<string, string>;
+          body: string;
+          matchedRouteId: string | null;
+          matchedRuleIndex: number | null;
+          responseStatus: number;
+          responseBody: string;
+          duration: number;
+        }>;
+        wsClients: Array<{
+          id: string;
+          endpointId: string;
+          connectedAt: number;
+          remoteAddress: string;
+        }>;
+        wsMessages: Array<{
+          id: string;
+          endpointId: string;
+          clientId: string;
+          direction: "received" | "sent" | "broadcast";
+          payload: string;
+          timestamp: number;
+        }>;
+      }>,
+
+    stop: (configId: string) =>
+      ipcRenderer.invoke("mock-server:stop", configId) as Promise<{
+        configId: string;
+        status: string;
+        requestCount: number;
+        recentRequests: unknown[];
+        wsClients: unknown[];
+        wsMessages: unknown[];
+      }>,
+
+    getState: (configId: string) =>
+      ipcRenderer.invoke("mock-server:state", configId) as Promise<{
+        configId: string;
+        status: string;
+        error?: string;
+        requestCount: number;
+        recentRequests: Array<{
+          id: string;
+          timestamp: number;
+          method: string;
+          path: string;
+          query: Record<string, string>;
+          headers: Record<string, string>;
+          body: string;
+          matchedRouteId: string | null;
+          matchedRuleIndex: number | null;
+          responseStatus: number;
+          responseBody: string;
+          duration: number;
+        }>;
+        wsClients: Array<{
+          id: string;
+          endpointId: string;
+          connectedAt: number;
+          remoteAddress: string;
+        }>;
+        wsMessages: Array<{
+          id: string;
+          endpointId: string;
+          clientId: string;
+          direction: "received" | "sent" | "broadcast";
+          payload: string;
+          timestamp: number;
+        }>;
+      }>,
+
+    clearLog: (configId: string) =>
+      ipcRenderer.invoke("mock-server:clear-log", configId) as Promise<void>,
+
+    onStateChanged: (
+      callback: (state: {
+        configId: string;
+        status: string;
+        error?: string;
+        requestCount: number;
+        recentRequests: Array<{
+          id: string;
+          timestamp: number;
+          method: string;
+          path: string;
+          query: Record<string, string>;
+          headers: Record<string, string>;
+          body: string;
+          matchedRouteId: string | null;
+          matchedRuleIndex: number | null;
+          responseStatus: number;
+          responseBody: string;
+          duration: number;
+        }>;
+        wsClients: Array<{
+          id: string;
+          endpointId: string;
+          connectedAt: number;
+          remoteAddress: string;
+        }>;
+        wsMessages: Array<{
+          id: string;
+          endpointId: string;
+          clientId: string;
+          direction: "received" | "sent" | "broadcast";
+          payload: string;
+          timestamp: number;
+        }>;
+      }) => void,
+    ) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        state: Parameters<typeof callback>[0],
+      ) => callback(state);
+      ipcRenderer.on("mock-server:state-changed", listener);
+      return () =>
+        ipcRenderer.removeListener("mock-server:state-changed", listener);
+    },
+
+    wsSend: (configId: string, clientId: string, payload: string) =>
+      ipcRenderer.invoke(
+        "mock-server:ws:send",
+        configId,
+        clientId,
+        payload,
+      ) as Promise<{ success?: boolean; error?: string }>,
+
+    wsBroadcast: (configId: string, endpointId: string, payload: string) =>
+      ipcRenderer.invoke(
+        "mock-server:ws:broadcast",
+        configId,
+        endpointId,
+        payload,
+      ) as Promise<{ sent?: number; error?: string }>,
+
+    wsDisconnectClient: (configId: string, clientId: string) =>
+      ipcRenderer.invoke(
+        "mock-server:ws:disconnect-client",
+        configId,
+        clientId,
+      ) as Promise<void>,
+
+    clearWsLog: (configId: string) =>
+      ipcRenderer.invoke("mock-server:clear-ws-log", configId) as Promise<void>,
   },
 };
 

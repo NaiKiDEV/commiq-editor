@@ -3,8 +3,8 @@ import {
   sealStore,
   createCommand,
   createEvent,
-} from '@naikidev/commiq';
-import { withPatch } from '@naikidev/commiq-context';
+} from "@naikidev/commiq";
+import { withPatch } from "@naikidev/commiq-context";
 import {
   type LayoutNode,
   containsPanel,
@@ -14,9 +14,41 @@ import {
   updateSplitRatio,
   getFirstLeafPanelId,
   getVisiblePanelIds,
-} from '../lib/layout';
+} from "../lib/layout";
 
-export type PanelType = 'terminal' | 'browser' | 'notes' | 'app' | 'workflow' | 'timer' | 'ports' | 'process' | 'env' | 'http' | 'whiteboard' | 'regex' | 'data' | 'encoder' | 'cron' | 'diff' | 'color' | 'epoch' | 'uuid' | 'numbase' | 'ieee754' | 'hexdump' | 'endian' | 'bitfield' | 'svg' | 'k8s' | 'ws' | 'secrets' | 'db' | 'docker' | 'ssl';
+export type PanelType =
+  | "terminal"
+  | "browser"
+  | "notes"
+  | "app"
+  | "workflow"
+  | "timer"
+  | "ports"
+  | "process"
+  | "env"
+  | "http"
+  | "whiteboard"
+  | "regex"
+  | "data"
+  | "encoder"
+  | "cron"
+  | "diff"
+  | "color"
+  | "epoch"
+  | "uuid"
+  | "numbase"
+  | "ieee754"
+  | "hexdump"
+  | "endian"
+  | "bitfield"
+  | "svg"
+  | "k8s"
+  | "ws"
+  | "secrets"
+  | "db"
+  | "docker"
+  | "ssl"
+  | "mockserver";
 
 export type Panel = {
   id: string;
@@ -91,26 +123,34 @@ function getAllPanelIds(ws: Workspace): string[] {
   return ws.tabs.flatMap((t) => t.panels.map((p) => p.id));
 }
 
-export const PanelOpened = createEvent<Panel>('panel:opened');
-export const PanelClosed = createEvent<{ id: string }>('panel:closed');
-export const PanelActivated = createEvent<{ id: string }>('panel:activated');
+export const PanelOpened = createEvent<Panel>("panel:opened");
+export const PanelClosed = createEvent<{ id: string }>("panel:closed");
+export const PanelActivated = createEvent<{ id: string }>("panel:activated");
 
-export const TabCreated = createEvent<{ tab: Tab; workspaceId: string }>('tab:created');
-export const TabClosed = createEvent<{ tabId: string; panelIds: string[] }>('tab:closed');
-export const TabActivated = createEvent<{ tabId: string; browserPanelIds: string[] }>('tab:activated');
+export const TabCreated = createEvent<{ tab: Tab; workspaceId: string }>(
+  "tab:created",
+);
+export const TabClosed = createEvent<{ tabId: string; panelIds: string[] }>(
+  "tab:closed",
+);
+export const TabActivated = createEvent<{
+  tabId: string;
+  browserPanelIds: string[];
+}>("tab:activated");
 
-export const WorkspaceCreated = createEvent<{ workspace: Workspace }>('workspace:created');
+export const WorkspaceCreated = createEvent<{ workspace: Workspace }>(
+  "workspace:created",
+);
 export const WorkspaceSwitched = createEvent<{
   fromId: string | null;
   toId: string;
   fromPanelIds: string[];
   toPanelIds: string[];
-}>('workspace:switched');
-
+}>("workspace:switched");
 
 const defaultWorkspace: Workspace = {
   id: crypto.randomUUID(),
-  name: 'Workspace 1',
+  name: "Workspace 1",
   tabs: [],
   activeTabId: null,
 };
@@ -120,12 +160,10 @@ const initialState: EditorState = {
   activeWorkspaceId: defaultWorkspace.id,
 };
 
-
 const _store = createStore(initialState)
   .useExtension(withPatch<EditorState>())
 
-
-  .addCommandHandler('workspace:hydrate', (ctx, cmd) => {
+  .addCommandHandler("workspace:hydrate", (ctx, cmd) => {
     const state = cmd.data as EditorState;
     ctx.patch({
       workspaces: state.workspaces,
@@ -133,7 +171,7 @@ const _store = createStore(initialState)
     });
   })
 
-  .addCommandHandler('workspace:create', (ctx, cmd) => {
+  .addCommandHandler("workspace:create", (ctx, cmd) => {
     const { name } = cmd.data as { name: string };
     const workspace: Workspace = {
       id: crypto.randomUUID(),
@@ -158,7 +196,7 @@ const _store = createStore(initialState)
     });
   })
 
-  .addCommandHandler('workspace:switch', (ctx, cmd) => {
+  .addCommandHandler("workspace:switch", (ctx, cmd) => {
     const { id } = cmd.data as { id: string };
     if (id === ctx.state.activeWorkspaceId) return;
     const target = ctx.state.workspaces.find((w) => w.id === id);
@@ -178,7 +216,7 @@ const _store = createStore(initialState)
     });
   })
 
-  .addCommandHandler('workspace:rename', (ctx, cmd) => {
+  .addCommandHandler("workspace:rename", (ctx, cmd) => {
     const { id, name } = cmd.data as { id: string; name: string };
     ctx.patch({
       workspaces: ctx.state.workspaces.map((w) =>
@@ -187,7 +225,7 @@ const _store = createStore(initialState)
     });
   })
 
-  .addCommandHandler('workspace:delete', (ctx, cmd) => {
+  .addCommandHandler("workspace:delete", (ctx, cmd) => {
     const { id } = cmd.data as { id: string };
     const ws = ctx.state.workspaces.find((w) => w.id === id);
     if (!ws) return;
@@ -208,7 +246,7 @@ const _store = createStore(initialState)
       // Always keep at least one workspace
       const newWs: Workspace = {
         id: crypto.randomUUID(),
-        name: 'Workspace 1',
+        name: "Workspace 1",
         tabs: [],
         activeTabId: null,
       };
@@ -226,16 +264,23 @@ const _store = createStore(initialState)
         });
       }
     } else {
-      const newActiveId = wasActive ? remaining[0].id : ctx.state.activeWorkspaceId;
+      const newActiveId = wasActive
+        ? remaining[0].id
+        : ctx.state.activeWorkspaceId;
       ctx.patch({
         workspaces: remaining,
         activeWorkspaceId: newActiveId,
       });
       if (wasActive) {
         const newActiveWs = remaining[0];
-        const activeTab = newActiveWs.tabs.find((t) => t.id === newActiveWs.activeTabId);
+        const activeTab = newActiveWs.tabs.find(
+          (t) => t.id === newActiveWs.activeTabId,
+        );
         const toPanelIds = activeTab
-          ? activeTab.panels.reduce<string[]>((acc, p) => { if (p.type === 'browser') acc.push(p.id); return acc; }, [])
+          ? activeTab.panels.reduce<string[]>((acc, p) => {
+              if (p.type === "browser") acc.push(p.id);
+              return acc;
+            }, [])
           : [];
         ctx.emit(WorkspaceSwitched, {
           fromId: id,
@@ -247,9 +292,13 @@ const _store = createStore(initialState)
     }
   })
 
-
-  .addCommandHandler('tab:create', (ctx, cmd) => {
-    const { panel, tabName, transient, background } = cmd.data as { panel: Panel; tabName?: string; transient?: boolean; background?: boolean };
+  .addCommandHandler("tab:create", (ctx, cmd) => {
+    const { panel, tabName, transient, background } = cmd.data as {
+      panel: Panel;
+      tabName?: string;
+      transient?: boolean;
+      background?: boolean;
+    };
     const ws = getActiveWorkspace(ctx.state);
     if (!ws) return;
 
@@ -258,7 +307,7 @@ const _store = createStore(initialState)
       name: tabName ?? panel.title,
       panels: [panel],
       activePanelId: panel.id,
-      layout: { type: 'leaf', panelId: panel.id },
+      layout: { type: "leaf", panelId: panel.id },
       ...(transient ? { transient: true } : {}),
     };
 
@@ -269,20 +318,18 @@ const _store = createStore(initialState)
     };
 
     ctx.patch({
-      workspaces: ctx.state.workspaces.map((w) =>
-        w.id === ws.id ? newWs : w,
-      ),
+      workspaces: ctx.state.workspaces.map((w) => (w.id === ws.id ? newWs : w)),
     });
     ctx.emit(TabCreated, { tab, workspaceId: ws.id });
     ctx.emit(PanelOpened, panel);
 
     if (!background && ws.activeTabId && ws.activeTabId !== tab.id) {
-      const browserPanelIds = panel.type === 'browser' ? [panel.id] : [];
+      const browserPanelIds = panel.type === "browser" ? [panel.id] : [];
       ctx.emit(TabActivated, { tabId: tab.id, browserPanelIds });
     }
   })
 
-  .addCommandHandler('tab:close', (ctx, cmd) => {
+  .addCommandHandler("tab:close", (ctx, cmd) => {
     const { id } = cmd.data as { id: string };
     const ws = getActiveWorkspace(ctx.state);
     if (!ws) return;
@@ -303,9 +350,7 @@ const _store = createStore(initialState)
 
     const newWs = { ...ws, tabs: newTabs, activeTabId: newActiveTabId };
     ctx.patch({
-      workspaces: ctx.state.workspaces.map((w) =>
-        w.id === ws.id ? newWs : w,
-      ),
+      workspaces: ctx.state.workspaces.map((w) => (w.id === ws.id ? newWs : w)),
     });
 
     for (const pid of panelIds) {
@@ -314,35 +359,41 @@ const _store = createStore(initialState)
     ctx.emit(TabClosed, { tabId: id, panelIds });
   })
 
-  .addCommandHandler('tab:activate', (ctx, cmd) => {
+  .addCommandHandler("tab:activate", (ctx, cmd) => {
     const { id } = cmd.data as { id: string };
     const ws = getActiveWorkspace(ctx.state);
     if (!ws || ws.activeTabId === id) return;
     const tab = ws.tabs.find((t) => t.id === id);
     if (!tab) return;
 
-    ctx.patch(updateActiveWorkspace(ctx.state, (w) => ({ ...w, activeTabId: id })));
+    ctx.patch(
+      updateActiveWorkspace(ctx.state, (w) => ({ ...w, activeTabId: id })),
+    );
 
-    const visibleIds = tab.layout ? getVisiblePanelIds(tab.layout) : new Set<string>();
+    const visibleIds = tab.layout
+      ? getVisiblePanelIds(tab.layout)
+      : new Set<string>();
     const browserPanelIds = tab.panels.reduce<string[]>((acc, p) => {
-      if (p.type === 'browser' && visibleIds.has(p.id)) acc.push(p.id);
+      if (p.type === "browser" && visibleIds.has(p.id)) acc.push(p.id);
       return acc;
     }, []);
     ctx.emit(TabActivated, { tabId: id, browserPanelIds });
   })
 
-  .addCommandHandler('tab:rename', (ctx, cmd) => {
+  .addCommandHandler("tab:rename", (ctx, cmd) => {
     const { id, name } = cmd.data as { id: string; name: string };
     const ws = getActiveWorkspace(ctx.state);
     if (!ws) return;
 
-    ctx.patch(updateActiveWorkspace(ctx.state, (w) => ({
-      ...w,
-      tabs: w.tabs.map((t) => (t.id === id ? { ...t, name } : t)),
-    })));
+    ctx.patch(
+      updateActiveWorkspace(ctx.state, (w) => ({
+        ...w,
+        tabs: w.tabs.map((t) => (t.id === id ? { ...t, name } : t)),
+      })),
+    );
   })
 
-  .addCommandHandler('tab:reorder', (ctx, cmd) => {
+  .addCommandHandler("tab:reorder", (ctx, cmd) => {
     const { tabId, toIndex } = cmd.data as { tabId: string; toIndex: number };
     const ws = getActiveWorkspace(ctx.state);
     if (!ws) return;
@@ -353,10 +404,12 @@ const _store = createStore(initialState)
     const [moved] = newTabs.splice(fromIndex, 1);
     newTabs.splice(toIndex, 0, moved);
 
-    ctx.patch(updateActiveWorkspace(ctx.state, (w) => ({ ...w, tabs: newTabs })));
+    ctx.patch(
+      updateActiveWorkspace(ctx.state, (w) => ({ ...w, tabs: newTabs })),
+    );
   })
 
-  .addCommandHandler('tab:closeOthers', (ctx, cmd) => {
+  .addCommandHandler("tab:closeOthers", (ctx, cmd) => {
     const { tabId } = cmd.data as { tabId: string };
     const ws = getActiveWorkspace(ctx.state);
     if (!ws) return;
@@ -368,30 +421,37 @@ const _store = createStore(initialState)
 
     const prevActiveTabId = ws.activeTabId;
 
-    ctx.patch(updateActiveWorkspace(ctx.state, (w) => ({
-      ...w,
-      tabs: [keepTab],
-      activeTabId: tabId,
-    })));
+    ctx.patch(
+      updateActiveWorkspace(ctx.state, (w) => ({
+        ...w,
+        tabs: [keepTab],
+        activeTabId: tabId,
+      })),
+    );
 
     for (const tab of closing) {
       for (const panel of tab.panels) {
         ctx.emit(PanelClosed, { id: panel.id });
       }
-      ctx.emit(TabClosed, { tabId: tab.id, panelIds: tab.panels.map((p) => p.id) });
+      ctx.emit(TabClosed, {
+        tabId: tab.id,
+        panelIds: tab.panels.map((p) => p.id),
+      });
     }
 
     if (prevActiveTabId !== tabId) {
-      const visibleIds = keepTab.layout ? getVisiblePanelIds(keepTab.layout) : new Set<string>();
+      const visibleIds = keepTab.layout
+        ? getVisiblePanelIds(keepTab.layout)
+        : new Set<string>();
       const browserPanelIds = keepTab.panels.reduce<string[]>((acc, p) => {
-        if (p.type === 'browser' && visibleIds.has(p.id)) acc.push(p.id);
+        if (p.type === "browser" && visibleIds.has(p.id)) acc.push(p.id);
         return acc;
       }, []);
       ctx.emit(TabActivated, { tabId, browserPanelIds });
     }
   })
 
-  .addCommandHandler('tab:closeToRight', (ctx, cmd) => {
+  .addCommandHandler("tab:closeToRight", (ctx, cmd) => {
     const { tabId } = cmd.data as { tabId: string };
     const ws = getActiveWorkspace(ctx.state);
     if (!ws) return;
@@ -406,32 +466,38 @@ const _store = createStore(initialState)
       ? prevActiveTabId
       : tabId;
 
-    ctx.patch(updateActiveWorkspace(ctx.state, (w) => ({
-      ...w,
-      tabs: keeping,
-      activeTabId: newActiveTabId,
-    })));
+    ctx.patch(
+      updateActiveWorkspace(ctx.state, (w) => ({
+        ...w,
+        tabs: keeping,
+        activeTabId: newActiveTabId,
+      })),
+    );
 
     for (const tab of closing) {
       for (const panel of tab.panels) {
         ctx.emit(PanelClosed, { id: panel.id });
       }
-      ctx.emit(TabClosed, { tabId: tab.id, panelIds: tab.panels.map((p) => p.id) });
+      ctx.emit(TabClosed, {
+        tabId: tab.id,
+        panelIds: tab.panels.map((p) => p.id),
+      });
     }
 
     if (prevActiveTabId !== newActiveTabId) {
       const activeTab = keeping.find((t) => t.id === newActiveTabId)!;
-      const visibleIds = activeTab.layout ? getVisiblePanelIds(activeTab.layout) : new Set<string>();
+      const visibleIds = activeTab.layout
+        ? getVisiblePanelIds(activeTab.layout)
+        : new Set<string>();
       const browserPanelIds = activeTab.panels.reduce<string[]>((acc, p) => {
-        if (p.type === 'browser' && visibleIds.has(p.id)) acc.push(p.id);
+        if (p.type === "browser" && visibleIds.has(p.id)) acc.push(p.id);
         return acc;
       }, []);
       ctx.emit(TabActivated, { tabId: newActiveTabId, browserPanelIds });
     }
   })
 
-
-  .addCommandHandler('panel:open', (ctx, cmd) => {
+  .addCommandHandler("panel:open", (ctx, cmd) => {
     const panel = cmd.data as Panel;
     const tab = getActiveTab(ctx.state);
     if (!tab) return;
@@ -441,21 +507,26 @@ const _store = createStore(initialState)
     const closedIds: string[] = [];
 
     if (!tab.layout) {
-      newLayout = { type: 'leaf', panelId: panel.id };
-    } else if (tab.activePanelId && containsPanel(tab.layout, tab.activePanelId)) {
+      newLayout = { type: "leaf", panelId: panel.id };
+    } else if (
+      tab.activePanelId &&
+      containsPanel(tab.layout, tab.activePanelId)
+    ) {
       newLayout = replaceLeafPanel(tab.layout, tab.activePanelId, panel.id);
       closedIds.push(tab.activePanelId);
       panels = panels.filter((p) => p.id !== tab.activePanelId);
     } else {
-      newLayout = { type: 'leaf', panelId: panel.id };
+      newLayout = { type: "leaf", panelId: panel.id };
     }
 
-    ctx.patch(updateActiveTab(ctx.state, (t) => ({
-      ...t,
-      panels: [...panels, panel],
-      activePanelId: panel.id,
-      layout: newLayout,
-    })));
+    ctx.patch(
+      updateActiveTab(ctx.state, (t) => ({
+        ...t,
+        panels: [...panels, panel],
+        activePanelId: panel.id,
+        layout: newLayout,
+      })),
+    );
 
     for (const id of closedIds) {
       ctx.emit(PanelClosed, { id });
@@ -463,7 +534,7 @@ const _store = createStore(initialState)
     ctx.emit(PanelOpened, panel);
   })
 
-  .addCommandHandler('panel:close', (ctx, cmd) => {
+  .addCommandHandler("panel:close", (ctx, cmd) => {
     const { id } = cmd.data as { id: string };
     const tab = getActiveTab(ctx.state);
     if (!tab) return;
@@ -476,51 +547,56 @@ const _store = createStore(initialState)
     if (wasActive) {
       activePanelId = layout
         ? getFirstLeafPanelId(layout)
-        : panels[panels.length - 1]?.id ?? null;
+        : (panels[panels.length - 1]?.id ?? null);
     } else {
       activePanelId = tab.activePanelId;
     }
 
-    ctx.patch(updateActiveTab(ctx.state, (t) => ({
-      ...t,
-      panels,
-      activePanelId,
-      layout,
-    })));
+    ctx.patch(
+      updateActiveTab(ctx.state, (t) => ({
+        ...t,
+        panels,
+        activePanelId,
+        layout,
+      })),
+    );
     ctx.emit(PanelClosed, { id });
   })
 
-  .addCommandHandler('panel:activate', (ctx, cmd) => {
+  .addCommandHandler("panel:activate", (ctx, cmd) => {
     const { id } = cmd.data as { id: string };
     const tab = getActiveTab(ctx.state);
     if (!tab || !tab.layout || !containsPanel(tab.layout, id)) return;
 
-    ctx.patch(updateActiveTab(ctx.state, (t) => ({
-      ...t,
-      activePanelId: id,
-    })));
+    ctx.patch(
+      updateActiveTab(ctx.state, (t) => ({
+        ...t,
+        activePanelId: id,
+      })),
+    );
     ctx.emit(PanelActivated, { id });
   })
 
-  .addCommandHandler('panel:updateTitle', (ctx, cmd) => {
+  .addCommandHandler("panel:updateTitle", (ctx, cmd) => {
     const { id, title } = cmd.data as { id: string; title: string };
     // Search across all tabs in the active workspace (title updates come async from PTY)
     const ws = getActiveWorkspace(ctx.state);
     if (!ws) return;
 
-    ctx.patch(updateActiveWorkspace(ctx.state, (w) => ({
-      ...w,
-      tabs: w.tabs.map((t) => ({
-        ...t,
-        panels: t.panels.map((p) => (p.id === id ? { ...p, title } : p)),
+    ctx.patch(
+      updateActiveWorkspace(ctx.state, (w) => ({
+        ...w,
+        tabs: w.tabs.map((t) => ({
+          ...t,
+          panels: t.panels.map((p) => (p.id === id ? { ...p, title } : p)),
+        })),
       })),
-    })));
+    );
   })
 
-
-  .addCommandHandler('layout:split', (ctx, cmd) => {
+  .addCommandHandler("layout:split", (ctx, cmd) => {
     const { direction, newPanel } = cmd.data as {
-      direction: 'horizontal' | 'vertical';
+      direction: "horizontal" | "vertical";
       newPanel: Panel;
     };
     const tab = getActiveTab(ctx.state);
@@ -535,84 +611,88 @@ const _store = createStore(initialState)
       splitId,
     );
 
-    ctx.patch(updateActiveTab(ctx.state, (t) => ({
-      ...t,
-      panels: [...t.panels, newPanel],
-      activePanelId: newPanel.id,
-      layout: newLayout,
-    })));
+    ctx.patch(
+      updateActiveTab(ctx.state, (t) => ({
+        ...t,
+        panels: [...t.panels, newPanel],
+        activePanelId: newPanel.id,
+        layout: newLayout,
+      })),
+    );
     ctx.emit(PanelOpened, newPanel);
   })
 
-  .addCommandHandler('layout:resize', (ctx, cmd) => {
+  .addCommandHandler("layout:resize", (ctx, cmd) => {
     const { splitId, ratio } = cmd.data as { splitId: string; ratio: number };
     const tab = getActiveTab(ctx.state);
     if (!tab || !tab.layout) return;
 
-    ctx.patch(updateActiveTab(ctx.state, (t) => ({
-      ...t,
-      layout: updateSplitRatio(t.layout!, splitId, ratio),
-    })));
+    ctx.patch(
+      updateActiveTab(ctx.state, (t) => ({
+        ...t,
+        layout: updateSplitRatio(t.layout!, splitId, ratio),
+      })),
+    );
   });
 
 export const workspaceStore = sealStore(_store);
 
-
 // Hydrate
 export const hydrateWorkspace = (state: EditorState) =>
-  createCommand('workspace:hydrate', state);
+  createCommand("workspace:hydrate", state);
 
 export const createWorkspace = (name: string) =>
-  createCommand('workspace:create', { name });
+  createCommand("workspace:create", { name });
 
 export const switchWorkspace = (id: string) =>
-  createCommand('workspace:switch', { id });
+  createCommand("workspace:switch", { id });
 
 export const renameWorkspace = (id: string, name: string) =>
-  createCommand('workspace:rename', { id, name });
+  createCommand("workspace:rename", { id, name });
 
 export const deleteWorkspace = (id: string) =>
-  createCommand('workspace:delete', { id });
+  createCommand("workspace:delete", { id });
 
-export const createTab = (panel: Panel, tabName?: string, transient?: boolean, background?: boolean) =>
-  createCommand('tab:create', { panel, tabName, transient, background });
+export const createTab = (
+  panel: Panel,
+  tabName?: string,
+  transient?: boolean,
+  background?: boolean,
+) => createCommand("tab:create", { panel, tabName, transient, background });
 
-export const closeTab = (id: string) =>
-  createCommand('tab:close', { id });
+export const closeTab = (id: string) => createCommand("tab:close", { id });
 
 export const activateTab = (id: string) =>
-  createCommand('tab:activate', { id });
+  createCommand("tab:activate", { id });
 
 export const renameTab = (id: string, name: string) =>
-  createCommand('tab:rename', { id, name });
+  createCommand("tab:rename", { id, name });
 
 export const reorderTab = (tabId: string, toIndex: number) =>
-  createCommand('tab:reorder', { tabId, toIndex });
+  createCommand("tab:reorder", { tabId, toIndex });
 
 export const closeOtherTabs = (tabId: string) =>
-  createCommand('tab:closeOthers', { tabId });
+  createCommand("tab:closeOthers", { tabId });
 
 export const closeTabsToRight = (tabId: string) =>
-  createCommand('tab:closeToRight', { tabId });
+  createCommand("tab:closeToRight", { tabId });
 
-export const openPanel = (panel: Panel) =>
-  createCommand('panel:open', panel);
+export const openPanel = (panel: Panel) => createCommand("panel:open", panel);
 
-export const closePanel = (id: string) =>
-  createCommand('panel:close', { id });
+export const closePanel = (id: string) => createCommand("panel:close", { id });
 
 export const activatePanel = (id: string) =>
-  createCommand('panel:activate', { id });
+  createCommand("panel:activate", { id });
 
 export const updatePanelTitle = (id: string, title: string) =>
-  createCommand('panel:updateTitle', { id, title });
+  createCommand("panel:updateTitle", { id, title });
 
 export const layoutSplit = (
-  direction: 'horizontal' | 'vertical',
+  direction: "horizontal" | "vertical",
   newPanel: Panel,
-) => createCommand('layout:split', { direction, newPanel });
+) => createCommand("layout:split", { direction, newPanel });
 
 export const layoutResize = (splitId: string, ratio: number) =>
-  createCommand('layout:resize', { splitId, ratio });
+  createCommand("layout:resize", { splitId, ratio });
 
 export { getActiveWorkspace, getActiveTab };
