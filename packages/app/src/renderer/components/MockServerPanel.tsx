@@ -18,6 +18,11 @@ import {
   Unplug,
   Plug,
   Megaphone,
+  CopyPlus,
+  Download,
+  Upload,
+  ArrowUpRight,
+  Info,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -123,6 +128,7 @@ function emptyConfig(): MockServerConfig {
     name: "My Mock Server",
     port: 8080,
     corsOrigin: "*",
+    proxyBaseUrl: "",
     routes: [],
     wsEndpoints: [],
   };
@@ -184,6 +190,49 @@ function MethodBadge({ method, small }: { method: string; small?: boolean }) {
     >
       {method}
     </span>
+  );
+}
+
+/** Collapsible hint showing available template variables */
+function TemplateHint() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="text-[10px] text-muted-foreground">
+      <button
+        className="flex items-center gap-1 hover:text-foreground transition-colors"
+        onClick={() => setOpen(!open)}
+      >
+        <Info className="size-3" />
+        Template variables available
+        {open ? (
+          <ChevronDown className="size-2.5" />
+        ) : (
+          <ChevronRight className="size-2.5" />
+        )}
+      </button>
+      {open && (
+        <div className="mt-1.5 grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 pl-4 font-mono">
+          <span className="text-foreground/70">{"{{params.id}}"}</span>
+          <span>URL path parameter</span>
+          <span className="text-foreground/70">{"{{query.name}}"}</span>
+          <span>Query string param</span>
+          <span className="text-foreground/70">{"{{header.name}}"}</span>
+          <span>Request header value</span>
+          <span className="text-foreground/70">{"{{body}}"}</span>
+          <span>Raw request body</span>
+          <span className="text-foreground/70">{"{{body.user.name}}"}</span>
+          <span>JSON body field (dot path)</span>
+          <span className="text-foreground/70">{"{{now}}"}</span>
+          <span>ISO 8601 timestamp</span>
+          <span className="text-foreground/70">{"{{timestamp}}"}</span>
+          <span>Unix timestamp (ms)</span>
+          <span className="text-foreground/70">{"{{randomUUID}}"}</span>
+          <span>Random UUID v4</span>
+          <span className="text-foreground/70">{"{{randomInt 1 100}}"}</span>
+          <span>Random integer in range</span>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -402,6 +451,7 @@ function RouteEditor({
             onChange={(val) => patch({ body: val })}
             minLines={8}
           />
+          <TemplateHint />
         </div>
       )}
 
@@ -673,6 +723,12 @@ function RequestLogViewer({
           </Tooltip>
           <MethodBadge method={selectedLog.method} />
           <span className="text-xs font-mono truncate">{selectedLog.path}</span>
+          {selectedLog.proxied && (
+            <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 bg-blue-400/10 text-blue-400 rounded font-mono shrink-0">
+              <ArrowUpRight className="size-2.5" />
+              proxied
+            </span>
+          )}
           <span
             className={cn(
               "text-xs font-mono ml-auto",
@@ -695,9 +751,11 @@ function RequestLogViewer({
               <span>{formatTimestamp(selectedLog.timestamp)}</span>
               <span className="text-muted-foreground">Route</span>
               <span>
-                {matchedRoute
-                  ? `${matchedRoute.name || matchedRoute.path}`
-                  : "(no match — 404)"}
+                {selectedLog.proxied
+                  ? "(proxied to backend)"
+                  : matchedRoute
+                    ? `${matchedRoute.name || matchedRoute.path}`
+                    : "(no match — 404)"}
               </span>
               {selectedLog.matchedRuleIndex !== null &&
                 selectedLog.matchedRuleIndex >= 0 && (
@@ -805,6 +863,9 @@ function RequestLogViewer({
               <span className="font-mono truncate flex-1 min-w-0">
                 {log.path}
               </span>
+              {log.proxied && (
+                <ArrowUpRight className="size-3 text-blue-400 shrink-0" />
+              )}
               <span
                 className={cn(
                   "font-mono shrink-0",
@@ -1213,6 +1274,19 @@ function ServerSettings({
             className="flex-1 h-7 text-xs"
           />
         </div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-muted-foreground w-20 shrink-0">
+            Proxy Fallback
+          </label>
+          <Input
+            value={config.proxyBaseUrl}
+            onChange={(e) =>
+              onChange({ ...config, proxyBaseUrl: e.target.value })
+            }
+            placeholder="https://api.example.com (unmatched routes forwarded)"
+            className="flex-1 h-7 text-xs"
+          />
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -1314,6 +1388,17 @@ export function MockServerPanel({ panelId: _panelId }: { panelId: string }) {
     setEditorSection("settings");
   };
 
+  const importConfig = async () => {
+    const imported =
+      (await window.electronAPI.mockServer.importConfig()) as MockServerConfig | null;
+    if (imported) {
+      setConfigs((prev) => [...prev, imported]);
+      setActiveConfigId(imported.id);
+      setView("editor");
+      setEditorSection("routes");
+    }
+  };
+
   const deleteConfig = async (id: string) => {
     const state = serverStates.get(id);
     if (state?.status === "running") {
@@ -1360,6 +1445,28 @@ export function MockServerPanel({ panelId: _panelId }: { panelId: string }) {
     };
     saveConfig(updated);
     setSelectedRouteId(route.id);
+  };
+
+  const duplicateRoute = (routeId: string) => {
+    if (!activeConfig) return;
+    const source = activeConfig.routes.find((r) => r.id === routeId);
+    if (!source) return;
+    const clone: MockRoute = {
+      ...JSON.parse(JSON.stringify(source)),
+      id: crypto.randomUUID(),
+      name: source.name ? `${source.name} (copy)` : "",
+    };
+    // give new IDs to nested rules
+    clone.rules = clone.rules.map((r: MockResponseRule) => ({
+      ...r,
+      id: crypto.randomUUID(),
+    }));
+    const updated = {
+      ...activeConfig,
+      routes: [...activeConfig.routes, clone],
+    };
+    saveConfig(updated);
+    setSelectedRouteId(clone.id);
   };
 
   const deleteRoute = (routeId: string) => {
@@ -1418,6 +1525,20 @@ export function MockServerPanel({ panelId: _panelId }: { panelId: string }) {
                   variant="ghost"
                   size="icon-xs"
                   className="ml-auto"
+                  onClick={importConfig}
+                />
+              }
+            >
+              <Upload className="size-3.5" />
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Import server</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
                   onClick={createConfig}
                 />
               }
@@ -1602,6 +1723,23 @@ export function MockServerPanel({ panelId: _panelId }: { panelId: string }) {
         )}
 
         <div className="ml-auto flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="text-muted-foreground"
+                  onClick={() =>
+                    window.electronAPI.mockServer.exportConfig(activeConfig.id)
+                  }
+                />
+              }
+            >
+              <Download className="size-3.5" />
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Export config</TooltipContent>
+          </Tooltip>
           <Button
             variant={isRunning ? "destructive" : "default"}
             size="xs"
@@ -1741,6 +1879,17 @@ export function MockServerPanel({ panelId: _panelId }: { panelId: string }) {
                           +{route.rules.length}
                         </span>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          duplicateRoute(route.id);
+                        }}
+                      >
+                        <CopyPlus className="size-3" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon-xs"

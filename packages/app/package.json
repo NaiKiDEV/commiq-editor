@@ -1,7 +1,7 @@
 {
   "name": "@commiq-editor/app",
   "productName": "Commiq Editor",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "A cross-platform workbench for embedding terminals, browsers, and applications",
   "main": ".vite/build/index.js",
   "private": true,

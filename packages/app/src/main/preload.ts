@@ -1118,6 +1118,7 @@ const electronAPI = {
           name: string;
           port: number;
           corsOrigin: string;
+          proxyBaseUrl: string;
           routes: Array<{
             id: string;
             method: string;
@@ -1154,6 +1155,7 @@ const electronAPI = {
       name: string;
       port: number;
       corsOrigin: string;
+      proxyBaseUrl: string;
       routes: Array<{
         id: string;
         method: string;
@@ -1348,6 +1350,17 @@ const electronAPI = {
 
     clearWsLog: (configId: string) =>
       ipcRenderer.invoke("mock-server:clear-ws-log", configId) as Promise<void>,
+
+    exportConfig: (configId: string) =>
+      ipcRenderer.invoke(
+        "mock-server:export",
+        configId,
+      ) as Promise<{ success?: boolean; canceled?: boolean; path?: string; error?: string }>,
+
+    importConfig: () =>
+      ipcRenderer.invoke(
+        "mock-server:import",
+      ) as Promise<{ success?: boolean; canceled?: boolean; config?: unknown; error?: string }>,
   },
 };
 
