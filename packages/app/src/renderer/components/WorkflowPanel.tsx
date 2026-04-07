@@ -70,10 +70,12 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
   const commandListRef = useRef<HTMLDivElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
 
-  // Mutable ref — synced every render so stable callbacks always read current values
+  // Mutable refs — synced every render so stable callbacks always read current values
   const workflowsRef = useRef(workflows);
   workflowsRef.current = workflows;
   const stateRef = useRef<{ activeWorkflow: Workflow | null }>({ activeWorkflow: null });
+  const actionsRef = useRef({ createTab, navigateBrowser });
+  actionsRef.current = { createTab, navigateBrowser };
 
   const activeWorkflow = useMemo(
     () => workflows.find((w) => w.id === activeWorkflowId) ?? null,
@@ -313,8 +315,8 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
 
       if (cmd.type === "browser") {
         const tabName = cmd.name.trim() || cmd.command;
-        const panelId = createTab("browser", tabName, { background: true });
-        setTimeout(() => navigateBrowser(panelId, cmd.command.trim()), BROWSER_TAB_READY_DELAY_MS);
+        const panelId = actionsRef.current.createTab("browser", tabName, { background: true });
+        setTimeout(() => actionsRef.current.navigateBrowser(panelId, cmd.command.trim()), BROWSER_TAB_READY_DELAY_MS);
 
         setRunState((prev) => {
           if (!prev) return prev;
@@ -333,7 +335,7 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
         }
       } else {
         const tabName = cmd.name.trim() || workflow.name;
-        const panelId = createTab("terminal", tabName, { background: true });
+        const panelId = actionsRef.current.createTab("terminal", tabName, { background: true });
         const removeListener = window.electronAPI.terminal.onData(panelId, () => {
           removeListener();
           window.electronAPI.terminal.write(panelId, cmd.command + "\r");
@@ -351,7 +353,7 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
         });
       }
     },
-    [createTab, navigateBrowser],
+    [],
   );
 
   const advanceStep = useCallback(
@@ -433,11 +435,11 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
           if (!cmd.command.trim()) continue;
           if (cmd.type === "browser") {
             const tabName = cmd.name.trim() || cmd.command;
-            const panelId = createTab("browser", tabName, { background: true });
-            setTimeout(() => navigateBrowser(panelId, cmd.command.trim()), BROWSER_TAB_READY_DELAY_MS);
+            const panelId = actionsRef.current.createTab("browser", tabName, { background: true });
+            setTimeout(() => actionsRef.current.navigateBrowser(panelId, cmd.command.trim()), BROWSER_TAB_READY_DELAY_MS);
           } else {
             const tabName = cmd.name.trim() || workflow.name;
-            const panelId = createTab("terminal", tabName, { background: true });
+            const panelId = actionsRef.current.createTab("terminal", tabName, { background: true });
             const removeListener = window.electronAPI.terminal.onData(panelId, () => {
               removeListener();
               window.electronAPI.terminal.write(panelId, cmd.command + "\r");
@@ -449,7 +451,7 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
 
       startSequentialRun(workflow);
     },
-    [createTab, navigateBrowser, startSequentialRun],
+    [startSequentialRun],
   );
 
   const runSingleCommand = useCallback(
@@ -457,18 +459,18 @@ export function WorkflowPanel({ panelId: _panelId }: WorkflowPanelProps) {
       if (!command.command.trim()) return;
       if (command.type === "browser") {
         const tabName = command.name.trim() || command.command;
-        const panelId = createTab("browser", tabName, { background: true });
-        setTimeout(() => navigateBrowser(panelId, command.command.trim()), 100);
+        const panelId = actionsRef.current.createTab("browser", tabName, { background: true });
+        setTimeout(() => actionsRef.current.navigateBrowser(panelId, command.command.trim()), 100);
       } else {
         const tabName = command.name.trim() || `${workflowName} - Command`;
-        const panelId = createTab("terminal", tabName, { background: true });
+        const panelId = actionsRef.current.createTab("terminal", tabName, { background: true });
         const removeListener = window.electronAPI.terminal.onData(panelId, () => {
           removeListener();
           window.electronAPI.terminal.write(panelId, command.command + "\r");
         });
       }
     },
-    [createTab, navigateBrowser],
+    [],
   );
 
   // Stable advance — reads active workflow from ref so it never changes identity
