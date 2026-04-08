@@ -22,6 +22,20 @@ export const STICKY_BORDER_COLORS: Record<StickyColor, string> = {
 
 export const ALL_COLORS: StickyColor[] = ['yellow', 'blue', 'green', 'pink', 'purple', 'orange', 'red'];
 
+export const TEXT_COLORS = [
+  '#ffffff',
+  '#f87171',
+  '#fb923c',
+  '#fbbf24',
+  '#4ade80',
+  '#60a5fa',
+  '#c084fc',
+  '#f9a8d4',
+  '#94a3b8',
+];
+
+export const TEXT_FONT_SIZES = [12, 14, 16, 20, 24, 32, 48];
+
 export const FRAME_COLORS = [
   '#e2e8f0', '#93c5fd', '#86efac', '#fef08a',
   '#f9a8d4', '#c4b5fd', '#fb923c', '#f87171',
@@ -30,13 +44,14 @@ export const FRAME_COLORS = [
 export const SHORTCUT_LABELS = [
   ['Undo', 'Ctrl+Z'],
   ['Redo', 'Ctrl+Shift+Z'],
-  ['Pan', 'Middle mouse button'],
+  ['Pan', 'Two-finger scroll / Middle mouse'],
+  ['Zoom', 'Pinch / Ctrl+scroll'],
   ['Multi-select', 'Shift+click / drag'],
   ['Select all', 'Ctrl+A'],
   ['Delete', 'Del key'],
   ['Resize', 'Select item → drag handles'],
   ['Colors', 'Right-click item'],
-  ['Edit text', 'Double-click sticky'],
+  ['Edit text', 'Double-click sticky / text'],
   ['Rename frame', 'Double-click frame'],
 ];
 

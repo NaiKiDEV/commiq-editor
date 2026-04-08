@@ -1,6 +1,6 @@
 import { ipcMain, BrowserWindow } from "electron";
 import { whiteboardState } from "../whiteboard/state";
-import type { StickyColor, Sticky, Frame } from "../../shared/whiteboard-types";
+import type { StickyColor, Sticky, Frame, TextNode } from "../../shared/whiteboard-types";
 import {
   startMcpServer,
   stopMcpServer,
@@ -138,6 +138,41 @@ export function registerWhiteboardIpc(): void {
     "whiteboard:disconnect",
     (_e, boardId: string, connectionId: string) =>
       whiteboardState.disconnect(boardId, connectionId),
+  );
+
+  // Text CRUD
+  ipcMain.handle(
+    "whiteboard:create-text",
+    (
+      _e,
+      boardId: string,
+      data: {
+        text?: string;
+        x?: number;
+        y?: number;
+        width?: number;
+        fontSize?: number;
+        bold?: boolean;
+        italic?: boolean;
+        color?: string;
+      },
+    ) => whiteboardState.createText(boardId, data),
+  );
+  ipcMain.handle(
+    "whiteboard:update-text",
+    (
+      _e,
+      boardId: string,
+      textId: string,
+      patch: Partial<
+        Pick<TextNode, "x" | "y" | "width" | "text" | "fontSize" | "bold" | "italic" | "color">
+      >,
+    ) => whiteboardState.updateText(boardId, textId, patch),
+  );
+  ipcMain.handle(
+    "whiteboard:delete-text",
+    (_e, boardId: string, textId: string) =>
+      whiteboardState.deleteText(boardId, textId),
   );
 
   // MCP server

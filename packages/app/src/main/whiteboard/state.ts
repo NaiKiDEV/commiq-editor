@@ -9,6 +9,7 @@ import type {
   Sticky,
   Frame,
   Connection,
+  TextNode,
   StickyColor,
 } from "../../shared/whiteboard-types";
 
@@ -60,6 +61,7 @@ export class WhiteboardStateManager extends EventEmitter {
       stickies: [],
       frames: [],
       connections: [],
+      texts: [],
       viewport: { x: 0, y: 0, zoom: 1 },
       createdAt: now,
       updatedAt: now,
@@ -85,6 +87,7 @@ export class WhiteboardStateManager extends EventEmitter {
     const board: Board = {
       ...data,
       id: randomUUID(),
+      texts: data.texts ?? [],
       createdAt: now,
       updatedAt: now,
     };
@@ -356,6 +359,7 @@ export class WhiteboardStateManager extends EventEmitter {
       frames: board.frames,
       connections: board.connections,
       colorMeanings: board.colorMeanings,
+      texts: board.texts,
     });
     let stack = this.undoStacks.get(boardId);
     if (!stack) { stack = []; this.undoStacks.set(boardId, stack); }
@@ -386,6 +390,7 @@ export class WhiteboardStateManager extends EventEmitter {
     board.frames = state.frames;
     board.connections = state.connections;
     board.colorMeanings = state.colorMeanings;
+    board.texts = state.texts ?? [];
     board.updatedAt = new Date().toISOString();
 
     this.scheduleSave(boardId);
@@ -415,6 +420,7 @@ export class WhiteboardStateManager extends EventEmitter {
     board.frames = state.frames;
     board.connections = state.connections;
     board.colorMeanings = state.colorMeanings;
+    board.texts = state.texts ?? [];
     board.updatedAt = new Date().toISOString();
 
     this.scheduleSave(boardId);
@@ -428,6 +434,75 @@ export class WhiteboardStateManager extends EventEmitter {
 
   canRedo(boardId: string): boolean {
     return (this.redoStacks.get(boardId)?.length ?? 0) > 0;
+  }
+
+  createText(
+    boardId: string,
+    data: {
+      text?: string;
+      x?: number;
+      y?: number;
+      width?: number;
+      fontSize?: number;
+      bold?: boolean;
+      italic?: boolean;
+      color?: string;
+    },
+  ): TextNode | null {
+    const board = this.boards.get(boardId);
+    if (!board) return null;
+    this.pushUndo(boardId);
+    const now = new Date().toISOString();
+    const node: TextNode = {
+      id: randomUUID(),
+      x: data.x ?? board.viewport.x + 400,
+      y: data.y ?? board.viewport.y + 200,
+      width: data.width ?? 300,
+      text: data.text ?? "",
+      fontSize: data.fontSize ?? 16,
+      bold: data.bold ?? false,
+      italic: data.italic ?? false,
+      color: data.color ?? "#ffffff",
+      createdAt: now,
+      updatedAt: now,
+    };
+    board.texts.push(node);
+    board.updatedAt = now;
+    this.scheduleSave(boardId);
+    this.emit("board-changed", board);
+    return node;
+  }
+
+  updateText(
+    boardId: string,
+    textId: string,
+    patch: Partial<
+      Pick<TextNode, "x" | "y" | "width" | "text" | "fontSize" | "bold" | "italic" | "color">
+    >,
+  ): TextNode | null {
+    const board = this.boards.get(boardId);
+    if (!board) return null;
+    const node = board.texts.find((t) => t.id === textId);
+    if (!node) return null;
+    this.pushUndo(boardId);
+    Object.assign(node, patch, { updatedAt: new Date().toISOString() });
+    board.updatedAt = node.updatedAt;
+    this.scheduleSave(boardId);
+    this.emit("board-changed", board);
+    return node;
+  }
+
+  deleteText(boardId: string, textId: string): boolean {
+    const board = this.boards.get(boardId);
+    if (!board) return false;
+    const idx = board.texts.findIndex((t) => t.id === textId);
+    if (idx === -1) return false;
+    this.pushUndo(boardId);
+    board.texts.splice(idx, 1);
+    board.updatedAt = new Date().toISOString();
+    this.scheduleSave(boardId);
+    this.emit("board-changed", board);
+    return true;
   }
 
   private autoPositionX(board: Board): number {
@@ -487,6 +562,7 @@ export class WhiteboardStateManager extends EventEmitter {
       try {
         const raw = fs.readFileSync(path.join(this.storageDir, file), "utf-8");
         const board: Board = JSON.parse(raw);
+        if (!board.texts) board.texts = [];
         this.boards.set(board.id, board);
       } catch { /* corrupted file */ }
     }

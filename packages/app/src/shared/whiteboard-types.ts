@@ -1,5 +1,19 @@
 export type StickyColor = "yellow" | "blue" | "green" | "pink" | "purple" | "orange" | "red";
 
+export type TextNode = {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  text: string;
+  fontSize: number;
+  bold: boolean;
+  italic: boolean;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Board = {
   id: string;
   name: string;
@@ -7,6 +21,7 @@ export type Board = {
   stickies: Sticky[];
   frames: Frame[];
   connections: Connection[];
+  texts: TextNode[];
   viewport: { x: number; y: number; zoom: number };
   colorMeanings?: Partial<Record<StickyColor, string>>;
   createdAt: string;

@@ -2,23 +2,26 @@ import { memo } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Board } from '../../../shared/whiteboard-types';
-import { STICKY_COLORS, ALL_COLORS, FRAME_COLORS } from './constants';
+import { STICKY_COLORS, ALL_COLORS, FRAME_COLORS, TEXT_COLORS, TEXT_FONT_SIZES } from './constants';
 
 interface StickyCtx { stickyId: string; x: number; y: number }
 interface FrameCtx { frameId: string; x: number; y: number }
 interface ConnectionCtx { connectionId: string; x: number; y: number; label: string }
+interface TextCtx { textId: string; x: number; y: number }
 
 interface ContextMenusProps {
   board: Board | null;
   contextMenu: StickyCtx | null;
   frameContextMenu: FrameCtx | null;
   connectionContextMenu: ConnectionCtx | null;
+  textContextMenu: TextCtx | null;
   metadataEditor: string | null;
   stagePos: { x: number; y: number };
   stageScale: number;
   onCloseStickyMenu: () => void;
   onCloseFrameMenu: () => void;
   onCloseConnectionMenu: () => void;
+  onCloseTextMenu: () => void;
   onCloseMetadata: () => void;
   onConnectionLabelChange: (label: string) => void;
   onStickyColorChange: (stickyId: string, color: string) => void;
@@ -29,6 +32,11 @@ interface ContextMenusProps {
   onFrameDelete: (frameId: string) => void;
   onConnectionLabelSave: (connectionId: string, label: string) => void;
   onConnectionDelete: (connectionId: string) => void;
+  onTextColorChange: (textId: string, color: string) => void;
+  onTextSizeChange: (textId: string, size: number) => void;
+  onTextBoldToggle: (textId: string) => void;
+  onTextItalicToggle: (textId: string) => void;
+  onTextDelete: (textId: string) => void;
   onMetadataKeyChange: (stickyId: string, index: number, newKey: string) => void;
   onMetadataValueChange: (stickyId: string, index: number, newValue: string) => void;
   onMetadataRemove: (stickyId: string, key: string) => void;
@@ -37,13 +45,14 @@ interface ContextMenusProps {
 
 export const ContextMenus = memo(function ContextMenus({
   board,
-  contextMenu, frameContextMenu, connectionContextMenu, metadataEditor,
+  contextMenu, frameContextMenu, connectionContextMenu, textContextMenu, metadataEditor,
   stagePos, stageScale,
-  onCloseStickyMenu, onCloseFrameMenu, onCloseConnectionMenu, onCloseMetadata,
+  onCloseStickyMenu, onCloseFrameMenu, onCloseConnectionMenu, onCloseTextMenu, onCloseMetadata,
   onConnectionLabelChange,
   onStickyColorChange, onStickyDelete, onStickyEditMetadata,
   onFrameColorChange, onFrameRename, onFrameDelete,
   onConnectionLabelSave, onConnectionDelete,
+  onTextColorChange, onTextSizeChange, onTextBoldToggle, onTextItalicToggle, onTextDelete,
   onMetadataKeyChange, onMetadataValueChange, onMetadataRemove, onMetadataAdd,
 }: ContextMenusProps) {
   return (
@@ -171,6 +180,81 @@ export const ContextMenus = memo(function ContextMenus({
           </button>
         </div>
       )}
+
+      {/* Text node context menu */}
+      {textContextMenu && (() => {
+        const textNode = board?.texts.find((t) => t.id === textContextMenu.textId);
+        return (
+          <div
+            className="absolute z-50 bg-[#1e1e2e] border border-white/10 rounded-lg shadow-xl overflow-hidden py-1 min-w-45"
+            style={{ left: textContextMenu.x, top: textContextMenu.y }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-3 py-2 space-y-2">
+              <div>
+                <div className="text-[10px] text-white/30 mb-1">Color</div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {TEXT_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      className={cn(
+                        'w-4 h-4 rounded-full border-2 transition-transform hover:scale-110',
+                        textNode?.color === color ? 'border-white scale-110' : 'border-transparent',
+                      )}
+                      style={{ background: color }}
+                      onClick={() => onTextColorChange(textContextMenu.textId, color)}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] text-white/30 mb-1">Size</div>
+                <div className="flex items-center gap-1 flex-wrap">
+                  {TEXT_FONT_SIZES.map((size) => (
+                    <button
+                      key={size}
+                      className={cn(
+                        'px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors',
+                        textNode?.fontSize === size ? 'bg-blue-500/30 text-blue-300' : 'text-white/50 hover:text-white/80 hover:bg-white/10',
+                      )}
+                      onClick={() => onTextSizeChange(textContextMenu.textId, size)}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-1.5">
+                <button
+                  className={cn(
+                    'flex-1 py-1 rounded text-xs font-bold transition-colors',
+                    textNode?.bold ? 'bg-blue-500/30 text-blue-300' : 'text-white/50 hover:bg-white/10',
+                  )}
+                  onClick={() => onTextBoldToggle(textContextMenu.textId)}
+                >
+                  B
+                </button>
+                <button
+                  className={cn(
+                    'flex-1 py-1 rounded text-xs italic transition-colors',
+                    textNode?.italic ? 'bg-blue-500/30 text-blue-300' : 'text-white/50 hover:bg-white/10',
+                  )}
+                  onClick={() => onTextItalicToggle(textContextMenu.textId)}
+                >
+                  I
+                </button>
+              </div>
+            </div>
+            <div className="h-px bg-white/10" />
+            <button
+              className="w-full px-3 py-1.5 text-sm text-red-400 hover:text-red-300 hover:bg-white/5 text-left"
+              onClick={() => onTextDelete(textContextMenu.textId)}
+            >
+              Delete
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Metadata editor */}
       {metadataEditor && board && (() => {

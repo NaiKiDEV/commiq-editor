@@ -1,24 +1,28 @@
 import { memo } from 'react';
 import {
   MousePointer2, StickyNote, Square, ArrowRight, Trash2,
-  ZoomIn, ZoomOut, Maximize, Undo2, Redo2,
+  ZoomIn, ZoomOut, Maximize, Undo2, Redo2, Type,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StickyColor } from '../../../shared/whiteboard-types';
-import { STICKY_COLORS, ALL_COLORS, FRAME_COLORS } from './constants';
+import { STICKY_COLORS, ALL_COLORS, FRAME_COLORS, TEXT_COLORS, TEXT_FONT_SIZES } from './constants';
 
-type Tool = 'select' | 'sticky' | 'frame' | 'connect' | 'delete';
+type Tool = 'select' | 'sticky' | 'frame' | 'connect' | 'delete' | 'text';
 
 interface ToolbarProps {
   tool: Tool;
   stageScale: number;
   preCreationStickyColor: StickyColor;
   preCreationFrameColor: string;
+  preCreationTextColor: string;
+  preCreationTextSize: number;
   canUndo: boolean;
   canRedo: boolean;
   onToolChange: (tool: Tool) => void;
   onStickyColorChange: (color: StickyColor) => void;
   onFrameColorChange: (color: string) => void;
+  onTextColorChange: (color: string) => void;
+  onTextSizeChange: (size: number) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onFitToScreen: () => void;
@@ -29,6 +33,7 @@ interface ToolbarProps {
 const TOOLS: [Tool, typeof MousePointer2, string][] = [
   ['select', MousePointer2, 'Select'],
   ['sticky', StickyNote, 'Sticky'],
+  ['text', Type, 'Text'],
   ['frame', Square, 'Frame'],
   ['connect', ArrowRight, 'Connect'],
   ['delete', Trash2, 'Delete'],
@@ -36,8 +41,9 @@ const TOOLS: [Tool, typeof MousePointer2, string][] = [
 
 export const Toolbar = memo(function Toolbar({
   tool, stageScale, preCreationStickyColor, preCreationFrameColor,
+  preCreationTextColor, preCreationTextSize,
   canUndo, canRedo,
-  onToolChange, onStickyColorChange, onFrameColorChange,
+  onToolChange, onStickyColorChange, onFrameColorChange, onTextColorChange, onTextSizeChange,
   onZoomIn, onZoomOut, onFitToScreen, onUndo, onRedo,
 }: ToolbarProps) {
   return (
@@ -111,6 +117,39 @@ export const Toolbar = memo(function Toolbar({
               )}
               style={{ background: color }}
               onClick={() => onFrameColorChange(color)}
+              title={color}
+            />
+          ))}
+        </>
+      )}
+
+      {tool === 'text' && (
+        <>
+          <div className="w-px h-5 bg-white/10 mx-1" />
+          {TEXT_FONT_SIZES.map((size) => (
+            <button
+              key={size}
+              className={cn(
+                'px-1.5 rounded text-xs font-mono transition-colors',
+                preCreationTextSize === size ? 'bg-blue-500/30 text-blue-300' : 'text-white/50 hover:text-white/80 hover:bg-white/10',
+              )}
+              style={{ fontSize: Math.max(9, Math.min(size * 0.7, 13)) }}
+              onClick={() => onTextSizeChange(size)}
+              title={`${size}px`}
+            >
+              {size}
+            </button>
+          ))}
+          <div className="w-px h-5 bg-white/10 mx-1" />
+          {TEXT_COLORS.map((color) => (
+            <button
+              key={color}
+              className={cn(
+                'w-4 h-4 rounded-full border-2 transition-transform hover:scale-110',
+                preCreationTextColor === color ? 'border-white scale-110' : 'border-transparent',
+              )}
+              style={{ background: color }}
+              onClick={() => onTextColorChange(color)}
               title={color}
             />
           ))}

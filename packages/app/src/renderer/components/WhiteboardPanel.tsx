@@ -4,10 +4,11 @@ import type Konva from 'konva';
 import { Radio, Keyboard, Palette, Undo2, Redo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettings } from '../contexts/settings';
-import type { Board, StickyColor, BoardSummary } from '../../shared/whiteboard-types';
+import type { Board, StickyColor, BoardSummary, TextNode } from '../../shared/whiteboard-types';
 
 import { StickyNode } from './whiteboard/StickyNode';
 import { FrameNode } from './whiteboard/FrameNode';
+import { TextNodeComponent } from './whiteboard/TextNode';
 import { ConnectionArrow } from './whiteboard/ConnectionArrow';
 import { GridLayer } from './whiteboard/GridLayer';
 import { Toolbar } from './whiteboard/Toolbar';
@@ -15,7 +16,7 @@ import { BoardMenu } from './whiteboard/BoardMenu';
 import { ContextMenus } from './whiteboard/ContextMenus';
 import { ALL_COLORS, STICKY_COLORS, MIN_ZOOM, MAX_ZOOM, SHORTCUT_LABELS } from './whiteboard/constants';
 
-type Tool = 'select' | 'sticky' | 'frame' | 'connect' | 'delete';
+type Tool = 'select' | 'sticky' | 'frame' | 'connect' | 'delete' | 'text';
 type WhiteboardPanelProps = { panelId: string };
 
 export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
@@ -62,19 +63,26 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
   const [showColorLegend, setShowColorLegend] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [editingTextNode, setEditingTextNode] = useState<string | null>(null);
+  const [editTextNodeContent, setEditTextNodeContent] = useState('');
+  const [textContextMenu, setTextContextMenu] = useState<{ textId: string; x: number; y: number } | null>(null);
+  const [preCreationTextColor, setPreCreationTextColor] = useState('#ffffff');
+  const [preCreationTextSize, setPreCreationTextSize] = useState(16);
   const { settings } = useSettings();
 
   const stateRef = useRef({
     tool, activeBoardId, board, selectedIds, stageScale, stageSize,
     connectFrom, preCreationStickyColor, preCreationFrameColor,
     editingSticky, editText, editingFrame, editFrameLabel, boards,
-    frameDrawing, selectionRect,
+    frameDrawing, selectionRect, editingTextNode, editTextNodeContent,
+    preCreationTextColor, preCreationTextSize,
   });
   stateRef.current = {
     tool, activeBoardId, board, selectedIds, stageScale, stageSize,
     connectFrom, preCreationStickyColor, preCreationFrameColor,
     editingSticky, editText, editingFrame, editFrameLabel, boards,
-    frameDrawing, selectionRect,
+    frameDrawing, selectionRect, editingTextNode, editTextNodeContent,
+    preCreationTextColor, preCreationTextSize,
   };
 
   useEffect(() => {
@@ -234,6 +242,7 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         setContextMenu(null);
         setFrameContextMenu(null);
         setConnectionContextMenu(null);
+        setTextContextMenu(null);
         setMetadataEditor(null);
         setShowColorLegend(false);
         if (editingSticky && activeBoardId) {
@@ -241,24 +250,31 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
           setEditingSticky(null);
           setEditText('');
         }
-        setSelectedIds(new Set());
-        return;
-      }
-      if (e.key === 'Delete' && selectedIds.size > 0 && activeBoardId && !editingSticky) {
-        for (const id of selectedIds) {
-          if (board?.stickies.some((s) => s.id === id)) window.electronAPI.whiteboard.deleteSticky(activeBoardId, id);
-          else if (board?.frames.some((f) => f.id === id)) window.electronAPI.whiteboard.deleteFrame(activeBoardId, id);
-          else if (board?.connections.some((c) => c.id === id)) window.electronAPI.whiteboard.disconnect(activeBoardId, id);
+        if (editingTextNode && activeBoardId) {
+          window.electronAPI.whiteboard.updateText(activeBoardId, editingTextNode, { text: stateRef.current.editTextNodeContent });
+          setEditingTextNode(null);
+          setEditTextNodeContent('');
         }
         setSelectedIds(new Set());
         return;
       }
-      if (e.key === 'a' && (e.ctrlKey || e.metaKey) && !editingSticky && !editingFrame) {
+      if (e.key === 'Delete' && selectedIds.size > 0 && activeBoardId && !editingSticky && !editingTextNode) {
+        for (const id of selectedIds) {
+          if (board?.stickies.some((s) => s.id === id)) window.electronAPI.whiteboard.deleteSticky(activeBoardId, id);
+          else if (board?.frames.some((f) => f.id === id)) window.electronAPI.whiteboard.deleteFrame(activeBoardId, id);
+          else if (board?.connections.some((c) => c.id === id)) window.electronAPI.whiteboard.disconnect(activeBoardId, id);
+          else if (board?.texts.some((t) => t.id === id)) window.electronAPI.whiteboard.deleteText(activeBoardId, id);
+        }
+        setSelectedIds(new Set());
+        return;
+      }
+      if (e.key === 'a' && (e.ctrlKey || e.metaKey) && !editingSticky && !editingFrame && !editingTextNode) {
         e.preventDefault();
         if (board) {
           const all = new Set<string>();
           board.stickies.forEach((s) => all.add(s.id));
           board.frames.forEach((f) => all.add(f.id));
+          board.texts.forEach((t) => all.add(t.id));
           setSelectedIds(all);
         }
       }
@@ -285,18 +301,34 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     e.evt.preventDefault();
     const stage = stageRef.current;
     if (!stage) return;
-    const oldScale = stateRef.current.stageScale;
-    const pos = stagePanRef.current;
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return;
-    const dir = e.evt.deltaY < 0 ? 1 : -1;
-    const newScale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, dir > 0 ? oldScale * 1.08 : oldScale / 1.08));
-    const mpt = { x: (pointer.x - pos.x) / oldScale, y: (pointer.y - pos.y) / oldScale };
-    const newPos = { x: pointer.x - mpt.x * newScale, y: pointer.y - mpt.y * newScale };
-    stagePanRef.current = newPos;
-    setStageScale(newScale);
-    setStagePos(newPos);
-    persistViewport(-newPos.x, -newPos.y, newScale);
+
+    // ctrlKey=true is the browser/Electron convention for trackpad pinch-to-zoom.
+    // Plain scroll (two-finger swipe on trackpad, or mouse wheel) pans the board.
+    if (e.evt.ctrlKey) {
+      // Zoom around pointer
+      const oldScale = stateRef.current.stageScale;
+      const pos = stagePanRef.current;
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+      const dir = e.evt.deltaY < 0 ? 1 : -1;
+      const newScale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, dir > 0 ? oldScale * 1.08 : oldScale / 1.08));
+      const mpt = { x: (pointer.x - pos.x) / oldScale, y: (pointer.y - pos.y) / oldScale };
+      const newPos = { x: pointer.x - mpt.x * newScale, y: pointer.y - mpt.y * newScale };
+      stagePanRef.current = newPos;
+      setStageScale(newScale);
+      setStagePos(newPos);
+      persistViewport(-newPos.x, -newPos.y, newScale);
+    } else {
+      // Pan — works for both trackpad two-finger scroll and regular mouse wheel
+      const dx = -e.evt.deltaX;
+      const dy = -e.evt.deltaY;
+      const newPos = { x: stagePanRef.current.x + dx, y: stagePanRef.current.y + dy };
+      stagePanRef.current = newPos;
+      stage.position(newPos);
+      stage.batchDraw();
+      setStagePos({ ...newPos });
+      persistViewport(-newPos.x, -newPos.y, stateRef.current.stageScale);
+    }
   }, [persistViewport]);
 
   const handleStageDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
@@ -309,14 +341,28 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
 
   const handleStageClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     const isStage = e.target === stageRef.current;
-    const { tool, activeBoardId, board, preCreationStickyColor } = stateRef.current;
-    setContextMenu(null); setFrameContextMenu(null); setConnectionContextMenu(null);
+    const { tool, activeBoardId, board, preCreationStickyColor, preCreationTextColor, preCreationTextSize } = stateRef.current;
+    setContextMenu(null); setFrameContextMenu(null); setConnectionContextMenu(null); setTextContextMenu(null);
     if (tool === 'sticky' && activeBoardId) {
       const clickedOnFrame = board?.frames.some((f) => f.id === e.target.id() || e.target.getParent()?.id() === f.id);
       if (isStage || clickedOnFrame) {
         const pos = screenToCanvas(e.evt.offsetX, e.evt.offsetY);
         window.electronAPI.whiteboard.createSticky(activeBoardId, { x: pos.x, y: pos.y, color: preCreationStickyColor });
         setTool('select');
+      }
+      return;
+    }
+    if (tool === 'text' && activeBoardId) {
+      const clickedOnFrame = board?.frames.some((f) => f.id === e.target.id() || e.target.getParent()?.id() === f.id);
+      if (isStage || clickedOnFrame) {
+        const pos = screenToCanvas(e.evt.offsetX, e.evt.offsetY);
+        window.electronAPI.whiteboard.createText(activeBoardId, {
+          x: pos.x, y: pos.y, color: preCreationTextColor, fontSize: preCreationTextSize,
+        }).then((node: TextNode) => {
+          setEditingTextNode(node.id);
+          setEditTextNodeContent('');
+          setTool('select');
+        }).catch(() => {});
       }
       return;
     }
@@ -385,6 +431,10 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         for (const f of board.frames) {
           if (f.x + f.width > rx && f.x < rx + rw && f.y + f.height > ry && f.y < ry + rh) newSelected.add(f.id);
         }
+        for (const t of board.texts) {
+          const th = t.fontSize * 2;
+          if (t.x + t.width > rx && t.x < rx + rw && t.y + th > ry && t.y < ry + rh) newSelected.add(t.id);
+        }
         setSelectedIds(newSelected);
         justDragSelected.current = true;
       }
@@ -407,6 +457,12 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     const frame = board.frames.find((f) => f.id === id);
     if (frame) {
       window.electronAPI.whiteboard.updateFrame(activeBoardId, id, { x: node.x(), y: node.y(), width: Math.max(80, frame.width * scaleX), height: Math.max(60, frame.height * scaleY) });
+      return;
+    }
+    const textNode = board.texts.find((t) => t.id === id);
+    if (textNode) {
+      // Only width changes — height is auto for text nodes
+      window.electronAPI.whiteboard.updateText(activeBoardId, id, { x: node.x(), y: node.y(), width: Math.max(80, textNode.width * scaleX) });
     }
   }, []);
 
@@ -463,6 +519,10 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
           for (const s of board.stickies) {
             if (s.frameId === id && !selectedIds.has(s.id)) window.electronAPI.whiteboard.updateSticky(activeBoardId, s.id, { x: s.x + dx, y: s.y + dy });
           }
+        }
+        const textNode = board.texts.find((t) => t.id === id);
+        if (textNode) {
+          window.electronAPI.whiteboard.updateText(activeBoardId, id, { x: textNode.x + dx, y: textNode.y + dy });
         }
       }
       dragOrigin.current = null; dragStartPositions.current = {};
@@ -526,6 +586,10 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
             if (s.frameId === id && !selectedIds.has(s.id)) window.electronAPI.whiteboard.updateSticky(activeBoardId, s.id, { x: s.x + dx, y: s.y + dy });
           }
         }
+        const textNode = board.texts.find((t) => t.id === id);
+        if (textNode) {
+          window.electronAPI.whiteboard.updateText(activeBoardId, id, { x: textNode.x + dx, y: textNode.y + dy });
+        }
       }
       dragOrigin.current = null; dragStartPositions.current = {};
       return;
@@ -537,6 +601,124 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     for (const sticky of board.stickies) {
       if (sticky.frameId === frameId) window.electronAPI.whiteboard.updateSticky(activeBoardId, sticky.id, { x: sticky.x + dx, y: sticky.y + dy });
     }
+  }, []);
+
+  const handleTextNodeDragStart = useCallback((textId: string, e: Konva.KonvaEventObject<DragEvent>) => {
+    const { selectedIds } = stateRef.current;
+    if (selectedIds.size > 1 && selectedIds.has(textId)) {
+      const stage = stageRef.current;
+      if (!stage) return;
+      dragOrigin.current = { x: e.target.x(), y: e.target.y() };
+      dragStartPositions.current = {};
+      for (const id of selectedIds) {
+        if (id === textId) continue;
+        const node = stage.findOne(`#${id}`);
+        if (node) dragStartPositions.current[id] = { x: node.x(), y: node.y() };
+      }
+    }
+  }, []);
+
+  const handleTextNodeDragMove = useCallback((textId: string, e: Konva.KonvaEventObject<DragEvent>) => {
+    const { selectedIds } = stateRef.current;
+    if (selectedIds.size > 1 && selectedIds.has(textId) && dragOrigin.current) {
+      const stage = stageRef.current;
+      if (!stage) return;
+      const dx = e.target.x() - dragOrigin.current.x;
+      const dy = e.target.y() - dragOrigin.current.y;
+      for (const [id, startPos] of Object.entries(dragStartPositions.current)) {
+        const node = stage.findOne(`#${id}`);
+        if (node) { node.x(startPos.x + dx); node.y(startPos.y + dy); }
+      }
+    }
+  }, []);
+
+  const handleTextNodeDragEnd = useCallback((textId: string, e: Konva.KonvaEventObject<DragEvent>) => {
+    const { activeBoardId, board, selectedIds } = stateRef.current;
+    if (!activeBoardId || !board) return;
+    if (selectedIds.size > 1 && selectedIds.has(textId) && dragOrigin.current) {
+      const dx = e.target.x() - dragOrigin.current.x;
+      const dy = e.target.y() - dragOrigin.current.y;
+      for (const id of selectedIds) {
+        const sticky = board.stickies.find((s) => s.id === id);
+        if (sticky) window.electronAPI.whiteboard.updateSticky(activeBoardId, id, { x: sticky.x + dx, y: sticky.y + dy });
+        const frame = board.frames.find((f) => f.id === id);
+        if (frame) {
+          window.electronAPI.whiteboard.updateFrame(activeBoardId, id, { x: frame.x + dx, y: frame.y + dy });
+          for (const s of board.stickies) {
+            if (s.frameId === id && !selectedIds.has(s.id)) window.electronAPI.whiteboard.updateSticky(activeBoardId, s.id, { x: s.x + dx, y: s.y + dy });
+          }
+        }
+        const textNode = board.texts.find((t) => t.id === id);
+        if (textNode) {
+          window.electronAPI.whiteboard.updateText(activeBoardId, id, { x: id === textId ? e.target.x() : textNode.x + dx, y: id === textId ? e.target.y() : textNode.y + dy });
+        }
+      }
+      dragOrigin.current = null; dragStartPositions.current = {};
+      return;
+    }
+    window.electronAPI.whiteboard.updateText(activeBoardId, textId, { x: e.target.x(), y: e.target.y() });
+  }, []);
+
+  const handleTextNodeClick = useCallback((textId: string, e: Konva.KonvaEventObject<MouseEvent>) => {
+    const { tool, activeBoardId } = stateRef.current;
+    if (tool === 'delete' && activeBoardId) {
+      window.electronAPI.whiteboard.deleteText(activeBoardId, textId);
+    } else if (tool === 'select') {
+      if (e.evt.shiftKey) {
+        setSelectedIds((prev) => { const next = new Set(prev); if (next.has(textId)) next.delete(textId); else next.add(textId); return next; });
+      } else {
+        setSelectedIds(new Set([textId]));
+      }
+    }
+  }, []);
+
+  const handleTextNodeDblClick = useCallback((textId: string) => {
+    const node = stateRef.current.board?.texts.find((t) => t.id === textId);
+    if (node) { setEditingTextNode(node.id); setEditTextNodeContent(node.text); }
+  }, []);
+
+  const handleTextNodeContextMenu = useCallback((textId: string, e: Konva.KonvaEventObject<PointerEvent>) => {
+    e.evt.preventDefault();
+    setContextMenu(null); setFrameContextMenu(null); setConnectionContextMenu(null);
+    setTextContextMenu({ textId, x: e.evt.clientX, y: e.evt.clientY });
+  }, []);
+
+  const finishTextEditing = useCallback(() => {
+    const { editingTextNode, activeBoardId, editTextNodeContent } = stateRef.current;
+    if (editingTextNode && activeBoardId) window.electronAPI.whiteboard.updateText(activeBoardId, editingTextNode, { text: editTextNodeContent });
+    setEditingTextNode(null); setEditTextNodeContent('');
+  }, []);
+
+  const handleTextColorChange = useCallback((textId: string, color: string) => {
+    const { activeBoardId } = stateRef.current;
+    if (activeBoardId) window.electronAPI.whiteboard.updateText(activeBoardId, textId, { color });
+    setTextContextMenu(null);
+  }, []);
+
+  const handleTextSizeChange = useCallback((textId: string, fontSize: number) => {
+    const { activeBoardId } = stateRef.current;
+    if (activeBoardId) window.electronAPI.whiteboard.updateText(activeBoardId, textId, { fontSize });
+    setTextContextMenu(null);
+  }, []);
+
+  const handleTextBoldToggle = useCallback((textId: string) => {
+    const { activeBoardId, board } = stateRef.current;
+    if (!activeBoardId || !board) return;
+    const node = board.texts.find((t) => t.id === textId);
+    if (node) window.electronAPI.whiteboard.updateText(activeBoardId, textId, { bold: !node.bold });
+  }, []);
+
+  const handleTextItalicToggle = useCallback((textId: string) => {
+    const { activeBoardId, board } = stateRef.current;
+    if (!activeBoardId || !board) return;
+    const node = board.texts.find((t) => t.id === textId);
+    if (node) window.electronAPI.whiteboard.updateText(activeBoardId, textId, { italic: !node.italic });
+  }, []);
+
+  const handleTextDelete = useCallback((textId: string) => {
+    const { activeBoardId } = stateRef.current;
+    if (activeBoardId) window.electronAPI.whiteboard.deleteText(activeBoardId, textId);
+    setTextContextMenu(null);
   }, []);
 
   const handleStickyClick = useCallback((stickyId: string, e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -709,10 +891,14 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
 
   const fitToScreen = useCallback(() => {
     const { board, stageSize } = stateRef.current;
-    if (!board || board.stickies.length === 0) {
+    if (!board || (board.stickies.length === 0 && board.frames.length === 0 && board.texts.length === 0)) {
       stagePanRef.current = { x: 0, y: 0 }; setStagePos({ x: 0, y: 0 }); setStageScale(1); persistViewport(0, 0, 1); return;
     }
-    const items = [...board.stickies.map((s) => ({ x: s.x, y: s.y, w: s.width, h: s.height })), ...board.frames.map((f) => ({ x: f.x, y: f.y, w: f.width, h: f.height }))];
+    const items = [
+      ...board.stickies.map((s) => ({ x: s.x, y: s.y, w: s.width, h: s.height })),
+      ...board.frames.map((f) => ({ x: f.x, y: f.y, w: f.width, h: f.height })),
+      ...board.texts.map((t) => ({ x: t.x, y: t.y, w: t.width, h: t.fontSize * 2 })),
+    ];
     const minX = Math.min(...items.map((i) => i.x)); const minY = Math.min(...items.map((i) => i.y));
     const maxX = Math.max(...items.map((i) => i.x + i.w)); const maxY = Math.max(...items.map((i) => i.y + i.h));
     const cW = maxX - minX + 100; const cH = maxY - minY + 100;
@@ -852,7 +1038,42 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     };
   }, [editingFrame, board, stageScale, stagePos]);
 
-  const cursorClass = tool === 'sticky' || tool === 'frame' ? 'cursor-crosshair' : tool === 'connect' || tool === 'delete' ? 'cursor-pointer' : 'cursor-default';
+  const editingTextNodeStyle = useMemo(() => {
+    if (!editingTextNode || !board) return null;
+    const textNode = board.texts.find((t) => t.id === editingTextNode);
+    if (!textNode) return null;
+    return {
+      position: 'absolute' as const,
+      left: textNode.x * stageScale + stagePos.x,
+      top: textNode.y * stageScale + stagePos.y,
+      width: textNode.width * stageScale,
+      minHeight: Math.max(textNode.fontSize * 1.6, 24) * stageScale,
+      fontSize: textNode.fontSize * stageScale,
+      padding: 2 * stageScale,
+      border: 'none',
+      outline: '2px dashed rgba(59,130,246,0.6)',
+      background: 'rgba(26,26,46,0.85)',
+      resize: 'none' as const,
+      zIndex: 50,
+      borderRadius: 4,
+      fontFamily: "'Inter Variable', 'Inter', system-ui, sans-serif",
+      fontWeight: textNode.bold ? 'bold' : '400',
+      fontStyle: textNode.italic ? 'italic' : ('normal' as const),
+      color: textNode.color,
+      lineHeight: '1.3',
+    };
+  }, [editingTextNode, board, stageScale, stagePos]);
+
+  const selectedType = useMemo(() => {
+    if (selectedIds.size !== 1) return null;
+    const [id] = selectedIds;
+    if (board?.stickies.some((s) => s.id === id)) return 'sticky';
+    if (board?.frames.some((f) => f.id === id)) return 'frame';
+    if (board?.texts.some((t) => t.id === id)) return 'text';
+    return null;
+  }, [selectedIds, board]);
+
+  const cursorClass = tool === 'sticky' || tool === 'frame' || tool === 'text' ? 'cursor-crosshair' : tool === 'connect' || tool === 'delete' ? 'cursor-pointer' : 'cursor-default';
 
   return (
     <div
@@ -947,6 +1168,23 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
             />
           ))}
 
+          {board?.texts.map((textNode) => (
+            <TextNodeComponent
+              key={textNode.id}
+              node={textNode}
+              isSelected={selectedIds.has(textNode.id)}
+              isEditing={editingTextNode === textNode.id}
+              isDraggable={isDraggable}
+              onClick={handleTextNodeClick}
+              onDblClick={handleTextNodeDblClick}
+              onDragStart={handleTextNodeDragStart}
+              onDragMove={handleTextNodeDragMove}
+              onDragEnd={handleTextNodeDragEnd}
+              onContextMenu={handleTextNodeContextMenu}
+              onTransformEnd={handleTransformEnd}
+            />
+          ))}
+
           {selectionRect && (
             <Rect
               x={Math.min(selectionRect.startX, selectionRect.currentX)}
@@ -962,7 +1200,11 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
             borderStroke="#3b82f6" borderStrokeWidth={1.5}
             anchorSize={8} anchorStroke="#3b82f6" anchorFill="white" anchorCornerRadius={2}
             rotateEnabled={false}
-            enabledAnchors={selectedIds.size === 1 ? ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'middle-left', 'middle-right', 'top-center', 'bottom-center'] : []}
+            enabledAnchors={selectedIds.size === 1
+              ? (selectedType === 'text'
+                ? ['middle-left', 'middle-right']
+                : ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'middle-left', 'middle-right', 'top-center', 'bottom-center'])
+              : []}
             boundBoxFunc={(_oldBox, newBox) => (newBox.width < 60 || newBox.height < 40 ? _oldBox : newBox)}
           />
         </Layer>
@@ -994,16 +1236,31 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         />
       )}
 
+      {editingTextNode && editingTextNodeStyle && (
+        <textarea
+          autoFocus
+          style={editingTextNodeStyle}
+          value={editTextNodeContent}
+          onChange={(e) => setEditTextNodeContent(e.target.value)}
+          onBlur={finishTextEditing}
+          onKeyDown={(e) => { if (e.key === 'Escape') finishTextEditing(); e.stopPropagation(); }}
+        />
+      )}
+
       <Toolbar
         tool={tool}
         stageScale={stageScale}
         preCreationStickyColor={preCreationStickyColor}
         preCreationFrameColor={preCreationFrameColor}
+        preCreationTextColor={preCreationTextColor}
+        preCreationTextSize={preCreationTextSize}
         canUndo={canUndo}
         canRedo={canRedo}
         onToolChange={handleToolChange}
         onStickyColorChange={setPreCreationStickyColor}
         onFrameColorChange={setPreCreationFrameColor}
+        onTextColorChange={setPreCreationTextColor}
+        onTextSizeChange={setPreCreationTextSize}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onFitToScreen={fitToScreen}
@@ -1105,12 +1362,14 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         contextMenu={contextMenu}
         frameContextMenu={frameContextMenu}
         connectionContextMenu={connectionContextMenu}
+        textContextMenu={textContextMenu}
         metadataEditor={metadataEditor}
         stagePos={stagePos}
         stageScale={stageScale}
         onCloseStickyMenu={() => setContextMenu(null)}
         onCloseFrameMenu={() => setFrameContextMenu(null)}
         onCloseConnectionMenu={() => setConnectionContextMenu(null)}
+        onCloseTextMenu={() => setTextContextMenu(null)}
         onCloseMetadata={() => setMetadataEditor(null)}
         onConnectionLabelChange={handleConnectionLabelChange}
         onStickyColorChange={handleStickyColorChange}
@@ -1121,6 +1380,11 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         onFrameDelete={handleFrameDelete}
         onConnectionLabelSave={handleConnectionLabelSave}
         onConnectionDelete={handleConnectionDelete}
+        onTextColorChange={handleTextColorChange}
+        onTextSizeChange={handleTextSizeChange}
+        onTextBoldToggle={handleTextBoldToggle}
+        onTextItalicToggle={handleTextItalicToggle}
+        onTextDelete={handleTextDelete}
         onMetadataKeyChange={handleMetadataKeyChange}
         onMetadataValueChange={handleMetadataValueChange}
         onMetadataRemove={handleMetadataRemove}

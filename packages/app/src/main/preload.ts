@@ -342,6 +342,15 @@ const electronAPI = {
     ) => ipcRenderer.invoke("whiteboard:update-frame", boardId, frameId, patch),
     deleteFrame: (boardId: string, frameId: string) =>
       ipcRenderer.invoke("whiteboard:delete-frame", boardId, frameId),
+    createText: (boardId: string, data: Record<string, unknown>) =>
+      ipcRenderer.invoke("whiteboard:create-text", boardId, data),
+    updateText: (
+      boardId: string,
+      textId: string,
+      patch: Record<string, unknown>,
+    ) => ipcRenderer.invoke("whiteboard:update-text", boardId, textId, patch),
+    deleteText: (boardId: string, textId: string) =>
+      ipcRenderer.invoke("whiteboard:delete-text", boardId, textId),
     connect: (
       boardId: string,
       fromStickyId: string,

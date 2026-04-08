@@ -199,6 +199,83 @@ function createConfiguredMcpServer(): McpServer {
     },
   );
 
+  // --- Text tools ---
+
+  mcp.tool(
+    "create_text",
+    "Create a plain text label on a board",
+    {
+      boardId: z.string(),
+      text: z.string().optional(),
+      x: z.number().optional(),
+      y: z.number().optional(),
+      width: z.number().optional(),
+      fontSize: z.number().optional(),
+      bold: z.boolean().optional(),
+      italic: z.boolean().optional(),
+      color: z.string().optional(),
+    },
+    async ({ boardId, ...data }) => {
+      const node = whiteboardState.createText(boardId, data);
+      if (!node)
+        return {
+          content: [{ type: "text", text: "Board not found" }],
+          isError: true,
+        };
+      return {
+        content: [
+          { type: "text", text: JSON.stringify(node, null, 2) },
+        ],
+      };
+    },
+  );
+
+  mcp.tool(
+    "update_text",
+    "Update a text label",
+    {
+      boardId: z.string(),
+      textId: z.string(),
+      text: z.string().optional(),
+      x: z.number().optional(),
+      y: z.number().optional(),
+      width: z.number().optional(),
+      fontSize: z.number().optional(),
+      bold: z.boolean().optional(),
+      italic: z.boolean().optional(),
+      color: z.string().optional(),
+    },
+    async ({ boardId, textId, ...patch }) => {
+      const node = whiteboardState.updateText(boardId, textId, patch);
+      if (!node)
+        return {
+          content: [{ type: "text", text: "Board or text not found" }],
+          isError: true,
+        };
+      return {
+        content: [
+          { type: "text", text: JSON.stringify(node, null, 2) },
+        ],
+      };
+    },
+  );
+
+  mcp.tool(
+    "delete_text",
+    "Delete a text label",
+    {
+      boardId: z.string(),
+      textId: z.string(),
+    },
+    async ({ boardId, textId }) => {
+      const ok = whiteboardState.deleteText(boardId, textId);
+      return {
+        content: [{ type: "text", text: ok ? "Deleted" : "Not found" }],
+        isError: !ok,
+      };
+    },
+  );
+
   // --- Color meaning tools ---
 
   mcp.tool(
@@ -444,11 +521,13 @@ function createConfiguredMcpServer(): McpServer {
           stickies: full?.stickies.length ?? 0,
           frames: full?.frames.length ?? 0,
           connections: full?.connections.length ?? 0,
+          texts: full?.texts.length ?? 0,
           colorMeanings: full?.colorMeanings ?? {},
           resourceUris: {
             stickies: `board://${b.id}/stickies`,
             frames: `board://${b.id}/frames`,
             connections: `board://${b.id}/connections`,
+            texts: `board://${b.id}/texts`,
             colorMeanings: `board://${b.id}/color-meanings`,
           },
         };
@@ -577,6 +656,31 @@ function createConfiguredMcpServer(): McpServer {
           {
             uri: uri.href,
             text: JSON.stringify(enriched, null, 2),
+            mimeType: "application/json",
+          },
+        ],
+      };
+    },
+  );
+
+  mcp.resource(
+    "board-texts",
+    new ResourceTemplate("board://{boardId}/texts", {
+      list: async () =>
+        whiteboardState.listBoards().map((b) => ({
+          uri: `board://${b.id}/texts`,
+          name: `${b.name} - Texts`,
+        })),
+    }),
+    async (uri, { boardId }) => {
+      const board = whiteboardState.getBoard(boardId as string);
+      if (!board)
+        return { contents: [{ uri: uri.href, text: "Board not found" }] };
+      return {
+        contents: [
+          {
+            uri: uri.href,
+            text: JSON.stringify(board.texts, null, 2),
             mimeType: "application/json",
           },
         ],
