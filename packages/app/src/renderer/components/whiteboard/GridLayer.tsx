@@ -1,6 +1,6 @@
-import { memo, useCallback } from 'react';
-import { Layer, Shape } from 'react-konva';
-import { GRID_SIZE } from './constants';
+import { memo, useCallback } from "react";
+import { Layer, Shape } from "react-konva";
+import { GRID_SIZE } from "./constants";
 
 interface GridLayerProps {
   /** Ref to the live stage position — allows reading current pos during imperative panning without React state updates */
@@ -14,7 +14,19 @@ function GridLayerBase({ stagePosRef, stageScale, stageSize }: GridLayerProps) {
   // even when the Stage was moved imperatively (no React re-render).
   // Deps only include scale/size so the function identity is stable during panning.
   const sceneFunc = useCallback(
-    (context: { fillStyle: string; beginPath: () => void; moveTo: (x: number, y: number) => void; arc: (x: number, y: number, r: number, start: number, end: number) => void; fill: () => void }) => {
+    (context: {
+      fillStyle: string;
+      beginPath: () => void;
+      moveTo: (x: number, y: number) => void;
+      arc: (
+        x: number,
+        y: number,
+        r: number,
+        start: number,
+        end: number,
+      ) => void;
+      fill: () => void;
+    }) => {
       // Skip grid at very low zoom levels — dots would be sub-pixel
       if (stageScale < 0.15) return;
 
@@ -29,7 +41,7 @@ function GridLayerBase({ stagePosRef, stageScale, stageSize }: GridLayerProps) {
       const endY = startY + stageSize.height / stageScale + gs * 2;
 
       // Batch all dots into a single path — one fill() call instead of N
-      context.fillStyle = 'rgba(255,255,255,0.15)';
+      context.fillStyle = "rgba(255,255,255,0.15)";
       context.beginPath();
       for (let x = startX; x < endX; x += gs) {
         for (let y = startY; y < endY; y += gs) {

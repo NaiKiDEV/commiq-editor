@@ -1,22 +1,33 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { Stage, Layer, Rect, Arrow, Transformer } from 'react-konva';
-import type Konva from 'konva';
-import { Radio, Keyboard, Palette, Undo2, Redo2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useSettings } from '../contexts/settings';
-import type { Board, StickyColor, BoardSummary, TextNode } from '../../shared/whiteboard-types';
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { Stage, Layer, Rect, Arrow, Transformer } from "react-konva";
+import type Konva from "konva";
+import { Radio, Keyboard, Palette, Undo2, Redo2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useSettings } from "../contexts/settings";
+import type {
+  Board,
+  StickyColor,
+  BoardSummary,
+  TextNode,
+} from "../../shared/whiteboard-types";
 
-import { StickyNode } from './whiteboard/StickyNode';
-import { FrameNode } from './whiteboard/FrameNode';
-import { TextNodeComponent } from './whiteboard/TextNode';
-import { ConnectionArrow } from './whiteboard/ConnectionArrow';
-import { GridLayer } from './whiteboard/GridLayer';
-import { Toolbar } from './whiteboard/Toolbar';
-import { BoardMenu } from './whiteboard/BoardMenu';
-import { ContextMenus } from './whiteboard/ContextMenus';
-import { ALL_COLORS, STICKY_COLORS, MIN_ZOOM, MAX_ZOOM, SHORTCUT_LABELS } from './whiteboard/constants';
+import { StickyNode } from "./whiteboard/StickyNode";
+import { FrameNode } from "./whiteboard/FrameNode";
+import { TextNodeComponent } from "./whiteboard/TextNode";
+import { ConnectionArrow } from "./whiteboard/ConnectionArrow";
+import { GridLayer } from "./whiteboard/GridLayer";
+import { Toolbar } from "./whiteboard/Toolbar";
+import { BoardMenu } from "./whiteboard/BoardMenu";
+import { ContextMenus } from "./whiteboard/ContextMenus";
+import {
+  ALL_COLORS,
+  STICKY_COLORS,
+  MIN_ZOOM,
+  MAX_ZOOM,
+  SHORTCUT_LABELS,
+} from "./whiteboard/constants";
 
-type Tool = 'select' | 'sticky' | 'frame' | 'connect' | 'delete' | 'text';
+type Tool = "select" | "sticky" | "frame" | "connect" | "delete" | "text";
 type WhiteboardPanelProps = { panelId: string };
 
 export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
@@ -28,61 +39,127 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
   const middleMouseLast = useRef({ x: 0, y: 0 });
   const stagePanRef = useRef({ x: 0, y: 0 });
   const viewportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dragStartPositions = useRef<Record<string, { x: number; y: number }>>({});
+  const dragStartPositions = useRef<Record<string, { x: number; y: number }>>(
+    {},
+  );
   const dragOrigin = useRef<{ x: number; y: number } | null>(null);
   const justDragSelected = useRef(false);
-  const frameDragStartPos = useRef<Record<string, { x: number; y: number }>>({});
+  const frameDragStartPos = useRef<Record<string, { x: number; y: number }>>(
+    {},
+  );
 
   const [stageSize, setStageSize] = useState({ width: 800, height: 600 });
   const [boards, setBoards] = useState<BoardSummary[]>([]);
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
   const [board, setBoard] = useState<Board | null>(null);
-  const [tool, setTool] = useState<Tool>('select');
+  const [tool, setTool] = useState<Tool>("select");
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
-  const [connectMousePos, setConnectMousePos] = useState<{ x: number; y: number } | null>(null);
-  const [frameDrawing, setFrameDrawing] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
+  const [connectMousePos, setConnectMousePos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [frameDrawing, setFrameDrawing] = useState<{
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+  } | null>(null);
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
   const [stageScale, setStageScale] = useState(1);
   const [boardMenuOpen, setBoardMenuOpen] = useState(false);
   const [renamingBoardId, setRenamingBoardId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState('');
+  const [renameValue, setRenameValue] = useState("");
   const [editingSticky, setEditingSticky] = useState<string | null>(null);
-  const [editText, setEditText] = useState('');
+  const [editText, setEditText] = useState("");
   const [editingFrame, setEditingFrame] = useState<string | null>(null);
-  const [editFrameLabel, setEditFrameLabel] = useState('');
-  const [contextMenu, setContextMenu] = useState<{ stickyId: string; x: number; y: number } | null>(null);
-  const [frameContextMenu, setFrameContextMenu] = useState<{ frameId: string; x: number; y: number } | null>(null);
-  const [connectionContextMenu, setConnectionContextMenu] = useState<{ connectionId: string; x: number; y: number; label: string } | null>(null);
+  const [editFrameLabel, setEditFrameLabel] = useState("");
+  const [contextMenu, setContextMenu] = useState<{
+    stickyId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [frameContextMenu, setFrameContextMenu] = useState<{
+    frameId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [connectionContextMenu, setConnectionContextMenu] = useState<{
+    connectionId: string;
+    x: number;
+    y: number;
+    label: string;
+  } | null>(null);
   const [metadataEditor, setMetadataEditor] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [preCreationStickyColor, setPreCreationStickyColor] = useState<StickyColor>('yellow');
-  const [preCreationFrameColor, setPreCreationFrameColor] = useState<string>('#e2e8f0');
-  const [selectionRect, setSelectionRect] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
+  const [preCreationStickyColor, setPreCreationStickyColor] =
+    useState<StickyColor>("yellow");
+  const [preCreationFrameColor, setPreCreationFrameColor] =
+    useState<string>("#e2e8f0");
+  const [selectionRect, setSelectionRect] = useState<{
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+  } | null>(null);
   const [mcpRunning, setMcpRunning] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showColorLegend, setShowColorLegend] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [editingTextNode, setEditingTextNode] = useState<string | null>(null);
-  const [editTextNodeContent, setEditTextNodeContent] = useState('');
-  const [textContextMenu, setTextContextMenu] = useState<{ textId: string; x: number; y: number } | null>(null);
-  const [preCreationTextColor, setPreCreationTextColor] = useState('#ffffff');
+  const [editTextNodeContent, setEditTextNodeContent] = useState("");
+  const [textContextMenu, setTextContextMenu] = useState<{
+    textId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [preCreationTextColor, setPreCreationTextColor] = useState("#ffffff");
   const [preCreationTextSize, setPreCreationTextSize] = useState(16);
   const { settings } = useSettings();
 
   const stateRef = useRef({
-    tool, activeBoardId, board, selectedIds, stageScale, stageSize,
-    connectFrom, preCreationStickyColor, preCreationFrameColor,
-    editingSticky, editText, editingFrame, editFrameLabel, boards,
-    frameDrawing, selectionRect, editingTextNode, editTextNodeContent,
-    preCreationTextColor, preCreationTextSize,
+    tool,
+    activeBoardId,
+    board,
+    selectedIds,
+    stageScale,
+    stageSize,
+    connectFrom,
+    preCreationStickyColor,
+    preCreationFrameColor,
+    editingSticky,
+    editText,
+    editingFrame,
+    editFrameLabel,
+    boards,
+    frameDrawing,
+    selectionRect,
+    editingTextNode,
+    editTextNodeContent,
+    preCreationTextColor,
+    preCreationTextSize,
   });
   stateRef.current = {
-    tool, activeBoardId, board, selectedIds, stageScale, stageSize,
-    connectFrom, preCreationStickyColor, preCreationFrameColor,
-    editingSticky, editText, editingFrame, editFrameLabel, boards,
-    frameDrawing, selectionRect, editingTextNode, editTextNodeContent,
-    preCreationTextColor, preCreationTextSize,
+    tool,
+    activeBoardId,
+    board,
+    selectedIds,
+    stageScale,
+    stageSize,
+    connectFrom,
+    preCreationStickyColor,
+    preCreationFrameColor,
+    editingSticky,
+    editText,
+    editingFrame,
+    editFrameLabel,
+    boards,
+    frameDrawing,
+    selectionRect,
+    editingTextNode,
+    editTextNodeContent,
+    preCreationTextColor,
+    preCreationTextSize,
   };
 
   useEffect(() => {
@@ -100,14 +177,26 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
   }, []);
 
   useEffect(() => {
-    window.electronAPI.whiteboard.listBoards()
+    window.electronAPI.whiteboard
+      .listBoards()
       .then(async (list: BoardSummary[]) => {
         if (list.length > 0) {
           setBoards(list);
           setActiveBoardId(list[0].id);
         } else {
-          const b: Board = await window.electronAPI.whiteboard.createBoard('Board 1', null);
-          setBoards([{ id: b.id, name: b.name, workspaceId: b.workspaceId, createdAt: b.createdAt, updatedAt: b.updatedAt }]);
+          const b: Board = await window.electronAPI.whiteboard.createBoard(
+            "Board 1",
+            null,
+          );
+          setBoards([
+            {
+              id: b.id,
+              name: b.name,
+              workspaceId: b.workspaceId,
+              createdAt: b.createdAt,
+              updatedAt: b.updatedAt,
+            },
+          ]);
           setActiveBoardId(b.id);
         }
       })
@@ -116,7 +205,8 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
 
   useEffect(() => {
     if (!activeBoardId) return;
-    window.electronAPI.whiteboard.getBoard(activeBoardId)
+    window.electronAPI.whiteboard
+      .getBoard(activeBoardId)
       .then((b: Board | null) => {
         if (b) {
           setBoard(b);
@@ -130,29 +220,46 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
   }, [activeBoardId]);
 
   useEffect(() => {
-    const cleanupChanged = window.electronAPI.whiteboard.onBoardChanged((b: unknown) => {
-      const updated = b as Board;
-      if (updated.id === stateRef.current.activeBoardId) { setBoard(updated); refreshUndoRedo(); }
-      setBoards((prev) =>
-        prev.map((bs) =>
-          bs.id === updated.id
-            ? { id: updated.id, name: updated.name, workspaceId: updated.workspaceId, createdAt: updated.createdAt, updatedAt: updated.updatedAt }
-            : bs,
-        ),
-      );
-    });
-    const cleanupDeleted = window.electronAPI.whiteboard.onBoardDeleted((deletedId: string) => {
-      setBoards((prev) => prev.filter((bs) => bs.id !== deletedId));
-      if (deletedId === stateRef.current.activeBoardId) {
-        setActiveBoardId(null);
-        setBoard(null);
-      }
-    });
-    return () => { cleanupChanged(); cleanupDeleted(); };
+    const cleanupChanged = window.electronAPI.whiteboard.onBoardChanged(
+      (b: unknown) => {
+        const updated = b as Board;
+        if (updated.id === stateRef.current.activeBoardId) {
+          setBoard(updated);
+          refreshUndoRedo();
+        }
+        setBoards((prev) =>
+          prev.map((bs) =>
+            bs.id === updated.id
+              ? {
+                  id: updated.id,
+                  name: updated.name,
+                  workspaceId: updated.workspaceId,
+                  createdAt: updated.createdAt,
+                  updatedAt: updated.updatedAt,
+                }
+              : bs,
+          ),
+        );
+      },
+    );
+    const cleanupDeleted = window.electronAPI.whiteboard.onBoardDeleted(
+      (deletedId: string) => {
+        setBoards((prev) => prev.filter((bs) => bs.id !== deletedId));
+        if (deletedId === stateRef.current.activeBoardId) {
+          setActiveBoardId(null);
+          setBoard(null);
+        }
+      },
+    );
+    return () => {
+      cleanupChanged();
+      cleanupDeleted();
+    };
   }, []);
 
   useEffect(() => {
-    window.electronAPI.whiteboard.getMcpStatus()
+    window.electronAPI.whiteboard
+      .getMcpStatus()
       .then((s: { running: boolean }) => setMcpRunning(s.running))
       .catch(() => {});
   }, []);
@@ -166,7 +273,7 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         e.preventDefault();
         middleMousePanning.current = true;
         middleMouseLast.current = { x: e.clientX, y: e.clientY };
-        container.style.cursor = 'grabbing';
+        container.style.cursor = "grabbing";
       }
     };
     const onMouseMove = (e: MouseEvent) => {
@@ -174,34 +281,45 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
       const dx = e.clientX - middleMouseLast.current.x;
       const dy = e.clientY - middleMouseLast.current.y;
       middleMouseLast.current = { x: e.clientX, y: e.clientY };
-      const newPos = { x: stagePanRef.current.x + dx, y: stagePanRef.current.y + dy };
+      const newPos = {
+        x: stagePanRef.current.x + dx,
+        y: stagePanRef.current.y + dy,
+      };
       stagePanRef.current = newPos;
       const stage = stageRef.current;
-      if (stage) { stage.position(newPos); stage.batchDraw(); }
+      if (stage) {
+        stage.position(newPos);
+        stage.batchDraw();
+      }
     };
     const onMouseUp = (e: MouseEvent) => {
       if (e.button === 1) {
         middleMousePanning.current = false;
-        container.style.cursor = '';
+        container.style.cursor = "";
         const pos = stagePanRef.current;
         setStagePos({ ...pos });
         if (viewportTimerRef.current) clearTimeout(viewportTimerRef.current);
         viewportTimerRef.current = setTimeout(() => {
           const { activeBoardId, stageScale } = stateRef.current;
-          if (activeBoardId) window.electronAPI.whiteboard.updateBoard(activeBoardId, { viewport: { x: -pos.x, y: -pos.y, zoom: stageScale } });
+          if (activeBoardId)
+            window.electronAPI.whiteboard.updateBoard(activeBoardId, {
+              viewport: { x: -pos.x, y: -pos.y, zoom: stageScale },
+            });
         }, 3000);
       }
     };
-    const onContextMenu = (e: MouseEvent) => { if (e.button === 1) e.preventDefault(); };
-    container.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    container.addEventListener('contextmenu', onContextMenu);
+    const onContextMenu = (e: MouseEvent) => {
+      if (e.button === 1) e.preventDefault();
+    };
+    container.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    container.addEventListener("contextmenu", onContextMenu);
     return () => {
-      container.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      container.removeEventListener('contextmenu', onContextMenu);
+      container.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      container.removeEventListener("contextmenu", onContextMenu);
     };
   }, []);
 
@@ -220,21 +338,33 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      const { editingSticky, editingFrame, selectedIds, activeBoardId, board } = stateRef.current;
+      const { editingSticky, editingFrame, selectedIds, activeBoardId, board } =
+        stateRef.current;
 
-      if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey && !editingSticky && !editingFrame) {
+      if (
+        e.key === "z" &&
+        (e.ctrlKey || e.metaKey) &&
+        !e.shiftKey &&
+        !editingSticky &&
+        !editingFrame
+      ) {
         e.preventDefault();
         if (activeBoardId) window.electronAPI.whiteboard.undo(activeBoardId);
         return;
       }
-      if (((e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey) || (e.key === 'y' && (e.ctrlKey || e.metaKey))) && !editingSticky && !editingFrame) {
+      if (
+        ((e.key === "z" && (e.ctrlKey || e.metaKey) && e.shiftKey) ||
+          (e.key === "y" && (e.ctrlKey || e.metaKey))) &&
+        !editingSticky &&
+        !editingFrame
+      ) {
         e.preventDefault();
         if (activeBoardId) window.electronAPI.whiteboard.redo(activeBoardId);
         return;
       }
 
-      if (e.key === 'Escape') {
-        setTool('select');
+      if (e.key === "Escape") {
+        setTool("select");
         setConnectFrom(null);
         setConnectMousePos(null);
         setFrameDrawing(null);
@@ -246,29 +376,53 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         setMetadataEditor(null);
         setShowColorLegend(false);
         if (editingSticky && activeBoardId) {
-          window.electronAPI.whiteboard.updateSticky(activeBoardId, editingSticky, { text: stateRef.current.editText });
+          window.electronAPI.whiteboard.updateSticky(
+            activeBoardId,
+            editingSticky,
+            { text: stateRef.current.editText },
+          );
           setEditingSticky(null);
-          setEditText('');
+          setEditText("");
         }
         if (editingTextNode && activeBoardId) {
-          window.electronAPI.whiteboard.updateText(activeBoardId, editingTextNode, { text: stateRef.current.editTextNodeContent });
+          window.electronAPI.whiteboard.updateText(
+            activeBoardId,
+            editingTextNode,
+            { text: stateRef.current.editTextNodeContent },
+          );
           setEditingTextNode(null);
-          setEditTextNodeContent('');
+          setEditTextNodeContent("");
         }
         setSelectedIds(new Set());
         return;
       }
-      if (e.key === 'Delete' && selectedIds.size > 0 && activeBoardId && !editingSticky && !editingTextNode) {
+      if (
+        e.key === "Delete" &&
+        selectedIds.size > 0 &&
+        activeBoardId &&
+        !editingSticky &&
+        !editingTextNode
+      ) {
         for (const id of selectedIds) {
-          if (board?.stickies.some((s) => s.id === id)) window.electronAPI.whiteboard.deleteSticky(activeBoardId, id);
-          else if (board?.frames.some((f) => f.id === id)) window.electronAPI.whiteboard.deleteFrame(activeBoardId, id);
-          else if (board?.connections.some((c) => c.id === id)) window.electronAPI.whiteboard.disconnect(activeBoardId, id);
-          else if (board?.texts.some((t) => t.id === id)) window.electronAPI.whiteboard.deleteText(activeBoardId, id);
+          if (board?.stickies.some((s) => s.id === id))
+            window.electronAPI.whiteboard.deleteSticky(activeBoardId, id);
+          else if (board?.frames.some((f) => f.id === id))
+            window.electronAPI.whiteboard.deleteFrame(activeBoardId, id);
+          else if (board?.connections.some((c) => c.id === id))
+            window.electronAPI.whiteboard.disconnect(activeBoardId, id);
+          else if (board?.texts.some((t) => t.id === id))
+            window.electronAPI.whiteboard.deleteText(activeBoardId, id);
         }
         setSelectedIds(new Set());
         return;
       }
-      if (e.key === 'a' && (e.ctrlKey || e.metaKey) && !editingSticky && !editingFrame && !editingTextNode) {
+      if (
+        e.key === "a" &&
+        (e.ctrlKey || e.metaKey) &&
+        !editingSticky &&
+        !editingFrame &&
+        !editingTextNode
+      ) {
         e.preventDefault();
         if (board) {
           const all = new Set<string>();
@@ -279,8 +433,8 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         }
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, []);
 
   const persistViewport = useCallback((x: number, y: number, zoom: number) => {
@@ -288,137 +442,225 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     if (!activeBoardId) return;
     if (viewportTimerRef.current) clearTimeout(viewportTimerRef.current);
     viewportTimerRef.current = setTimeout(() => {
-      window.electronAPI.whiteboard.updateBoard(activeBoardId, { viewport: { x, y, zoom } });
+      window.electronAPI.whiteboard.updateBoard(activeBoardId, {
+        viewport: { x, y, zoom },
+      });
     }, 3000);
   }, []);
 
-  const screenToCanvas = useCallback((screenX: number, screenY: number) => ({
-    x: (screenX - stagePanRef.current.x) / stateRef.current.stageScale,
-    y: (screenY - stagePanRef.current.y) / stateRef.current.stageScale,
-  }), []);
+  const screenToCanvas = useCallback(
+    (screenX: number, screenY: number) => ({
+      x: (screenX - stagePanRef.current.x) / stateRef.current.stageScale,
+      y: (screenY - stagePanRef.current.y) / stateRef.current.stageScale,
+    }),
+    [],
+  );
 
-  const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
-    e.evt.preventDefault();
-    const stage = stageRef.current;
-    if (!stage) return;
+  const handleWheel = useCallback(
+    (e: Konva.KonvaEventObject<WheelEvent>) => {
+      e.evt.preventDefault();
+      const stage = stageRef.current;
+      if (!stage) return;
 
-    // ctrlKey=true is the browser/Electron convention for trackpad pinch-to-zoom.
-    // Plain scroll (two-finger swipe on trackpad, or mouse wheel) pans the board.
-    if (e.evt.ctrlKey) {
-      // Zoom around pointer
-      const oldScale = stateRef.current.stageScale;
-      const pos = stagePanRef.current;
-      const pointer = stage.getPointerPosition();
-      if (!pointer) return;
-      const dir = e.evt.deltaY < 0 ? 1 : -1;
-      const newScale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, dir > 0 ? oldScale * 1.08 : oldScale / 1.08));
-      const mpt = { x: (pointer.x - pos.x) / oldScale, y: (pointer.y - pos.y) / oldScale };
-      const newPos = { x: pointer.x - mpt.x * newScale, y: pointer.y - mpt.y * newScale };
+      // ctrlKey=true is the browser/Electron convention for trackpad pinch-to-zoom.
+      // Plain scroll (two-finger swipe on trackpad, or mouse wheel) pans the board.
+      if (e.evt.ctrlKey) {
+        // Zoom around pointer
+        const oldScale = stateRef.current.stageScale;
+        const pos = stagePanRef.current;
+        const pointer = stage.getPointerPosition();
+        if (!pointer) return;
+        const dir = e.evt.deltaY < 0 ? 1 : -1;
+        const newScale = Math.min(
+          MAX_ZOOM,
+          Math.max(MIN_ZOOM, dir > 0 ? oldScale * 1.08 : oldScale / 1.08),
+        );
+        const mpt = {
+          x: (pointer.x - pos.x) / oldScale,
+          y: (pointer.y - pos.y) / oldScale,
+        };
+        const newPos = {
+          x: pointer.x - mpt.x * newScale,
+          y: pointer.y - mpt.y * newScale,
+        };
+        stagePanRef.current = newPos;
+        setStageScale(newScale);
+        setStagePos(newPos);
+        persistViewport(-newPos.x, -newPos.y, newScale);
+      } else {
+        // Pan — works for both trackpad two-finger scroll and regular mouse wheel
+        const dx = -e.evt.deltaX;
+        const dy = -e.evt.deltaY;
+        const newPos = {
+          x: stagePanRef.current.x + dx,
+          y: stagePanRef.current.y + dy,
+        };
+        stagePanRef.current = newPos;
+        stage.position(newPos);
+        stage.batchDraw();
+        setStagePos({ ...newPos });
+        persistViewport(-newPos.x, -newPos.y, stateRef.current.stageScale);
+      }
+    },
+    [persistViewport],
+  );
+
+  const handleStageDragEnd = useCallback(
+    (e: Konva.KonvaEventObject<DragEvent>) => {
+      if (e.target !== stageRef.current) return;
+      const newPos = { x: e.target.x(), y: e.target.y() };
       stagePanRef.current = newPos;
-      setStageScale(newScale);
       setStagePos(newPos);
-      persistViewport(-newPos.x, -newPos.y, newScale);
-    } else {
-      // Pan — works for both trackpad two-finger scroll and regular mouse wheel
-      const dx = -e.evt.deltaX;
-      const dy = -e.evt.deltaY;
-      const newPos = { x: stagePanRef.current.x + dx, y: stagePanRef.current.y + dy };
-      stagePanRef.current = newPos;
-      stage.position(newPos);
-      stage.batchDraw();
-      setStagePos({ ...newPos });
       persistViewport(-newPos.x, -newPos.y, stateRef.current.stageScale);
-    }
-  }, [persistViewport]);
+    },
+    [persistViewport],
+  );
 
-  const handleStageDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
-    if (e.target !== stageRef.current) return;
-    const newPos = { x: e.target.x(), y: e.target.y() };
-    stagePanRef.current = newPos;
-    setStagePos(newPos);
-    persistViewport(-newPos.x, -newPos.y, stateRef.current.stageScale);
-  }, [persistViewport]);
-
-  const handleStageClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    const isStage = e.target === stageRef.current;
-    const { tool, activeBoardId, board, preCreationStickyColor, preCreationTextColor, preCreationTextSize } = stateRef.current;
-    setContextMenu(null); setFrameContextMenu(null); setConnectionContextMenu(null); setTextContextMenu(null);
-    if (tool === 'sticky' && activeBoardId) {
-      const clickedOnFrame = board?.frames.some((f) => f.id === e.target.id() || e.target.getParent()?.id() === f.id);
-      if (isStage || clickedOnFrame) {
-        const pos = screenToCanvas(e.evt.offsetX, e.evt.offsetY);
-        window.electronAPI.whiteboard.createSticky(activeBoardId, { x: pos.x, y: pos.y, color: preCreationStickyColor });
-        setTool('select');
+  const handleStageClick = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      const isStage = e.target === stageRef.current;
+      const {
+        tool,
+        activeBoardId,
+        board,
+        preCreationStickyColor,
+        preCreationTextColor,
+        preCreationTextSize,
+      } = stateRef.current;
+      setContextMenu(null);
+      setFrameContextMenu(null);
+      setConnectionContextMenu(null);
+      setTextContextMenu(null);
+      if (tool === "sticky" && activeBoardId) {
+        const clickedOnFrame = board?.frames.some(
+          (f) => f.id === e.target.id() || e.target.getParent()?.id() === f.id,
+        );
+        if (isStage || clickedOnFrame) {
+          const pos = screenToCanvas(e.evt.offsetX, e.evt.offsetY);
+          window.electronAPI.whiteboard.createSticky(activeBoardId, {
+            x: pos.x,
+            y: pos.y,
+            color: preCreationStickyColor,
+          });
+          setTool("select");
+        }
+        return;
       }
-      return;
-    }
-    if (tool === 'text' && activeBoardId) {
-      const clickedOnFrame = board?.frames.some((f) => f.id === e.target.id() || e.target.getParent()?.id() === f.id);
-      if (isStage || clickedOnFrame) {
-        const pos = screenToCanvas(e.evt.offsetX, e.evt.offsetY);
-        window.electronAPI.whiteboard.createText(activeBoardId, {
-          x: pos.x, y: pos.y, color: preCreationTextColor, fontSize: preCreationTextSize,
-        }).then((node: TextNode) => {
-          setEditingTextNode(node.id);
-          setEditTextNodeContent('');
-          setTool('select');
-        }).catch(() => {});
+      if (tool === "text" && activeBoardId) {
+        const clickedOnFrame = board?.frames.some(
+          (f) => f.id === e.target.id() || e.target.getParent()?.id() === f.id,
+        );
+        if (isStage || clickedOnFrame) {
+          const pos = screenToCanvas(e.evt.offsetX, e.evt.offsetY);
+          window.electronAPI.whiteboard
+            .createText(activeBoardId, {
+              x: pos.x,
+              y: pos.y,
+              color: preCreationTextColor,
+              fontSize: preCreationTextSize,
+            })
+            .then((node: TextNode) => {
+              setEditingTextNode(node.id);
+              setEditTextNodeContent("");
+              setTool("select");
+            })
+            .catch(() => {});
+        }
+        return;
       }
-      return;
-    }
-    if (!isStage) return;
-    if (tool === 'connect') { setConnectFrom(null); setConnectMousePos(null); return; }
-    if (tool === 'select') {
-      if (justDragSelected.current) { justDragSelected.current = false; }
-      else setSelectedIds(new Set());
-    }
-  }, [screenToCanvas]);
+      if (!isStage) return;
+      if (tool === "connect") {
+        setConnectFrom(null);
+        setConnectMousePos(null);
+        return;
+      }
+      if (tool === "select") {
+        if (justDragSelected.current) {
+          justDragSelected.current = false;
+        } else setSelectedIds(new Set());
+      }
+    },
+    [screenToCanvas],
+  );
 
-  const handleStageMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (e.evt.button !== 0) return;
-    const { tool } = stateRef.current;
-    if (tool === 'frame' && e.target === stageRef.current) {
-      const pos = screenToCanvas(e.evt.offsetX, e.evt.offsetY);
-      setFrameDrawing({ startX: pos.x, startY: pos.y, currentX: pos.x, currentY: pos.y });
-      return;
-    }
-    if (tool === 'select' && e.target === stageRef.current) {
-      const pos = screenToCanvas(e.evt.offsetX, e.evt.offsetY);
-      setSelectionRect({ startX: pos.x, startY: pos.y, currentX: pos.x, currentY: pos.y });
-    }
-  }, [screenToCanvas]);
+  const handleStageMouseDown = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (e.evt.button !== 0) return;
+      const { tool } = stateRef.current;
+      if (tool === "frame" && e.target === stageRef.current) {
+        const pos = screenToCanvas(e.evt.offsetX, e.evt.offsetY);
+        setFrameDrawing({
+          startX: pos.x,
+          startY: pos.y,
+          currentX: pos.x,
+          currentY: pos.y,
+        });
+        return;
+      }
+      if (tool === "select" && e.target === stageRef.current) {
+        const pos = screenToCanvas(e.evt.offsetX, e.evt.offsetY);
+        setSelectionRect({
+          startX: pos.x,
+          startY: pos.y,
+          currentX: pos.x,
+          currentY: pos.y,
+        });
+      }
+    },
+    [screenToCanvas],
+  );
 
-  const handleStageMouseMove = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    const { tool, connectFrom, frameDrawing, selectionRect } = stateRef.current;
-    if (tool === 'connect' && connectFrom) {
-      setConnectMousePos(screenToCanvas(e.evt.offsetX, e.evt.offsetY));
-    }
-    if (tool === 'frame' && frameDrawing) {
-      const pos = screenToCanvas(e.evt.offsetX, e.evt.offsetY);
-      setFrameDrawing((prev) => prev ? { ...prev, currentX: pos.x, currentY: pos.y } : null);
-    }
-    if (tool === 'select' && selectionRect) {
-      const pos = screenToCanvas(e.evt.offsetX, e.evt.offsetY);
-      setSelectionRect((prev) => prev ? { ...prev, currentX: pos.x, currentY: pos.y } : null);
-    }
-  }, [screenToCanvas]);
+  const handleStageMouseMove = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      const { tool, connectFrom, frameDrawing, selectionRect } =
+        stateRef.current;
+      if (tool === "connect" && connectFrom) {
+        setConnectMousePos(screenToCanvas(e.evt.offsetX, e.evt.offsetY));
+      }
+      if (tool === "frame" && frameDrawing) {
+        const pos = screenToCanvas(e.evt.offsetX, e.evt.offsetY);
+        setFrameDrawing((prev) =>
+          prev ? { ...prev, currentX: pos.x, currentY: pos.y } : null,
+        );
+      }
+      if (tool === "select" && selectionRect) {
+        const pos = screenToCanvas(e.evt.offsetX, e.evt.offsetY);
+        setSelectionRect((prev) =>
+          prev ? { ...prev, currentX: pos.x, currentY: pos.y } : null,
+        );
+      }
+    },
+    [screenToCanvas],
+  );
 
   const handleStageMouseUp = useCallback(() => {
-    const { tool, frameDrawing, selectionRect, activeBoardId, board, preCreationFrameColor } = stateRef.current;
-    if (tool === 'frame' && frameDrawing && activeBoardId) {
+    const {
+      tool,
+      frameDrawing,
+      selectionRect,
+      activeBoardId,
+      board,
+      preCreationFrameColor,
+    } = stateRef.current;
+    if (tool === "frame" && frameDrawing && activeBoardId) {
       const x = Math.min(frameDrawing.startX, frameDrawing.currentX);
       const y = Math.min(frameDrawing.startY, frameDrawing.currentY);
       const width = Math.abs(frameDrawing.currentX - frameDrawing.startX);
       const height = Math.abs(frameDrawing.currentY - frameDrawing.startY);
       if (width > 20 && height > 20) {
         window.electronAPI.whiteboard.createFrame(activeBoardId, {
-          label: `Frame ${(board?.frames.length ?? 0) + 1}`, x, y, width, height, color: preCreationFrameColor,
+          label: `Frame ${(board?.frames.length ?? 0) + 1}`,
+          x,
+          y,
+          width,
+          height,
+          color: preCreationFrameColor,
         });
       }
       setFrameDrawing(null);
-      setTool('select');
+      setTool("select");
     }
-    if (tool === 'select' && selectionRect && board) {
+    if (tool === "select" && selectionRect && board) {
       const rx = Math.min(selectionRect.startX, selectionRect.currentX);
       const ry = Math.min(selectionRect.startY, selectionRect.currentY);
       const rw = Math.abs(selectionRect.currentX - selectionRect.startX);
@@ -426,14 +668,32 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
       if (rw > 5 || rh > 5) {
         const newSelected = new Set<string>();
         for (const s of board.stickies) {
-          if (s.x + s.width > rx && s.x < rx + rw && s.y + s.height > ry && s.y < ry + rh) newSelected.add(s.id);
+          if (
+            s.x + s.width > rx &&
+            s.x < rx + rw &&
+            s.y + s.height > ry &&
+            s.y < ry + rh
+          )
+            newSelected.add(s.id);
         }
         for (const f of board.frames) {
-          if (f.x + f.width > rx && f.x < rx + rw && f.y + f.height > ry && f.y < ry + rh) newSelected.add(f.id);
+          if (
+            f.x + f.width > rx &&
+            f.x < rx + rw &&
+            f.y + f.height > ry &&
+            f.y < ry + rh
+          )
+            newSelected.add(f.id);
         }
         for (const t of board.texts) {
           const th = t.fontSize * 2;
-          if (t.x + t.width > rx && t.x < rx + rw && t.y + th > ry && t.y < ry + rh) newSelected.add(t.id);
+          if (
+            t.x + t.width > rx &&
+            t.x < rx + rw &&
+            t.y + th > ry &&
+            t.y < ry + rh
+          )
+            newSelected.add(t.id);
         }
         setSelectedIds(newSelected);
         justDragSelected.current = true;
@@ -447,361 +707,636 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     if (!activeBoardId || !board) return;
     const node = e.target;
     const id = node.id();
-    const scaleX = node.scaleX(); const scaleY = node.scaleY();
-    node.scaleX(1); node.scaleY(1);
+    const scaleX = node.scaleX();
+    const scaleY = node.scaleY();
+    node.scaleX(1);
+    node.scaleY(1);
     const sticky = board.stickies.find((s) => s.id === id);
     if (sticky) {
-      window.electronAPI.whiteboard.updateSticky(activeBoardId, id, { x: node.x(), y: node.y(), width: Math.max(80, sticky.width * scaleX), height: Math.max(60, sticky.height * scaleY) });
+      window.electronAPI.whiteboard.updateSticky(activeBoardId, id, {
+        x: node.x(),
+        y: node.y(),
+        width: Math.max(80, sticky.width * scaleX),
+        height: Math.max(60, sticky.height * scaleY),
+      });
       return;
     }
     const frame = board.frames.find((f) => f.id === id);
     if (frame) {
-      window.electronAPI.whiteboard.updateFrame(activeBoardId, id, { x: node.x(), y: node.y(), width: Math.max(80, frame.width * scaleX), height: Math.max(60, frame.height * scaleY) });
+      window.electronAPI.whiteboard.updateFrame(activeBoardId, id, {
+        x: node.x(),
+        y: node.y(),
+        width: Math.max(80, frame.width * scaleX),
+        height: Math.max(60, frame.height * scaleY),
+      });
       return;
     }
     const textNode = board.texts.find((t) => t.id === id);
     if (textNode) {
       // Only width changes — height is auto for text nodes
-      window.electronAPI.whiteboard.updateText(activeBoardId, id, { x: node.x(), y: node.y(), width: Math.max(80, textNode.width * scaleX) });
+      window.electronAPI.whiteboard.updateText(activeBoardId, id, {
+        x: node.x(),
+        y: node.y(),
+        width: Math.max(80, textNode.width * scaleX),
+      });
     }
   }, []);
 
-  const handleStickyDragStart = useCallback((stickyId: string, e: Konva.KonvaEventObject<DragEvent>) => {
-    const { selectedIds } = stateRef.current;
-    if (selectedIds.size > 1 && selectedIds.has(stickyId)) {
-      const stage = stageRef.current;
-      if (!stage) return;
-      dragStartPositions.current = {};
-      dragOrigin.current = { x: e.target.x(), y: e.target.y() };
-      for (const id of selectedIds) {
-        if (id === stickyId) continue;
-        const node = stage.findOne(`#${id}`);
-        if (node) dragStartPositions.current[id] = { x: node.x(), y: node.y() };
-      }
-    }
-  }, []);
-
-  const handleStickyDragMove = useCallback((stickyId: string, e: Konva.KonvaEventObject<DragEvent>) => {
-    const { selectedIds } = stateRef.current;
-    if (selectedIds.size > 1 && selectedIds.has(stickyId) && dragOrigin.current) {
-      const stage = stageRef.current;
-      if (!stage) return;
-      const dx = e.target.x() - dragOrigin.current.x;
-      const dy = e.target.y() - dragOrigin.current.y;
-      for (const [id, startPos] of Object.entries(dragStartPositions.current)) {
-        const node = stage.findOne(`#${id}`);
-        if (node) { node.x(startPos.x + dx); node.y(startPos.y + dy); }
-      }
-    }
-  }, []);
-
-  const handleStickyDragEnd = useCallback((stickyId: string, e: Konva.KonvaEventObject<DragEvent>) => {
-    const { activeBoardId, board, selectedIds } = stateRef.current;
-    if (!activeBoardId || !board) return;
-    if (selectedIds.size > 1 && selectedIds.has(stickyId) && dragOrigin.current) {
-      const dx = e.target.x() - dragOrigin.current.x;
-      const dy = e.target.y() - dragOrigin.current.y;
-      for (const id of selectedIds) {
-        const sticky = board.stickies.find((s) => s.id === id);
-        if (sticky) {
-          const newX = id === stickyId ? e.target.x() : sticky.x + dx;
-          const newY = id === stickyId ? e.target.y() : sticky.y + dy;
-          const cx = newX + sticky.width / 2; const cy = newY + sticky.height / 2;
-          let newFrameId: string | null = null;
-          for (const frame of board.frames) {
-            if (cx >= frame.x && cx <= frame.x + frame.width && cy >= frame.y && cy <= frame.y + frame.height) { newFrameId = frame.id; break; }
-          }
-          window.electronAPI.whiteboard.updateSticky(activeBoardId, id, { x: newX, y: newY, frameId: newFrameId });
+  const handleStickyDragStart = useCallback(
+    (stickyId: string, e: Konva.KonvaEventObject<DragEvent>) => {
+      const { selectedIds } = stateRef.current;
+      if (selectedIds.size > 1 && selectedIds.has(stickyId)) {
+        const stage = stageRef.current;
+        if (!stage) return;
+        dragStartPositions.current = {};
+        dragOrigin.current = { x: e.target.x(), y: e.target.y() };
+        for (const id of selectedIds) {
+          if (id === stickyId) continue;
+          const node = stage.findOne(`#${id}`);
+          if (node)
+            dragStartPositions.current[id] = { x: node.x(), y: node.y() };
         }
-        const frame = board.frames.find((f) => f.id === id);
-        if (frame) {
-          window.electronAPI.whiteboard.updateFrame(activeBoardId, id, { x: frame.x + dx, y: frame.y + dy });
-          for (const s of board.stickies) {
-            if (s.frameId === id && !selectedIds.has(s.id)) window.electronAPI.whiteboard.updateSticky(activeBoardId, s.id, { x: s.x + dx, y: s.y + dy });
+      }
+    },
+    [],
+  );
+
+  const handleStickyDragMove = useCallback(
+    (stickyId: string, e: Konva.KonvaEventObject<DragEvent>) => {
+      const { selectedIds } = stateRef.current;
+      if (
+        selectedIds.size > 1 &&
+        selectedIds.has(stickyId) &&
+        dragOrigin.current
+      ) {
+        const stage = stageRef.current;
+        if (!stage) return;
+        const dx = e.target.x() - dragOrigin.current.x;
+        const dy = e.target.y() - dragOrigin.current.y;
+        for (const [id, startPos] of Object.entries(
+          dragStartPositions.current,
+        )) {
+          const node = stage.findOne(`#${id}`);
+          if (node) {
+            node.x(startPos.x + dx);
+            node.y(startPos.y + dy);
           }
         }
-        const textNode = board.texts.find((t) => t.id === id);
-        if (textNode) {
-          window.electronAPI.whiteboard.updateText(activeBoardId, id, { x: textNode.x + dx, y: textNode.y + dy });
-        }
       }
-      dragOrigin.current = null; dragStartPositions.current = {};
-      return;
-    }
-    const newX = e.target.x(); const newY = e.target.y();
-    const stk = board.stickies.find((s) => s.id === stickyId);
-    const cx = newX + (stk?.width ?? 200) / 2; const cy = newY + (stk?.height ?? 150) / 2;
-    let newFrameId: string | null = null;
-    for (const frame of board.frames) {
-      if (cx >= frame.x && cx <= frame.x + frame.width && cy >= frame.y && cy <= frame.y + frame.height) { newFrameId = frame.id; break; }
-    }
-    window.electronAPI.whiteboard.updateSticky(activeBoardId, stickyId, { x: newX, y: newY, frameId: newFrameId });
-  }, []);
+    },
+    [],
+  );
 
-  const handleFrameDragStart = useCallback((frameId: string, e: Konva.KonvaEventObject<DragEvent>) => {
-    const { selectedIds } = stateRef.current;
-    frameDragStartPos.current = { [frameId]: { x: e.target.x(), y: e.target.y() } };
-    if (selectedIds.size > 1 && selectedIds.has(frameId)) {
-      const stage = stageRef.current;
-      if (!stage) return;
-      dragOrigin.current = { x: e.target.x(), y: e.target.y() };
-      dragStartPositions.current = {};
-      for (const id of selectedIds) {
-        if (id === frameId) continue;
-        const node = stage.findOne(`#${id}`);
-        if (node) dragStartPositions.current[id] = { x: node.x(), y: node.y() };
-      }
-    }
-  }, []);
-
-  const handleFrameDragMove = useCallback((frameId: string, e: Konva.KonvaEventObject<DragEvent>) => {
-    const { selectedIds } = stateRef.current;
-    if (selectedIds.size > 1 && selectedIds.has(frameId) && dragOrigin.current) {
-      const stage = stageRef.current;
-      if (!stage) return;
-      const dx = e.target.x() - dragOrigin.current.x;
-      const dy = e.target.y() - dragOrigin.current.y;
-      for (const [id, startPos] of Object.entries(dragStartPositions.current)) {
-        const node = stage.findOne(`#${id}`);
-        if (node) { node.x(startPos.x + dx); node.y(startPos.y + dy); }
-      }
-    }
-  }, []);
-
-  const handleFrameDragEnd = useCallback((frameId: string, e: Konva.KonvaEventObject<DragEvent>) => {
-    const { activeBoardId, board, selectedIds } = stateRef.current;
-    if (!activeBoardId || !board) return;
-    if (selectedIds.size > 1 && selectedIds.has(frameId) && dragOrigin.current) {
-      const dx = e.target.x() - dragOrigin.current.x;
-      const dy = e.target.y() - dragOrigin.current.y;
-      for (const id of selectedIds) {
-        const sticky = board.stickies.find((s) => s.id === id);
-        if (sticky) window.electronAPI.whiteboard.updateSticky(activeBoardId, id, { x: sticky.x + dx, y: sticky.y + dy });
-        const frame = board.frames.find((f) => f.id === id);
-        if (frame) {
-          const newX = id === frameId ? e.target.x() : frame.x + dx;
-          const newY = id === frameId ? e.target.y() : frame.y + dy;
-          window.electronAPI.whiteboard.updateFrame(activeBoardId, id, { x: newX, y: newY });
-          for (const s of board.stickies) {
-            if (s.frameId === id && !selectedIds.has(s.id)) window.electronAPI.whiteboard.updateSticky(activeBoardId, s.id, { x: s.x + dx, y: s.y + dy });
+  const handleStickyDragEnd = useCallback(
+    (stickyId: string, e: Konva.KonvaEventObject<DragEvent>) => {
+      const { activeBoardId, board, selectedIds } = stateRef.current;
+      if (!activeBoardId || !board) return;
+      if (
+        selectedIds.size > 1 &&
+        selectedIds.has(stickyId) &&
+        dragOrigin.current
+      ) {
+        const dx = e.target.x() - dragOrigin.current.x;
+        const dy = e.target.y() - dragOrigin.current.y;
+        for (const id of selectedIds) {
+          const sticky = board.stickies.find((s) => s.id === id);
+          if (sticky) {
+            const newX = id === stickyId ? e.target.x() : sticky.x + dx;
+            const newY = id === stickyId ? e.target.y() : sticky.y + dy;
+            const cx = newX + sticky.width / 2;
+            const cy = newY + sticky.height / 2;
+            let newFrameId: string | null = null;
+            for (const frame of board.frames) {
+              if (
+                cx >= frame.x &&
+                cx <= frame.x + frame.width &&
+                cy >= frame.y &&
+                cy <= frame.y + frame.height
+              ) {
+                newFrameId = frame.id;
+                break;
+              }
+            }
+            window.electronAPI.whiteboard.updateSticky(activeBoardId, id, {
+              x: newX,
+              y: newY,
+              frameId: newFrameId,
+            });
+          }
+          const frame = board.frames.find((f) => f.id === id);
+          if (frame) {
+            window.electronAPI.whiteboard.updateFrame(activeBoardId, id, {
+              x: frame.x + dx,
+              y: frame.y + dy,
+            });
+            for (const s of board.stickies) {
+              if (s.frameId === id && !selectedIds.has(s.id))
+                window.electronAPI.whiteboard.updateSticky(
+                  activeBoardId,
+                  s.id,
+                  { x: s.x + dx, y: s.y + dy },
+                );
+            }
+          }
+          const textNode = board.texts.find((t) => t.id === id);
+          if (textNode) {
+            window.electronAPI.whiteboard.updateText(activeBoardId, id, {
+              x: textNode.x + dx,
+              y: textNode.y + dy,
+            });
           }
         }
-        const textNode = board.texts.find((t) => t.id === id);
-        if (textNode) {
-          window.electronAPI.whiteboard.updateText(activeBoardId, id, { x: textNode.x + dx, y: textNode.y + dy });
+        dragOrigin.current = null;
+        dragStartPositions.current = {};
+        return;
+      }
+      const newX = e.target.x();
+      const newY = e.target.y();
+      const stk = board.stickies.find((s) => s.id === stickyId);
+      const cx = newX + (stk?.width ?? 200) / 2;
+      const cy = newY + (stk?.height ?? 150) / 2;
+      let newFrameId: string | null = null;
+      for (const frame of board.frames) {
+        if (
+          cx >= frame.x &&
+          cx <= frame.x + frame.width &&
+          cy >= frame.y &&
+          cy <= frame.y + frame.height
+        ) {
+          newFrameId = frame.id;
+          break;
         }
       }
-      dragOrigin.current = null; dragStartPositions.current = {};
-      return;
-    }
-    const startPos = frameDragStartPos.current[frameId];
-    if (!startPos) return;
-    const dx = e.target.x() - startPos.x; const dy = e.target.y() - startPos.y;
-    window.electronAPI.whiteboard.updateFrame(activeBoardId, frameId, { x: e.target.x(), y: e.target.y() });
-    for (const sticky of board.stickies) {
-      if (sticky.frameId === frameId) window.electronAPI.whiteboard.updateSticky(activeBoardId, sticky.id, { x: sticky.x + dx, y: sticky.y + dy });
-    }
-  }, []);
+      window.electronAPI.whiteboard.updateSticky(activeBoardId, stickyId, {
+        x: newX,
+        y: newY,
+        frameId: newFrameId,
+      });
+    },
+    [],
+  );
 
-  const handleTextNodeDragStart = useCallback((textId: string, e: Konva.KonvaEventObject<DragEvent>) => {
-    const { selectedIds } = stateRef.current;
-    if (selectedIds.size > 1 && selectedIds.has(textId)) {
-      const stage = stageRef.current;
-      if (!stage) return;
-      dragOrigin.current = { x: e.target.x(), y: e.target.y() };
-      dragStartPositions.current = {};
-      for (const id of selectedIds) {
-        if (id === textId) continue;
-        const node = stage.findOne(`#${id}`);
-        if (node) dragStartPositions.current[id] = { x: node.x(), y: node.y() };
+  const handleFrameDragStart = useCallback(
+    (frameId: string, e: Konva.KonvaEventObject<DragEvent>) => {
+      const { selectedIds } = stateRef.current;
+      frameDragStartPos.current = {
+        [frameId]: { x: e.target.x(), y: e.target.y() },
+      };
+      if (selectedIds.size > 1 && selectedIds.has(frameId)) {
+        const stage = stageRef.current;
+        if (!stage) return;
+        dragOrigin.current = { x: e.target.x(), y: e.target.y() };
+        dragStartPositions.current = {};
+        for (const id of selectedIds) {
+          if (id === frameId) continue;
+          const node = stage.findOne(`#${id}`);
+          if (node)
+            dragStartPositions.current[id] = { x: node.x(), y: node.y() };
+        }
       }
-    }
-  }, []);
+    },
+    [],
+  );
 
-  const handleTextNodeDragMove = useCallback((textId: string, e: Konva.KonvaEventObject<DragEvent>) => {
-    const { selectedIds } = stateRef.current;
-    if (selectedIds.size > 1 && selectedIds.has(textId) && dragOrigin.current) {
-      const stage = stageRef.current;
-      if (!stage) return;
-      const dx = e.target.x() - dragOrigin.current.x;
-      const dy = e.target.y() - dragOrigin.current.y;
-      for (const [id, startPos] of Object.entries(dragStartPositions.current)) {
-        const node = stage.findOne(`#${id}`);
-        if (node) { node.x(startPos.x + dx); node.y(startPos.y + dy); }
-      }
-    }
-  }, []);
-
-  const handleTextNodeDragEnd = useCallback((textId: string, e: Konva.KonvaEventObject<DragEvent>) => {
-    const { activeBoardId, board, selectedIds } = stateRef.current;
-    if (!activeBoardId || !board) return;
-    if (selectedIds.size > 1 && selectedIds.has(textId) && dragOrigin.current) {
-      const dx = e.target.x() - dragOrigin.current.x;
-      const dy = e.target.y() - dragOrigin.current.y;
-      for (const id of selectedIds) {
-        const sticky = board.stickies.find((s) => s.id === id);
-        if (sticky) window.electronAPI.whiteboard.updateSticky(activeBoardId, id, { x: sticky.x + dx, y: sticky.y + dy });
-        const frame = board.frames.find((f) => f.id === id);
-        if (frame) {
-          window.electronAPI.whiteboard.updateFrame(activeBoardId, id, { x: frame.x + dx, y: frame.y + dy });
-          for (const s of board.stickies) {
-            if (s.frameId === id && !selectedIds.has(s.id)) window.electronAPI.whiteboard.updateSticky(activeBoardId, s.id, { x: s.x + dx, y: s.y + dy });
+  const handleFrameDragMove = useCallback(
+    (frameId: string, e: Konva.KonvaEventObject<DragEvent>) => {
+      const { selectedIds } = stateRef.current;
+      if (
+        selectedIds.size > 1 &&
+        selectedIds.has(frameId) &&
+        dragOrigin.current
+      ) {
+        const stage = stageRef.current;
+        if (!stage) return;
+        const dx = e.target.x() - dragOrigin.current.x;
+        const dy = e.target.y() - dragOrigin.current.y;
+        for (const [id, startPos] of Object.entries(
+          dragStartPositions.current,
+        )) {
+          const node = stage.findOne(`#${id}`);
+          if (node) {
+            node.x(startPos.x + dx);
+            node.y(startPos.y + dy);
           }
         }
-        const textNode = board.texts.find((t) => t.id === id);
-        if (textNode) {
-          window.electronAPI.whiteboard.updateText(activeBoardId, id, { x: id === textId ? e.target.x() : textNode.x + dx, y: id === textId ? e.target.y() : textNode.y + dy });
+      }
+    },
+    [],
+  );
+
+  const handleFrameDragEnd = useCallback(
+    (frameId: string, e: Konva.KonvaEventObject<DragEvent>) => {
+      const { activeBoardId, board, selectedIds } = stateRef.current;
+      if (!activeBoardId || !board) return;
+      if (
+        selectedIds.size > 1 &&
+        selectedIds.has(frameId) &&
+        dragOrigin.current
+      ) {
+        const dx = e.target.x() - dragOrigin.current.x;
+        const dy = e.target.y() - dragOrigin.current.y;
+        for (const id of selectedIds) {
+          const sticky = board.stickies.find((s) => s.id === id);
+          if (sticky)
+            window.electronAPI.whiteboard.updateSticky(activeBoardId, id, {
+              x: sticky.x + dx,
+              y: sticky.y + dy,
+            });
+          const frame = board.frames.find((f) => f.id === id);
+          if (frame) {
+            const newX = id === frameId ? e.target.x() : frame.x + dx;
+            const newY = id === frameId ? e.target.y() : frame.y + dy;
+            window.electronAPI.whiteboard.updateFrame(activeBoardId, id, {
+              x: newX,
+              y: newY,
+            });
+            for (const s of board.stickies) {
+              if (s.frameId === id && !selectedIds.has(s.id))
+                window.electronAPI.whiteboard.updateSticky(
+                  activeBoardId,
+                  s.id,
+                  { x: s.x + dx, y: s.y + dy },
+                );
+            }
+          }
+          const textNode = board.texts.find((t) => t.id === id);
+          if (textNode) {
+            window.electronAPI.whiteboard.updateText(activeBoardId, id, {
+              x: textNode.x + dx,
+              y: textNode.y + dy,
+            });
+          }
+        }
+        dragOrigin.current = null;
+        dragStartPositions.current = {};
+        return;
+      }
+      const startPos = frameDragStartPos.current[frameId];
+      if (!startPos) return;
+      const dx = e.target.x() - startPos.x;
+      const dy = e.target.y() - startPos.y;
+      window.electronAPI.whiteboard.updateFrame(activeBoardId, frameId, {
+        x: e.target.x(),
+        y: e.target.y(),
+      });
+      for (const sticky of board.stickies) {
+        if (sticky.frameId === frameId)
+          window.electronAPI.whiteboard.updateSticky(activeBoardId, sticky.id, {
+            x: sticky.x + dx,
+            y: sticky.y + dy,
+          });
+      }
+    },
+    [],
+  );
+
+  const handleTextNodeDragStart = useCallback(
+    (textId: string, e: Konva.KonvaEventObject<DragEvent>) => {
+      const { selectedIds } = stateRef.current;
+      if (selectedIds.size > 1 && selectedIds.has(textId)) {
+        const stage = stageRef.current;
+        if (!stage) return;
+        dragOrigin.current = { x: e.target.x(), y: e.target.y() };
+        dragStartPositions.current = {};
+        for (const id of selectedIds) {
+          if (id === textId) continue;
+          const node = stage.findOne(`#${id}`);
+          if (node)
+            dragStartPositions.current[id] = { x: node.x(), y: node.y() };
         }
       }
-      dragOrigin.current = null; dragStartPositions.current = {};
-      return;
-    }
-    window.electronAPI.whiteboard.updateText(activeBoardId, textId, { x: e.target.x(), y: e.target.y() });
-  }, []);
+    },
+    [],
+  );
 
-  const handleTextNodeClick = useCallback((textId: string, e: Konva.KonvaEventObject<MouseEvent>) => {
-    const { tool, activeBoardId } = stateRef.current;
-    if (tool === 'delete' && activeBoardId) {
-      window.electronAPI.whiteboard.deleteText(activeBoardId, textId);
-    } else if (tool === 'select') {
-      if (e.evt.shiftKey) {
-        setSelectedIds((prev) => { const next = new Set(prev); if (next.has(textId)) next.delete(textId); else next.add(textId); return next; });
-      } else {
-        setSelectedIds(new Set([textId]));
+  const handleTextNodeDragMove = useCallback(
+    (textId: string, e: Konva.KonvaEventObject<DragEvent>) => {
+      const { selectedIds } = stateRef.current;
+      if (
+        selectedIds.size > 1 &&
+        selectedIds.has(textId) &&
+        dragOrigin.current
+      ) {
+        const stage = stageRef.current;
+        if (!stage) return;
+        const dx = e.target.x() - dragOrigin.current.x;
+        const dy = e.target.y() - dragOrigin.current.y;
+        for (const [id, startPos] of Object.entries(
+          dragStartPositions.current,
+        )) {
+          const node = stage.findOne(`#${id}`);
+          if (node) {
+            node.x(startPos.x + dx);
+            node.y(startPos.y + dy);
+          }
+        }
       }
-    }
-  }, []);
+    },
+    [],
+  );
+
+  const handleTextNodeDragEnd = useCallback(
+    (textId: string, e: Konva.KonvaEventObject<DragEvent>) => {
+      const { activeBoardId, board, selectedIds } = stateRef.current;
+      if (!activeBoardId || !board) return;
+      if (
+        selectedIds.size > 1 &&
+        selectedIds.has(textId) &&
+        dragOrigin.current
+      ) {
+        const dx = e.target.x() - dragOrigin.current.x;
+        const dy = e.target.y() - dragOrigin.current.y;
+        for (const id of selectedIds) {
+          const sticky = board.stickies.find((s) => s.id === id);
+          if (sticky)
+            window.electronAPI.whiteboard.updateSticky(activeBoardId, id, {
+              x: sticky.x + dx,
+              y: sticky.y + dy,
+            });
+          const frame = board.frames.find((f) => f.id === id);
+          if (frame) {
+            window.electronAPI.whiteboard.updateFrame(activeBoardId, id, {
+              x: frame.x + dx,
+              y: frame.y + dy,
+            });
+            for (const s of board.stickies) {
+              if (s.frameId === id && !selectedIds.has(s.id))
+                window.electronAPI.whiteboard.updateSticky(
+                  activeBoardId,
+                  s.id,
+                  { x: s.x + dx, y: s.y + dy },
+                );
+            }
+          }
+          const textNode = board.texts.find((t) => t.id === id);
+          if (textNode) {
+            window.electronAPI.whiteboard.updateText(activeBoardId, id, {
+              x: id === textId ? e.target.x() : textNode.x + dx,
+              y: id === textId ? e.target.y() : textNode.y + dy,
+            });
+          }
+        }
+        dragOrigin.current = null;
+        dragStartPositions.current = {};
+        return;
+      }
+      window.electronAPI.whiteboard.updateText(activeBoardId, textId, {
+        x: e.target.x(),
+        y: e.target.y(),
+      });
+    },
+    [],
+  );
+
+  const handleTextNodeClick = useCallback(
+    (textId: string, e: Konva.KonvaEventObject<MouseEvent>) => {
+      const { tool, activeBoardId } = stateRef.current;
+      if (tool === "delete" && activeBoardId) {
+        window.electronAPI.whiteboard.deleteText(activeBoardId, textId);
+      } else if (tool === "select") {
+        if (e.evt.shiftKey) {
+          setSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(textId)) next.delete(textId);
+            else next.add(textId);
+            return next;
+          });
+        } else {
+          setSelectedIds(new Set([textId]));
+        }
+      }
+    },
+    [],
+  );
 
   const handleTextNodeDblClick = useCallback((textId: string) => {
     const node = stateRef.current.board?.texts.find((t) => t.id === textId);
-    if (node) { setEditingTextNode(node.id); setEditTextNodeContent(node.text); }
+    if (node) {
+      setEditingTextNode(node.id);
+      setEditTextNodeContent(node.text);
+    }
   }, []);
 
-  const handleTextNodeContextMenu = useCallback((textId: string, e: Konva.KonvaEventObject<PointerEvent>) => {
-    e.evt.preventDefault();
-    setContextMenu(null); setFrameContextMenu(null); setConnectionContextMenu(null);
-    setTextContextMenu({ textId, x: e.evt.clientX, y: e.evt.clientY });
-  }, []);
+  const handleTextNodeContextMenu = useCallback(
+    (textId: string, e: Konva.KonvaEventObject<PointerEvent>) => {
+      e.evt.preventDefault();
+      setContextMenu(null);
+      setFrameContextMenu(null);
+      setConnectionContextMenu(null);
+      setTextContextMenu({ textId, x: e.evt.clientX, y: e.evt.clientY });
+    },
+    [],
+  );
 
   const finishTextEditing = useCallback(() => {
-    const { editingTextNode, activeBoardId, editTextNodeContent } = stateRef.current;
-    if (editingTextNode && activeBoardId) window.electronAPI.whiteboard.updateText(activeBoardId, editingTextNode, { text: editTextNodeContent });
-    setEditingTextNode(null); setEditTextNodeContent('');
+    const { editingTextNode, activeBoardId, editTextNodeContent } =
+      stateRef.current;
+    if (editingTextNode && activeBoardId)
+      window.electronAPI.whiteboard.updateText(activeBoardId, editingTextNode, {
+        text: editTextNodeContent,
+      });
+    setEditingTextNode(null);
+    setEditTextNodeContent("");
   }, []);
 
   const handleTextColorChange = useCallback((textId: string, color: string) => {
     const { activeBoardId } = stateRef.current;
-    if (activeBoardId) window.electronAPI.whiteboard.updateText(activeBoardId, textId, { color });
+    if (activeBoardId)
+      window.electronAPI.whiteboard.updateText(activeBoardId, textId, {
+        color,
+      });
     setTextContextMenu(null);
   }, []);
 
-  const handleTextSizeChange = useCallback((textId: string, fontSize: number) => {
-    const { activeBoardId } = stateRef.current;
-    if (activeBoardId) window.electronAPI.whiteboard.updateText(activeBoardId, textId, { fontSize });
-    setTextContextMenu(null);
-  }, []);
+  const handleTextSizeChange = useCallback(
+    (textId: string, fontSize: number) => {
+      const { activeBoardId } = stateRef.current;
+      if (activeBoardId)
+        window.electronAPI.whiteboard.updateText(activeBoardId, textId, {
+          fontSize,
+        });
+      setTextContextMenu(null);
+    },
+    [],
+  );
 
   const handleTextBoldToggle = useCallback((textId: string) => {
     const { activeBoardId, board } = stateRef.current;
     if (!activeBoardId || !board) return;
     const node = board.texts.find((t) => t.id === textId);
-    if (node) window.electronAPI.whiteboard.updateText(activeBoardId, textId, { bold: !node.bold });
+    if (node)
+      window.electronAPI.whiteboard.updateText(activeBoardId, textId, {
+        bold: !node.bold,
+      });
   }, []);
 
   const handleTextItalicToggle = useCallback((textId: string) => {
     const { activeBoardId, board } = stateRef.current;
     if (!activeBoardId || !board) return;
     const node = board.texts.find((t) => t.id === textId);
-    if (node) window.electronAPI.whiteboard.updateText(activeBoardId, textId, { italic: !node.italic });
+    if (node)
+      window.electronAPI.whiteboard.updateText(activeBoardId, textId, {
+        italic: !node.italic,
+      });
   }, []);
 
   const handleTextDelete = useCallback((textId: string) => {
     const { activeBoardId } = stateRef.current;
-    if (activeBoardId) window.electronAPI.whiteboard.deleteText(activeBoardId, textId);
+    if (activeBoardId)
+      window.electronAPI.whiteboard.deleteText(activeBoardId, textId);
     setTextContextMenu(null);
   }, []);
 
-  const handleStickyClick = useCallback((stickyId: string, e: Konva.KonvaEventObject<MouseEvent>) => {
-    const { tool, activeBoardId, connectFrom } = stateRef.current;
-    if (tool === 'connect' && activeBoardId) {
-      if (!connectFrom) { setConnectFrom(stickyId); }
-      else if (connectFrom !== stickyId) {
-        window.electronAPI.whiteboard.connect(activeBoardId, connectFrom, stickyId);
-        setConnectFrom(null); setConnectMousePos(null);
+  const handleStickyClick = useCallback(
+    (stickyId: string, e: Konva.KonvaEventObject<MouseEvent>) => {
+      const { tool, activeBoardId, connectFrom } = stateRef.current;
+      if (tool === "connect" && activeBoardId) {
+        if (!connectFrom) {
+          setConnectFrom(stickyId);
+        } else if (connectFrom !== stickyId) {
+          window.electronAPI.whiteboard.connect(
+            activeBoardId,
+            connectFrom,
+            stickyId,
+          );
+          setConnectFrom(null);
+          setConnectMousePos(null);
+        }
+      } else if (tool === "delete" && activeBoardId) {
+        window.electronAPI.whiteboard.deleteSticky(activeBoardId, stickyId);
+      } else if (tool === "select") {
+        if (e.evt.shiftKey) {
+          setSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(stickyId)) next.delete(stickyId);
+            else next.add(stickyId);
+            return next;
+          });
+        } else {
+          setSelectedIds(new Set([stickyId]));
+        }
       }
-    } else if (tool === 'delete' && activeBoardId) {
-      window.electronAPI.whiteboard.deleteSticky(activeBoardId, stickyId);
-    } else if (tool === 'select') {
-      if (e.evt.shiftKey) {
-        setSelectedIds((prev) => { const next = new Set(prev); if (next.has(stickyId)) next.delete(stickyId); else next.add(stickyId); return next; });
-      } else {
-        setSelectedIds(new Set([stickyId]));
-      }
-    }
-  }, []);
+    },
+    [],
+  );
 
   const handleStickyDblClick = useCallback((stickyId: string) => {
-    const sticky = stateRef.current.board?.stickies.find((s) => s.id === stickyId);
-    if (sticky) { setEditingSticky(sticky.id); setEditText(sticky.text); }
-  }, []);
-
-  const handleStickyContextMenu = useCallback((stickyId: string, e: Konva.KonvaEventObject<PointerEvent>) => {
-    e.evt.preventDefault();
-    setFrameContextMenu(null);
-    setContextMenu({ stickyId, x: e.evt.clientX, y: e.evt.clientY });
-  }, []);
-
-  const handleFrameClick = useCallback((frameId: string, e: Konva.KonvaEventObject<MouseEvent>) => {
-    const { tool, activeBoardId } = stateRef.current;
-    if (tool === 'delete' && activeBoardId) { window.electronAPI.whiteboard.deleteFrame(activeBoardId, frameId); }
-    else if (tool === 'select') {
-      if (e.evt.shiftKey) {
-        setSelectedIds((prev) => { const next = new Set(prev); if (next.has(frameId)) next.delete(frameId); else next.add(frameId); return next; });
-      } else {
-        setSelectedIds(new Set([frameId]));
-      }
+    const sticky = stateRef.current.board?.stickies.find(
+      (s) => s.id === stickyId,
+    );
+    if (sticky) {
+      setEditingSticky(sticky.id);
+      setEditText(sticky.text);
     }
   }, []);
+
+  const handleStickyContextMenu = useCallback(
+    (stickyId: string, e: Konva.KonvaEventObject<PointerEvent>) => {
+      e.evt.preventDefault();
+      setFrameContextMenu(null);
+      setContextMenu({ stickyId, x: e.evt.clientX, y: e.evt.clientY });
+    },
+    [],
+  );
+
+  const handleFrameClick = useCallback(
+    (frameId: string, e: Konva.KonvaEventObject<MouseEvent>) => {
+      const { tool, activeBoardId } = stateRef.current;
+      if (tool === "delete" && activeBoardId) {
+        window.electronAPI.whiteboard.deleteFrame(activeBoardId, frameId);
+      } else if (tool === "select") {
+        if (e.evt.shiftKey) {
+          setSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(frameId)) next.delete(frameId);
+            else next.add(frameId);
+            return next;
+          });
+        } else {
+          setSelectedIds(new Set([frameId]));
+        }
+      }
+    },
+    [],
+  );
 
   const handleFrameDblClick = useCallback((frameId: string) => {
     const frame = stateRef.current.board?.frames.find((f) => f.id === frameId);
-    if (frame) { setEditingFrame(frameId); setEditFrameLabel(frame.label); }
+    if (frame) {
+      setEditingFrame(frameId);
+      setEditFrameLabel(frame.label);
+    }
   }, []);
 
-  const handleFrameContextMenu = useCallback((frameId: string, e: Konva.KonvaEventObject<PointerEvent>) => {
-    e.evt.preventDefault();
-    setContextMenu(null);
-    setFrameContextMenu({ frameId, x: e.evt.clientX, y: e.evt.clientY });
-  }, []);
+  const handleFrameContextMenu = useCallback(
+    (frameId: string, e: Konva.KonvaEventObject<PointerEvent>) => {
+      e.evt.preventDefault();
+      setContextMenu(null);
+      setFrameContextMenu({ frameId, x: e.evt.clientX, y: e.evt.clientY });
+    },
+    [],
+  );
 
   const handleConnectionClick = useCallback((connectionId: string) => {
     const { tool, activeBoardId } = stateRef.current;
-    if (tool === 'delete' && activeBoardId) window.electronAPI.whiteboard.disconnect(activeBoardId, connectionId);
+    if (tool === "delete" && activeBoardId)
+      window.electronAPI.whiteboard.disconnect(activeBoardId, connectionId);
   }, []);
 
-  const handleConnectionContextMenu = useCallback((connectionId: string, label: string | null, e: Konva.KonvaEventObject<PointerEvent>) => {
-    e.evt.preventDefault();
-    setContextMenu(null); setFrameContextMenu(null);
-    setConnectionContextMenu({ connectionId, x: e.evt.clientX, y: e.evt.clientY, label: label ?? '' });
-  }, []);
+  const handleConnectionContextMenu = useCallback(
+    (
+      connectionId: string,
+      label: string | null,
+      e: Konva.KonvaEventObject<PointerEvent>,
+    ) => {
+      e.evt.preventDefault();
+      setContextMenu(null);
+      setFrameContextMenu(null);
+      setConnectionContextMenu({
+        connectionId,
+        x: e.evt.clientX,
+        y: e.evt.clientY,
+        label: label ?? "",
+      });
+    },
+    [],
+  );
 
   const finishEditing = useCallback(() => {
     const { editingSticky, activeBoardId, editText } = stateRef.current;
-    if (editingSticky && activeBoardId) window.electronAPI.whiteboard.updateSticky(activeBoardId, editingSticky, { text: editText });
-    setEditingSticky(null); setEditText('');
+    if (editingSticky && activeBoardId)
+      window.electronAPI.whiteboard.updateSticky(activeBoardId, editingSticky, {
+        text: editText,
+      });
+    setEditingSticky(null);
+    setEditText("");
   }, []);
 
   const finishFrameEditing = useCallback(() => {
     const { editingFrame, activeBoardId, editFrameLabel } = stateRef.current;
-    if (editingFrame && activeBoardId && editFrameLabel.trim()) window.electronAPI.whiteboard.updateFrame(activeBoardId, editingFrame, { label: editFrameLabel.trim() });
-    setEditingFrame(null); setEditFrameLabel('');
+    if (editingFrame && activeBoardId && editFrameLabel.trim())
+      window.electronAPI.whiteboard.updateFrame(activeBoardId, editingFrame, {
+        label: editFrameLabel.trim(),
+      });
+    setEditingFrame(null);
+    setEditFrameLabel("");
   }, []);
 
   const handleCreateBoard = useCallback(() => {
     const { boards } = stateRef.current;
-    window.electronAPI.whiteboard.createBoard(`Board ${boards.length + 1}`, null)
+    window.electronAPI.whiteboard
+      .createBoard(`Board ${boards.length + 1}`, null)
       .then((b: Board) => {
-        setBoards((prev) => [...prev, { id: b.id, name: b.name, workspaceId: b.workspaceId, createdAt: b.createdAt, updatedAt: b.updatedAt }]);
+        setBoards((prev) => [
+          ...prev,
+          {
+            id: b.id,
+            name: b.name,
+            workspaceId: b.workspaceId,
+            createdAt: b.createdAt,
+            updatedAt: b.updatedAt,
+          },
+        ]);
         setActiveBoardId(b.id);
         setBoardMenuOpen(false);
       })
@@ -821,38 +1356,60 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
 
   const handleRenameBoard = useCallback((boardId: string, name: string) => {
     window.electronAPI.whiteboard.updateBoard(boardId, { name });
-    setBoards((prev) => prev.map((b) => (b.id === boardId ? { ...b, name } : b)));
+    setBoards((prev) =>
+      prev.map((b) => (b.id === boardId ? { ...b, name } : b)),
+    );
     setRenamingBoardId(null);
   }, []);
 
-  const handleExportBoard = useCallback(async (boardId: string, boardName: string) => {
-    const data = await window.electronAPI.whiteboard.getBoard(boardId);
-    if (!data) return;
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${boardName.replace(/[^a-z0-9]/gi, '_')}.board.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, []);
+  const handleExportBoard = useCallback(
+    async (boardId: string, boardName: string) => {
+      const data = await window.electronAPI.whiteboard.getBoard(boardId);
+      if (!data) return;
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${boardName.replace(/[^a-z0-9]/gi, "_")}.board.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    [],
+  );
 
-  const handleImportBoard = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      try {
-        const data = JSON.parse(ev.target?.result as string);
-        const b: Board = await window.electronAPI.whiteboard.importBoard(data);
-        setBoards((prev) => [...prev, { id: b.id, name: b.name, workspaceId: b.workspaceId, createdAt: b.createdAt, updatedAt: b.updatedAt }]);
-        setActiveBoardId(b.id);
-        setBoardMenuOpen(false);
-      } catch { /* ignore malformed */ }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  }, []);
+  const handleImportBoard = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        try {
+          const data = JSON.parse(ev.target?.result as string);
+          const b: Board =
+            await window.electronAPI.whiteboard.importBoard(data);
+          setBoards((prev) => [
+            ...prev,
+            {
+              id: b.id,
+              name: b.name,
+              workspaceId: b.workspaceId,
+              createdAt: b.createdAt,
+              updatedAt: b.updatedAt,
+            },
+          ]);
+          setActiveBoardId(b.id);
+          setBoardMenuOpen(false);
+        } catch {
+          /* ignore malformed */
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = "";
+    },
+    [],
+  );
 
   const handleToggleMcp = useCallback(async () => {
     if (mcpRunning) {
@@ -866,16 +1423,26 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
   }, [mcpRunning, settings]);
 
   const handleToolChange = useCallback((newTool: Tool) => {
-    setTool(newTool); setConnectFrom(null); setConnectMousePos(null);
+    setTool(newTool);
+    setConnectFrom(null);
+    setConnectMousePos(null);
   }, []);
 
   const zoomIn = useCallback(() => {
     const { stageScale, stageSize } = stateRef.current;
     const newScale = Math.min(MAX_ZOOM, stageScale * 1.3);
     const center = { x: stageSize.width / 2, y: stageSize.height / 2 };
-    const mpt = { x: (center.x - stagePanRef.current.x) / stageScale, y: (center.y - stagePanRef.current.y) / stageScale };
-    const newPos = { x: center.x - mpt.x * newScale, y: center.y - mpt.y * newScale };
-    stagePanRef.current = newPos; setStageScale(newScale); setStagePos(newPos);
+    const mpt = {
+      x: (center.x - stagePanRef.current.x) / stageScale,
+      y: (center.y - stagePanRef.current.y) / stageScale,
+    };
+    const newPos = {
+      x: center.x - mpt.x * newScale,
+      y: center.y - mpt.y * newScale,
+    };
+    stagePanRef.current = newPos;
+    setStageScale(newScale);
+    setStagePos(newPos);
     persistViewport(-newPos.x, -newPos.y, newScale);
   }, [persistViewport]);
 
@@ -883,39 +1450,83 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     const { stageScale, stageSize } = stateRef.current;
     const newScale = Math.max(MIN_ZOOM, stageScale / 1.3);
     const center = { x: stageSize.width / 2, y: stageSize.height / 2 };
-    const mpt = { x: (center.x - stagePanRef.current.x) / stageScale, y: (center.y - stagePanRef.current.y) / stageScale };
-    const newPos = { x: center.x - mpt.x * newScale, y: center.y - mpt.y * newScale };
-    stagePanRef.current = newPos; setStageScale(newScale); setStagePos(newPos);
+    const mpt = {
+      x: (center.x - stagePanRef.current.x) / stageScale,
+      y: (center.y - stagePanRef.current.y) / stageScale,
+    };
+    const newPos = {
+      x: center.x - mpt.x * newScale,
+      y: center.y - mpt.y * newScale,
+    };
+    stagePanRef.current = newPos;
+    setStageScale(newScale);
+    setStagePos(newPos);
     persistViewport(-newPos.x, -newPos.y, newScale);
   }, [persistViewport]);
 
   const fitToScreen = useCallback(() => {
     const { board, stageSize } = stateRef.current;
-    if (!board || (board.stickies.length === 0 && board.frames.length === 0 && board.texts.length === 0)) {
-      stagePanRef.current = { x: 0, y: 0 }; setStagePos({ x: 0, y: 0 }); setStageScale(1); persistViewport(0, 0, 1); return;
+    if (
+      !board ||
+      (board.stickies.length === 0 &&
+        board.frames.length === 0 &&
+        board.texts.length === 0)
+    ) {
+      stagePanRef.current = { x: 0, y: 0 };
+      setStagePos({ x: 0, y: 0 });
+      setStageScale(1);
+      persistViewport(0, 0, 1);
+      return;
     }
     const items = [
-      ...board.stickies.map((s) => ({ x: s.x, y: s.y, w: s.width, h: s.height })),
+      ...board.stickies.map((s) => ({
+        x: s.x,
+        y: s.y,
+        w: s.width,
+        h: s.height,
+      })),
       ...board.frames.map((f) => ({ x: f.x, y: f.y, w: f.width, h: f.height })),
-      ...board.texts.map((t) => ({ x: t.x, y: t.y, w: t.width, h: t.fontSize * 2 })),
+      ...board.texts.map((t) => ({
+        x: t.x,
+        y: t.y,
+        w: t.width,
+        h: t.fontSize * 2,
+      })),
     ];
-    const minX = Math.min(...items.map((i) => i.x)); const minY = Math.min(...items.map((i) => i.y));
-    const maxX = Math.max(...items.map((i) => i.x + i.w)); const maxY = Math.max(...items.map((i) => i.y + i.h));
-    const cW = maxX - minX + 100; const cH = maxY - minY + 100;
+    const minX = Math.min(...items.map((i) => i.x));
+    const minY = Math.min(...items.map((i) => i.y));
+    const maxX = Math.max(...items.map((i) => i.x + i.w));
+    const maxY = Math.max(...items.map((i) => i.y + i.h));
+    const cW = maxX - minX + 100;
+    const cH = maxY - minY + 100;
     const newScale = Math.min(stageSize.width / cW, stageSize.height / cH, 2);
-    const newPos = { x: (stageSize.width - cW * newScale) / 2 - minX * newScale + 50 * newScale, y: (stageSize.height - cH * newScale) / 2 - minY * newScale + 50 * newScale };
-    stagePanRef.current = newPos; setStageScale(newScale); setStagePos(newPos);
+    const newPos = {
+      x:
+        (stageSize.width - cW * newScale) / 2 - minX * newScale + 50 * newScale,
+      y:
+        (stageSize.height - cH * newScale) / 2 -
+        minY * newScale +
+        50 * newScale,
+    };
+    stagePanRef.current = newPos;
+    setStageScale(newScale);
+    setStagePos(newPos);
     persistViewport(-newPos.x, -newPos.y, newScale);
   }, [persistViewport]);
 
   const refreshUndoRedo = useCallback(async () => {
     const { activeBoardId } = stateRef.current;
-    if (!activeBoardId) { setCanUndo(false); setCanRedo(false); return; }
+    if (!activeBoardId) {
+      setCanUndo(false);
+      setCanRedo(false);
+      return;
+    }
     const [u, r] = await Promise.all([
       window.electronAPI.whiteboard.canUndo(activeBoardId),
       window.electronAPI.whiteboard.canRedo(activeBoardId),
     ]);
-    setCanUndo(u); setCanRedo(r);
+    setCanUndo(u);
+    setCanRedo(r);
   }, []);
 
   const handleUndo = useCallback(async () => {
@@ -932,96 +1543,158 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     refreshUndoRedo();
   }, [refreshUndoRedo]);
 
-  const handleStickyColorChange = useCallback((stickyId: string, color: string) => {
-    const { activeBoardId } = stateRef.current;
-    if (activeBoardId) window.electronAPI.whiteboard.updateSticky(activeBoardId, stickyId, { color: color as StickyColor });
-    setContextMenu(null);
-  }, []);
+  const handleStickyColorChange = useCallback(
+    (stickyId: string, color: string) => {
+      const { activeBoardId } = stateRef.current;
+      if (activeBoardId)
+        window.electronAPI.whiteboard.updateSticky(activeBoardId, stickyId, {
+          color: color as StickyColor,
+        });
+      setContextMenu(null);
+    },
+    [],
+  );
   const handleStickyDelete = useCallback((stickyId: string) => {
     const { activeBoardId } = stateRef.current;
-    if (activeBoardId) window.electronAPI.whiteboard.deleteSticky(activeBoardId, stickyId);
+    if (activeBoardId)
+      window.electronAPI.whiteboard.deleteSticky(activeBoardId, stickyId);
     setContextMenu(null);
   }, []);
-  const handleStickyEditMetadata = useCallback((stickyId: string) => { setMetadataEditor(stickyId); setContextMenu(null); }, []);
-  const handleFrameColorChange = useCallback((frameId: string, color: string) => {
-    const { activeBoardId } = stateRef.current;
-    if (activeBoardId) window.electronAPI.whiteboard.updateFrame(activeBoardId, frameId, { color });
-    setFrameContextMenu(null);
+  const handleStickyEditMetadata = useCallback((stickyId: string) => {
+    setMetadataEditor(stickyId);
+    setContextMenu(null);
   }, []);
+  const handleFrameColorChange = useCallback(
+    (frameId: string, color: string) => {
+      const { activeBoardId } = stateRef.current;
+      if (activeBoardId)
+        window.electronAPI.whiteboard.updateFrame(activeBoardId, frameId, {
+          color,
+        });
+      setFrameContextMenu(null);
+    },
+    [],
+  );
   const handleFrameRename = useCallback((frameId: string) => {
     const frame = stateRef.current.board?.frames.find((f) => f.id === frameId);
-    if (frame) { setEditingFrame(frameId); setEditFrameLabel(frame.label); }
+    if (frame) {
+      setEditingFrame(frameId);
+      setEditFrameLabel(frame.label);
+    }
     setFrameContextMenu(null);
   }, []);
   const handleFrameDelete = useCallback((frameId: string) => {
     const { activeBoardId } = stateRef.current;
-    if (activeBoardId) window.electronAPI.whiteboard.deleteFrame(activeBoardId, frameId);
+    if (activeBoardId)
+      window.electronAPI.whiteboard.deleteFrame(activeBoardId, frameId);
     setFrameContextMenu(null);
   }, []);
   const handleConnectionLabelChange = useCallback((label: string) => {
-    setConnectionContextMenu((prev) => prev ? { ...prev, label } : null);
+    setConnectionContextMenu((prev) => (prev ? { ...prev, label } : null));
   }, []);
-  const handleConnectionLabelSave = useCallback((connectionId: string, label: string) => {
-    const { activeBoardId } = stateRef.current;
-    if (activeBoardId) window.electronAPI.whiteboard.updateConnection(activeBoardId, connectionId, { label: label || null });
-    setConnectionContextMenu(null);
-  }, []);
+  const handleConnectionLabelSave = useCallback(
+    (connectionId: string, label: string) => {
+      const { activeBoardId } = stateRef.current;
+      if (activeBoardId)
+        window.electronAPI.whiteboard.updateConnection(
+          activeBoardId,
+          connectionId,
+          { label: label || null },
+        );
+      setConnectionContextMenu(null);
+    },
+    [],
+  );
   const handleConnectionDelete = useCallback((connectionId: string) => {
     const { activeBoardId } = stateRef.current;
-    if (activeBoardId) window.electronAPI.whiteboard.disconnect(activeBoardId, connectionId);
+    if (activeBoardId)
+      window.electronAPI.whiteboard.disconnect(activeBoardId, connectionId);
     setConnectionContextMenu(null);
   }, []);
-  const handleMetadataKeyChange = useCallback((stickyId: string, index: number, newKey: string) => {
-    const { activeBoardId, board } = stateRef.current;
-    if (!activeBoardId || !board) return;
-    const sticky = board.stickies.find((s) => s.id === stickyId);
-    if (!sticky) return;
-    const entries = Object.entries(sticky.metadata ?? {});
-    const [oldKey, value] = entries[index] ?? [null, ''];
-    if (oldKey === null) return;
-    const newMeta = { ...sticky.metadata }; delete newMeta[oldKey]; newMeta[newKey] = value as string;
-    window.electronAPI.whiteboard.updateSticky(activeBoardId, stickyId, { metadata: newMeta });
-  }, []);
-  const handleMetadataValueChange = useCallback((stickyId: string, index: number, newValue: string) => {
-    const { activeBoardId, board } = stateRef.current;
-    if (!activeBoardId || !board) return;
-    const sticky = board.stickies.find((s) => s.id === stickyId);
-    if (!sticky) return;
-    const [key] = Object.entries(sticky.metadata ?? {})[index] ?? [null];
-    if (key === null) return;
-    window.electronAPI.whiteboard.updateSticky(activeBoardId, stickyId, { metadata: { ...(sticky.metadata ?? {}), [key]: newValue } });
-  }, []);
+  const handleMetadataKeyChange = useCallback(
+    (stickyId: string, index: number, newKey: string) => {
+      const { activeBoardId, board } = stateRef.current;
+      if (!activeBoardId || !board) return;
+      const sticky = board.stickies.find((s) => s.id === stickyId);
+      if (!sticky) return;
+      const entries = Object.entries(sticky.metadata ?? {});
+      const [oldKey, value] = entries[index] ?? [null, ""];
+      if (oldKey === null) return;
+      const newMeta = { ...sticky.metadata };
+      delete newMeta[oldKey];
+      newMeta[newKey] = value as string;
+      window.electronAPI.whiteboard.updateSticky(activeBoardId, stickyId, {
+        metadata: newMeta,
+      });
+    },
+    [],
+  );
+  const handleMetadataValueChange = useCallback(
+    (stickyId: string, index: number, newValue: string) => {
+      const { activeBoardId, board } = stateRef.current;
+      if (!activeBoardId || !board) return;
+      const sticky = board.stickies.find((s) => s.id === stickyId);
+      if (!sticky) return;
+      const [key] = Object.entries(sticky.metadata ?? {})[index] ?? [null];
+      if (key === null) return;
+      window.electronAPI.whiteboard.updateSticky(activeBoardId, stickyId, {
+        metadata: { ...(sticky.metadata ?? {}), [key]: newValue },
+      });
+    },
+    [],
+  );
   const handleMetadataRemove = useCallback((stickyId: string, key: string) => {
     const { activeBoardId, board } = stateRef.current;
     if (!activeBoardId || !board) return;
     const sticky = board.stickies.find((s) => s.id === stickyId);
     if (!sticky) return;
-    const newMeta = { ...(sticky.metadata ?? {}) }; delete newMeta[key];
-    window.electronAPI.whiteboard.updateSticky(activeBoardId, stickyId, { metadata: newMeta });
+    const newMeta = { ...(sticky.metadata ?? {}) };
+    delete newMeta[key];
+    window.electronAPI.whiteboard.updateSticky(activeBoardId, stickyId, {
+      metadata: newMeta,
+    });
   }, []);
   const handleMetadataAdd = useCallback((stickyId: string) => {
     const { activeBoardId, board } = stateRef.current;
     if (!activeBoardId || !board) return;
     const sticky = board.stickies.find((s) => s.id === stickyId);
     if (!sticky) return;
-    window.electronAPI.whiteboard.updateSticky(activeBoardId, stickyId, { metadata: { ...(sticky.metadata ?? {}), '': '' } });
+    window.electronAPI.whiteboard.updateSticky(activeBoardId, stickyId, {
+      metadata: { ...(sticky.metadata ?? {}), "": "" },
+    });
   }, []);
 
-  const stickyMap = useMemo(() => new Map(board?.stickies.map((s) => [s.id, s]) ?? []), [board]);
-  const isDraggable = tool === 'select';
-  const connectFromSticky = connectFrom ? board?.stickies.find((s) => s.id === connectFrom) : null;
+  const stickyMap = useMemo(
+    () => new Map(board?.stickies.map((s) => [s.id, s]) ?? []),
+    [board],
+  );
+  const isDraggable = tool === "select";
+  const connectFromSticky = connectFrom
+    ? board?.stickies.find((s) => s.id === connectFrom)
+    : null;
 
   const editingTextareaStyle = useMemo(() => {
     if (!editingSticky || !board) return null;
     const sticky = board.stickies.find((s) => s.id === editingSticky);
     if (!sticky) return null;
     return {
-      position: 'absolute' as const, left: sticky.x * stageScale + stagePos.x, top: sticky.y * stageScale + stagePos.y,
-      width: sticky.width * stageScale, height: sticky.height * stageScale, fontSize: 14 * stageScale,
-      padding: 8 * stageScale, border: 'none', outline: '2px solid #3b82f6',
-      background: STICKY_COLORS[sticky.color], resize: 'none' as const, zIndex: 50,
-      borderRadius: 8 * stageScale, fontFamily: "'Inter Variable', 'Inter', system-ui, sans-serif",
-      fontWeight: 500, lineHeight: '1.4', color: '#1e293b',
+      position: "absolute" as const,
+      left: sticky.x * stageScale + stagePos.x,
+      top: sticky.y * stageScale + stagePos.y,
+      width: sticky.width * stageScale,
+      height: sticky.height * stageScale,
+      fontSize: 14 * stageScale,
+      padding: 8 * stageScale,
+      border: "none",
+      outline: "2px solid #3b82f6",
+      background: STICKY_COLORS[sticky.color],
+      resize: "none" as const,
+      zIndex: 50,
+      borderRadius: 8 * stageScale,
+      fontFamily: "'Inter Variable', 'Inter', system-ui, sans-serif",
+      fontWeight: 500,
+      lineHeight: "1.4",
+      color: "#1e293b",
     };
   }, [editingSticky, board, stageScale, stagePos]);
 
@@ -1030,11 +1703,21 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     const frame = board.frames.find((f) => f.id === editingFrame);
     if (!frame) return null;
     return {
-      position: 'absolute' as const, left: frame.x * stageScale + stagePos.x,
-      top: frame.y * stageScale + stagePos.y - 28 * stageScale, width: Math.min(frame.width * stageScale, 300),
-      height: 24 * stageScale, fontSize: 13 * stageScale, padding: `2px ${6 * stageScale}px`,
-      border: 'none', outline: `2px solid ${frame.color}`, background: '#1e1e2e', color: frame.color,
-      fontWeight: 'bold', zIndex: 50, borderRadius: 4, fontFamily: "'Inter Variable', 'Inter', system-ui, sans-serif",
+      position: "absolute" as const,
+      left: frame.x * stageScale + stagePos.x,
+      top: frame.y * stageScale + stagePos.y - 28 * stageScale,
+      width: Math.min(frame.width * stageScale, 300),
+      height: 24 * stageScale,
+      fontSize: 13 * stageScale,
+      padding: `2px ${6 * stageScale}px`,
+      border: "none",
+      outline: `2px solid ${frame.color}`,
+      background: "#1e1e2e",
+      color: frame.color,
+      fontWeight: "bold",
+      zIndex: 50,
+      borderRadius: 4,
+      fontFamily: "'Inter Variable', 'Inter', system-ui, sans-serif",
     };
   }, [editingFrame, board, stageScale, stagePos]);
 
@@ -1043,43 +1726,55 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     const textNode = board.texts.find((t) => t.id === editingTextNode);
     if (!textNode) return null;
     return {
-      position: 'absolute' as const,
+      position: "absolute" as const,
       left: textNode.x * stageScale + stagePos.x,
       top: textNode.y * stageScale + stagePos.y,
       width: textNode.width * stageScale,
       minHeight: Math.max(textNode.fontSize * 1.6, 24) * stageScale,
       fontSize: textNode.fontSize * stageScale,
       padding: 2 * stageScale,
-      border: 'none',
-      outline: '2px dashed rgba(59,130,246,0.6)',
-      background: 'rgba(26,26,46,0.85)',
-      resize: 'none' as const,
+      border: "none",
+      outline: "2px dashed rgba(59,130,246,0.6)",
+      background: "rgba(26,26,46,0.85)",
+      resize: "none" as const,
       zIndex: 50,
       borderRadius: 4,
       fontFamily: "'Inter Variable', 'Inter', system-ui, sans-serif",
-      fontWeight: textNode.bold ? 'bold' : '400',
-      fontStyle: textNode.italic ? 'italic' : ('normal' as const),
+      fontWeight: textNode.bold ? "bold" : "400",
+      fontStyle: textNode.italic ? "italic" : ("normal" as const),
       color: textNode.color,
-      lineHeight: '1.3',
+      lineHeight: "1.3",
     };
   }, [editingTextNode, board, stageScale, stagePos]);
 
   const selectedType = useMemo(() => {
     if (selectedIds.size !== 1) return null;
     const [id] = selectedIds;
-    if (board?.stickies.some((s) => s.id === id)) return 'sticky';
-    if (board?.frames.some((f) => f.id === id)) return 'frame';
-    if (board?.texts.some((t) => t.id === id)) return 'text';
+    if (board?.stickies.some((s) => s.id === id)) return "sticky";
+    if (board?.frames.some((f) => f.id === id)) return "frame";
+    if (board?.texts.some((t) => t.id === id)) return "text";
     return null;
   }, [selectedIds, board]);
 
-  const cursorClass = tool === 'sticky' || tool === 'frame' || tool === 'text' ? 'cursor-crosshair' : tool === 'connect' || tool === 'delete' ? 'cursor-pointer' : 'cursor-default';
+  const cursorClass =
+    tool === "sticky" || tool === "frame" || tool === "text"
+      ? "cursor-crosshair"
+      : tool === "connect" || tool === "delete"
+        ? "cursor-pointer"
+        : "cursor-default";
 
   return (
     <div
       ref={containerRef}
-      className={cn("relative h-full w-full overflow-hidden bg-[#1a1a2e] font-['Inter_Variable','Inter',system-ui,sans-serif]", cursorClass)}
-      onClick={() => { setContextMenu(null); setFrameContextMenu(null); setConnectionContextMenu(null); }}
+      className={cn(
+        "relative h-full w-full overflow-hidden bg-[#1a1a2e] font-['Inter_Variable','Inter',system-ui,sans-serif]",
+        cursorClass,
+      )}
+      onClick={() => {
+        setContextMenu(null);
+        setFrameContextMenu(null);
+        setConnectionContextMenu(null);
+      }}
     >
       <Stage
         ref={stageRef}
@@ -1089,7 +1784,7 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         y={stagePos.y}
         scaleX={stageScale}
         scaleY={stageScale}
-        draggable={tool === 'connect'}
+        draggable={tool === "connect"}
         onWheel={handleWheel}
         onDragEnd={handleStageDragEnd}
         onClick={handleStageClick}
@@ -1097,7 +1792,11 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         onMouseMove={handleStageMouseMove}
         onMouseUp={handleStageMouseUp}
       >
-        <GridLayer stagePosRef={stagePanRef} stageScale={stageScale} stageSize={stageSize} />
+        <GridLayer
+          stagePosRef={stagePanRef}
+          stageScale={stageScale}
+          stageSize={stageSize}
+        />
         <Layer>
           {board?.frames.map((frame) => (
             <FrameNode
@@ -1121,9 +1820,12 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
               y={Math.min(frameDrawing.startY, frameDrawing.currentY)}
               width={Math.abs(frameDrawing.currentX - frameDrawing.startX)}
               height={Math.abs(frameDrawing.currentY - frameDrawing.startY)}
-              fill={(preCreationFrameColor || '#e2e8f0') + '15'}
-              stroke={preCreationFrameColor || '#e2e8f0'}
-              strokeWidth={2} dash={[8, 4]} cornerRadius={8} listening={false}
+              fill={(preCreationFrameColor || "#e2e8f0") + "15"}
+              stroke={preCreationFrameColor || "#e2e8f0"}
+              strokeWidth={2}
+              dash={[8, 4]}
+              cornerRadius={8}
+              listening={false}
             />
           )}
 
@@ -1145,8 +1847,19 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
 
           {connectFromSticky && connectMousePos && (
             <Arrow
-              points={[connectFromSticky.x + connectFromSticky.width / 2, connectFromSticky.y + connectFromSticky.height / 2, connectMousePos.x, connectMousePos.y]}
-              pointerLength={10} pointerWidth={8} fill="#60a5fa" stroke="#60a5fa" strokeWidth={2} dash={[6, 3]} listening={false}
+              points={[
+                connectFromSticky.x + connectFromSticky.width / 2,
+                connectFromSticky.y + connectFromSticky.height / 2,
+                connectMousePos.x,
+                connectMousePos.y,
+              ]}
+              pointerLength={10}
+              pointerWidth={8}
+              fill="#60a5fa"
+              stroke="#60a5fa"
+              strokeWidth={2}
+              dash={[6, 3]}
+              listening={false}
             />
           )}
 
@@ -1191,21 +1904,42 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
               y={Math.min(selectionRect.startY, selectionRect.currentY)}
               width={Math.abs(selectionRect.currentX - selectionRect.startX)}
               height={Math.abs(selectionRect.currentY - selectionRect.startY)}
-              fill="rgba(59, 130, 246, 0.08)" stroke="#3b82f6" strokeWidth={1} dash={[4, 4]} listening={false}
+              fill="rgba(59, 130, 246, 0.08)"
+              stroke="#3b82f6"
+              strokeWidth={1}
+              dash={[4, 4]}
+              listening={false}
             />
           )}
 
           <Transformer
             ref={transformerRef}
-            borderStroke="#3b82f6" borderStrokeWidth={1.5}
-            anchorSize={8} anchorStroke="#3b82f6" anchorFill="white" anchorCornerRadius={2}
+            borderStroke="#3b82f6"
+            borderStrokeWidth={1.5}
+            anchorSize={8}
+            anchorStroke="#3b82f6"
+            anchorFill="white"
+            anchorCornerRadius={2}
             rotateEnabled={false}
-            enabledAnchors={selectedIds.size === 1
-              ? (selectedType === 'text'
-                ? ['middle-left', 'middle-right']
-                : ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'middle-left', 'middle-right', 'top-center', 'bottom-center'])
-              : []}
-            boundBoxFunc={(_oldBox, newBox) => (newBox.width < 60 || newBox.height < 40 ? _oldBox : newBox)}
+            enabledAnchors={
+              selectedIds.size === 1
+                ? selectedType === "text"
+                  ? ["middle-left", "middle-right"]
+                  : [
+                      "top-left",
+                      "top-right",
+                      "bottom-left",
+                      "bottom-right",
+                      "middle-left",
+                      "middle-right",
+                      "top-center",
+                      "bottom-center",
+                    ]
+                : []
+            }
+            boundBoxFunc={(_oldBox, newBox) =>
+              newBox.width < 60 || newBox.height < 40 ? _oldBox : newBox
+            }
           />
         </Layer>
       </Stage>
@@ -1217,7 +1951,10 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
           value={editText}
           onChange={(e) => setEditText(e.target.value)}
           onBlur={finishEditing}
-          onKeyDown={(e) => { if (e.key === 'Escape') finishEditing(); e.stopPropagation(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") finishEditing();
+            e.stopPropagation();
+          }}
         />
       )}
 
@@ -1229,8 +1966,11 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
           onChange={(e) => setEditFrameLabel(e.target.value)}
           onBlur={finishFrameEditing}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') finishFrameEditing();
-            if (e.key === 'Escape') { setEditingFrame(null); setEditFrameLabel(''); }
+            if (e.key === "Enter") finishFrameEditing();
+            if (e.key === "Escape") {
+              setEditingFrame(null);
+              setEditFrameLabel("");
+            }
             e.stopPropagation();
           }}
         />
@@ -1243,7 +1983,10 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
           value={editTextNodeContent}
           onChange={(e) => setEditTextNodeContent(e.target.value)}
           onBlur={finishTextEditing}
-          onKeyDown={(e) => { if (e.key === 'Escape') finishTextEditing(); e.stopPropagation(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") finishTextEditing();
+            e.stopPropagation();
+          }}
         />
       )}
 
@@ -1276,8 +2019,14 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         renameValue={renameValue}
         importFileRef={importFileRef}
         onToggleMenu={() => setBoardMenuOpen((p) => !p)}
-        onSelectBoard={(id) => { setActiveBoardId(id); setBoardMenuOpen(false); }}
-        onStartRename={(id, name) => { setRenamingBoardId(id); setRenameValue(name); }}
+        onSelectBoard={(id) => {
+          setActiveBoardId(id);
+          setBoardMenuOpen(false);
+        }}
+        onStartRename={(id, name) => {
+          setRenamingBoardId(id);
+          setRenameValue(name);
+        }}
         onRenameChange={setRenameValue}
         onRenameCommit={handleRenameBoard}
         onRenameCancel={() => setRenamingBoardId(null)}
@@ -1292,13 +2041,15 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         <button
           onClick={handleToggleMcp}
           className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg text-sm shadow-xl transition-colors',
-            mcpRunning ? 'text-green-300 border-green-500/30' : 'text-white/50 hover:text-white/80',
+            "flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg text-sm shadow-xl transition-colors",
+            mcpRunning
+              ? "text-green-300 border-green-500/30"
+              : "text-white/50 hover:text-white/80",
           )}
-          title={mcpRunning ? 'Stop MCP Server' : 'Start MCP Server'}
+          title={mcpRunning ? "Stop MCP Server" : "Start MCP Server"}
         >
           <Radio size={14} />
-          {mcpRunning ? 'MCP' : 'MCP Off'}
+          {mcpRunning ? "MCP" : "MCP Off"}
         </button>
       </div>
 
@@ -1316,20 +2067,32 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
           </div>
         )}
         {showColorLegend && (
-          <div className="bg-[#1e1e2e]/95 backdrop-blur border border-white/10 rounded-lg shadow-xl p-3 min-w-70" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="bg-[#1e1e2e]/95 backdrop-blur border border-white/10 rounded-lg shadow-xl p-3 min-w-70"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="space-y-1.5">
               {ALL_COLORS.map((color) => (
                 <div key={color} className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full shrink-0 border border-white/10" style={{ background: STICKY_COLORS[color] }} />
+                  <div
+                    className="w-5 h-5 rounded-full shrink-0 border border-white/10"
+                    style={{ background: STICKY_COLORS[color] }}
+                  />
                   <input
                     className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80 outline-none focus:border-white/30 placeholder:text-white/25"
                     placeholder="No meaning set"
-                    value={board?.colorMeanings?.[color] ?? ''}
+                    value={board?.colorMeanings?.[color] ?? ""}
                     onChange={(e) => {
                       if (!activeBoardId || !board) return;
                       const newMeanings = { ...(board.colorMeanings ?? {}) };
-                      if (e.target.value) { newMeanings[color] = e.target.value; } else { delete newMeanings[color]; }
-                      window.electronAPI.whiteboard.updateBoard(activeBoardId, { colorMeanings: newMeanings });
+                      if (e.target.value) {
+                        newMeanings[color] = e.target.value;
+                      } else {
+                        delete newMeanings[color];
+                      }
+                      window.electronAPI.whiteboard.updateBoard(activeBoardId, {
+                        colorMeanings: newMeanings,
+                      });
                     }}
                   />
                 </div>
@@ -1340,7 +2103,12 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowColorLegend((p) => !p)}
-            className={cn('flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg text-sm shadow-xl transition-colors', showColorLegend ? 'text-purple-300 border-purple-500/30' : 'text-white/50 hover:text-white/80')}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg text-sm shadow-xl transition-colors",
+              showColorLegend
+                ? "text-purple-300 border-purple-500/30"
+                : "text-white/50 hover:text-white/80",
+            )}
             title="Color Legend"
           >
             <Palette size={14} />
@@ -1348,7 +2116,12 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
           </button>
           <button
             onClick={() => setShowShortcuts((p) => !p)}
-            className={cn('flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg text-sm shadow-xl transition-colors', showShortcuts ? 'text-blue-300 border-blue-500/30' : 'text-white/50 hover:text-white/80')}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg text-sm shadow-xl transition-colors",
+              showShortcuts
+                ? "text-blue-300 border-blue-500/30"
+                : "text-white/50 hover:text-white/80",
+            )}
             title="Keyboard shortcuts"
           >
             <Keyboard size={14} />

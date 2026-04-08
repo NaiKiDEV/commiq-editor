@@ -1,13 +1,28 @@
-import { memo } from 'react';
+import { memo } from "react";
 import {
-  MousePointer2, StickyNote, Square, ArrowRight, Trash2,
-  ZoomIn, ZoomOut, Maximize, Undo2, Redo2, Type,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { StickyColor } from '../../../shared/whiteboard-types';
-import { STICKY_COLORS, ALL_COLORS, FRAME_COLORS, TEXT_COLORS, TEXT_FONT_SIZES } from './constants';
+  MousePointer2,
+  StickyNote,
+  Square,
+  ArrowRight,
+  Trash2,
+  ZoomIn,
+  ZoomOut,
+  Maximize,
+  Undo2,
+  Redo2,
+  Type,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { StickyColor } from "../../../shared/whiteboard-types";
+import {
+  STICKY_COLORS,
+  ALL_COLORS,
+  FRAME_COLORS,
+  TEXT_COLORS,
+  TEXT_FONT_SIZES,
+} from "./constants";
 
-type Tool = 'select' | 'sticky' | 'frame' | 'connect' | 'delete' | 'text';
+type Tool = "select" | "sticky" | "frame" | "connect" | "delete" | "text";
 
 interface ToolbarProps {
   tool: Tool;
@@ -31,20 +46,33 @@ interface ToolbarProps {
 }
 
 const TOOLS: [Tool, typeof MousePointer2, string][] = [
-  ['select', MousePointer2, 'Select'],
-  ['sticky', StickyNote, 'Sticky'],
-  ['text', Type, 'Text'],
-  ['frame', Square, 'Frame'],
-  ['connect', ArrowRight, 'Connect'],
-  ['delete', Trash2, 'Delete'],
+  ["select", MousePointer2, "Select"],
+  ["sticky", StickyNote, "Sticky"],
+  ["text", Type, "Text"],
+  ["frame", Square, "Frame"],
+  ["connect", ArrowRight, "Connect"],
+  ["delete", Trash2, "Delete"],
 ];
 
 export const Toolbar = memo(function Toolbar({
-  tool, stageScale, preCreationStickyColor, preCreationFrameColor,
-  preCreationTextColor, preCreationTextSize,
-  canUndo, canRedo,
-  onToolChange, onStickyColorChange, onFrameColorChange, onTextColorChange, onTextSizeChange,
-  onZoomIn, onZoomOut, onFitToScreen, onUndo, onRedo,
+  tool,
+  stageScale,
+  preCreationStickyColor,
+  preCreationFrameColor,
+  preCreationTextColor,
+  preCreationTextSize,
+  canUndo,
+  canRedo,
+  onToolChange,
+  onStickyColorChange,
+  onFrameColorChange,
+  onTextColorChange,
+  onTextSizeChange,
+  onZoomIn,
+  onZoomOut,
+  onFitToScreen,
+  onUndo,
+  onRedo,
 }: ToolbarProps) {
   return (
     <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg px-2 py-1.5 shadow-xl">
@@ -52,8 +80,10 @@ export const Toolbar = memo(function Toolbar({
         onClick={onUndo}
         disabled={!canUndo}
         className={cn(
-          'p-1.5 rounded-md transition-colors',
-          canUndo ? 'text-white/60 hover:text-white/90 hover:bg-white/10' : 'text-white/20 cursor-not-allowed',
+          "p-1.5 rounded-md transition-colors",
+          canUndo
+            ? "text-white/60 hover:text-white/90 hover:bg-white/10"
+            : "text-white/20 cursor-not-allowed",
         )}
         title="Undo (Ctrl+Z)"
       >
@@ -63,8 +93,10 @@ export const Toolbar = memo(function Toolbar({
         onClick={onRedo}
         disabled={!canRedo}
         className={cn(
-          'p-1.5 rounded-md transition-colors',
-          canRedo ? 'text-white/60 hover:text-white/90 hover:bg-white/10' : 'text-white/20 cursor-not-allowed',
+          "p-1.5 rounded-md transition-colors",
+          canRedo
+            ? "text-white/60 hover:text-white/90 hover:bg-white/10"
+            : "text-white/20 cursor-not-allowed",
         )}
         title="Redo (Ctrl+Shift+Z)"
       >
@@ -76,10 +108,10 @@ export const Toolbar = memo(function Toolbar({
           key={t}
           onClick={() => onToolChange(t)}
           className={cn(
-            'p-1.5 rounded-md transition-colors',
+            "p-1.5 rounded-md transition-colors",
             tool === t
-              ? 'bg-blue-500/30 text-blue-300'
-              : 'text-white/60 hover:text-white/90 hover:bg-white/10',
+              ? "bg-blue-500/30 text-blue-300"
+              : "text-white/60 hover:text-white/90 hover:bg-white/10",
           )}
           title={label}
         >
@@ -87,15 +119,17 @@ export const Toolbar = memo(function Toolbar({
         </button>
       ))}
 
-      {tool === 'sticky' && (
+      {tool === "sticky" && (
         <>
           <div className="w-px h-5 bg-white/10 mx-1" />
           {ALL_COLORS.map((color) => (
             <button
               key={color}
               className={cn(
-                'w-5 h-5 rounded-full border-2 transition-transform hover:scale-110',
-                preCreationStickyColor === color ? 'border-white scale-110' : 'border-transparent',
+                "w-5 h-5 rounded-full border-2 transition-transform hover:scale-110",
+                preCreationStickyColor === color
+                  ? "border-white scale-110"
+                  : "border-transparent",
               )}
               style={{ background: STICKY_COLORS[color] }}
               onClick={() => onStickyColorChange(color)}
@@ -105,15 +139,17 @@ export const Toolbar = memo(function Toolbar({
         </>
       )}
 
-      {tool === 'frame' && (
+      {tool === "frame" && (
         <>
           <div className="w-px h-5 bg-white/10 mx-1" />
           {FRAME_COLORS.map((color) => (
             <button
               key={color}
               className={cn(
-                'w-5 h-5 rounded-full border-2 transition-transform hover:scale-110',
-                preCreationFrameColor === color ? 'border-white scale-110' : 'border-transparent',
+                "w-5 h-5 rounded-full border-2 transition-transform hover:scale-110",
+                preCreationFrameColor === color
+                  ? "border-white scale-110"
+                  : "border-transparent",
               )}
               style={{ background: color }}
               onClick={() => onFrameColorChange(color)}
@@ -123,15 +159,17 @@ export const Toolbar = memo(function Toolbar({
         </>
       )}
 
-      {tool === 'text' && (
+      {tool === "text" && (
         <>
           <div className="w-px h-5 bg-white/10 mx-1" />
           {TEXT_FONT_SIZES.map((size) => (
             <button
               key={size}
               className={cn(
-                'px-1.5 rounded text-xs font-mono transition-colors',
-                preCreationTextSize === size ? 'bg-blue-500/30 text-blue-300' : 'text-white/50 hover:text-white/80 hover:bg-white/10',
+                "px-1.5 rounded text-xs font-mono transition-colors",
+                preCreationTextSize === size
+                  ? "bg-blue-500/30 text-blue-300"
+                  : "text-white/50 hover:text-white/80 hover:bg-white/10",
               )}
               style={{ fontSize: Math.max(9, Math.min(size * 0.7, 13)) }}
               onClick={() => onTextSizeChange(size)}
@@ -145,8 +183,10 @@ export const Toolbar = memo(function Toolbar({
             <button
               key={color}
               className={cn(
-                'w-4 h-4 rounded-full border-2 transition-transform hover:scale-110',
-                preCreationTextColor === color ? 'border-white scale-110' : 'border-transparent',
+                "w-4 h-4 rounded-full border-2 transition-transform hover:scale-110",
+                preCreationTextColor === color
+                  ? "border-white scale-110"
+                  : "border-transparent",
               )}
               style={{ background: color }}
               onClick={() => onTextColorChange(color)}

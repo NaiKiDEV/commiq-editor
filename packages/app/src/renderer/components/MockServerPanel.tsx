@@ -42,6 +42,7 @@ import {
 } from "./ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { JsonEditor } from "./mock-server/JsonEditor";
+import { useSettings } from "../contexts/settings";
 import type {
   MockServerConfig,
   MockRoute,
@@ -1319,7 +1320,9 @@ export function MockServerPanel({ panelId: _panelId }: { panelId: string }) {
   const [view, setView] = useState<View>("servers");
   const [editorSection, setEditorSection] = useState<EditorSection>("routes");
   const [loading, setLoading] = useState(true);
+  const [mcpRunning, setMcpRunning] = useState(false);
 
+  const { settings } = useSettings();
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const activeConfig = configs.find((c) => c.id === activeConfigId) ?? null;
@@ -1347,6 +1350,25 @@ export function MockServerPanel({ panelId: _panelId }: { panelId: string }) {
   useEffect(() => {
     loadConfigs();
   }, [loadConfigs]);
+
+  // Check MCP server status on mount
+  useEffect(() => {
+    window.electronAPI.mockServer
+      .getMcpStatus()
+      .then((s: { running: boolean }) => setMcpRunning(s.running))
+      .catch(() => {});
+  }, []);
+
+  const handleToggleMcp = useCallback(async () => {
+    if (mcpRunning) {
+      await window.electronAPI.mockServer.stopMcpServer();
+      setMcpRunning(false);
+    } else {
+      const port = settings.mockServer?.mcpPort ?? 3200;
+      const result = await window.electronAPI.mockServer.startMcpServer(port);
+      if ((result as { success: boolean }).success) setMcpRunning(true);
+    }
+  }, [mcpRunning, settings]);
 
   useEffect(() => {
     const unsubscribe = window.electronAPI.mockServer.onStateChanged(
@@ -1547,6 +1569,29 @@ export function MockServerPanel({ panelId: _panelId }: { panelId: string }) {
             </TooltipTrigger>
             <TooltipContent side="bottom">Create server</TooltipContent>
           </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  onClick={handleToggleMcp}
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors border",
+                    mcpRunning
+                      ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
+                      : "text-muted-foreground border-border hover:text-foreground",
+                  )}
+                />
+              }
+            >
+              <Radio className="size-3" />
+              {mcpRunning ? "MCP" : "MCP Off"}
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {mcpRunning
+                ? `MCP server running on port ${settings.mockServer?.mcpPort ?? 3200}`
+                : "Start MCP server"}
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -1723,6 +1768,29 @@ export function MockServerPanel({ panelId: _panelId }: { panelId: string }) {
         )}
 
         <div className="ml-auto flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  onClick={handleToggleMcp}
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors border",
+                    mcpRunning
+                      ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
+                      : "text-muted-foreground border-border hover:text-foreground",
+                  )}
+                />
+              }
+            >
+              <Radio className="size-3" />
+              {mcpRunning ? "MCP" : "MCP Off"}
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {mcpRunning
+                ? `MCP server running on port ${settings.mockServer?.mcpPort ?? 3200}`
+                : "Start MCP server"}
+            </TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger
               render={

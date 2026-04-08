@@ -362,7 +362,10 @@ export class WhiteboardStateManager extends EventEmitter {
       texts: board.texts,
     });
     let stack = this.undoStacks.get(boardId);
-    if (!stack) { stack = []; this.undoStacks.set(boardId, stack); }
+    if (!stack) {
+      stack = [];
+      this.undoStacks.set(boardId, stack);
+    }
     stack.push(snapshot);
     if (stack.length > MAX_UNDO_STACK) stack.shift();
     this.redoStacks.set(boardId, []);
@@ -381,7 +384,10 @@ export class WhiteboardStateManager extends EventEmitter {
       colorMeanings: board.colorMeanings,
     });
     let redoStack = this.redoStacks.get(boardId);
-    if (!redoStack) { redoStack = []; this.redoStacks.set(boardId, redoStack); }
+    if (!redoStack) {
+      redoStack = [];
+      this.redoStacks.set(boardId, redoStack);
+    }
     redoStack.push(currentSnapshot);
 
     const snapshot = undoStack.pop()!;
@@ -411,7 +417,10 @@ export class WhiteboardStateManager extends EventEmitter {
       colorMeanings: board.colorMeanings,
     });
     let undoStack = this.undoStacks.get(boardId);
-    if (!undoStack) { undoStack = []; this.undoStacks.set(boardId, undoStack); }
+    if (!undoStack) {
+      undoStack = [];
+      this.undoStacks.set(boardId, undoStack);
+    }
     undoStack.push(currentSnapshot);
 
     const snapshot = redoStack.pop()!;
@@ -477,7 +486,10 @@ export class WhiteboardStateManager extends EventEmitter {
     boardId: string,
     textId: string,
     patch: Partial<
-      Pick<TextNode, "x" | "y" | "width" | "text" | "fontSize" | "bold" | "italic" | "color">
+      Pick<
+        TextNode,
+        "x" | "y" | "width" | "text" | "fontSize" | "bold" | "italic" | "color"
+      >
     >,
   ): TextNode | null {
     const board = this.boards.get(boardId);
@@ -564,7 +576,9 @@ export class WhiteboardStateManager extends EventEmitter {
         const board: Board = JSON.parse(raw);
         if (!board.texts) board.texts = [];
         this.boards.set(board.id, board);
-      } catch { /* corrupted file */ }
+      } catch {
+        /* corrupted file */
+      }
     }
   }
 

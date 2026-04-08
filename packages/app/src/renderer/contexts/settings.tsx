@@ -19,6 +19,9 @@ export type AppSettings = {
   whiteboard: {
     mcpPort: number;
   };
+  mockServer: {
+    mcpPort: number;
+  };
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -35,6 +38,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   whiteboard: {
     mcpPort: 3100,
+  },
+  mockServer: {
+    mcpPort: 3200,
   },
 };
 

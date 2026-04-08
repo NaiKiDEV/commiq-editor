@@ -12,6 +12,12 @@ import type {
   MockWsClient,
   MockWsMessage,
 } from "../../shared/mock-server-types";
+import {
+  setMockServerMcpBridge,
+  startMockServerMcp,
+  stopMockServerMcp,
+  getMockServerMcpStatus,
+} from "../mock-server/mcp-server";
 
 // ---------------------------------------------------------------------------
 // Persistence
@@ -626,6 +632,55 @@ function stopServer(configId: string): MockServerState | null {
 // ---------------------------------------------------------------------------
 
 export function registerMockServerIpc(win?: BrowserWindow): void {
+  // --- Inject MCP bridge so the MCP server can access configs & lifecycle ---
+  setMockServerMcpBridge({
+    listConfigs: () => readConfigs(),
+    saveConfig: async (config) => {
+      const configs = await readConfigs();
+      const idx = configs.findIndex((c) => c.id === config.id);
+      if (idx !== -1) configs[idx] = config;
+      else configs.push(config);
+      await writeConfigs(configs);
+      // Hot-reload running server's config
+      const running = servers.get(config.id);
+      if (running) running.config = config;
+      return config;
+    },
+    deleteConfig: async (configId) => {
+      stopServer(configId);
+      await writeConfigs(
+        (await readConfigs()).filter((c) => c.id !== configId),
+      );
+    },
+    startServer: async (configId) => {
+      const configs = await readConfigs();
+      const config = configs.find((c) => c.id === configId);
+      if (!config) return { status: "error", error: "Config not found" };
+      const state = await startServer(config);
+      return {
+        status: state.status,
+        error: state.error,
+        requestCount: state.requestCount,
+        recentRequests: state.recentRequests,
+      };
+    },
+    stopServer: async (configId) => {
+      const state = stopServer(configId);
+      return { status: state?.status ?? "stopped" };
+    },
+    getServerState: async (configId) => {
+      const entry = servers.get(configId);
+      if (!entry)
+        return { status: "stopped", requestCount: 0, recentRequests: [] };
+      return {
+        status: entry.state.status,
+        error: entry.state.error,
+        requestCount: entry.state.requestCount,
+        recentRequests: entry.state.recentRequests,
+      };
+    },
+  });
+
   // --- Config CRUD ---
 
   ipcMain.handle("mock-server:configs:list", async () => {
@@ -878,6 +933,21 @@ export function registerMockServerIpc(win?: BrowserWindow): void {
       return { error: err instanceof Error ? err.message : String(err) };
     }
   });
+
+  // --- MCP server lifecycle ---
+
+  ipcMain.handle("mock-server:start-mcp", async (_event, port: number) => {
+    return startMockServerMcp(port);
+  });
+
+  ipcMain.handle("mock-server:stop-mcp", async () => {
+    await stopMockServerMcp();
+    return { success: true };
+  });
+
+  ipcMain.handle("mock-server:mcp-status", () => {
+    return getMockServerMcpStatus();
+  });
 }
 
 export function registerMockServerPush(win: BrowserWindow): void {
@@ -888,4 +958,5 @@ export function stopAllMockServers(): void {
   for (const [id] of servers) {
     stopServer(id);
   }
+  stopMockServerMcp().catch(() => {});
 }

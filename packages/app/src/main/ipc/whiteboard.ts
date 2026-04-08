@@ -1,6 +1,11 @@
 import { ipcMain, BrowserWindow } from "electron";
 import { whiteboardState } from "../whiteboard/state";
-import type { StickyColor, Sticky, Frame, TextNode } from "../../shared/whiteboard-types";
+import type {
+  StickyColor,
+  Sticky,
+  Frame,
+  TextNode,
+} from "../../shared/whiteboard-types";
 import {
   startMcpServer,
   stopMcpServer,
@@ -165,7 +170,17 @@ export function registerWhiteboardIpc(): void {
       boardId: string,
       textId: string,
       patch: Partial<
-        Pick<TextNode, "x" | "y" | "width" | "text" | "fontSize" | "bold" | "italic" | "color">
+        Pick<
+          TextNode,
+          | "x"
+          | "y"
+          | "width"
+          | "text"
+          | "fontSize"
+          | "bold"
+          | "italic"
+          | "color"
+        >
       >,
     ) => whiteboardState.updateText(boardId, textId, patch),
   );

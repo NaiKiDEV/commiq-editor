@@ -1,4 +1,11 @@
-export type StickyColor = "yellow" | "blue" | "green" | "pink" | "purple" | "orange" | "red";
+export type StickyColor =
+  | "yellow"
+  | "blue"
+  | "green"
+  | "pink"
+  | "purple"
+  | "orange"
+  | "red";
 
 export type TextNode = {
   id: string;

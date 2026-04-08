@@ -223,9 +223,7 @@ function createConfiguredMcpServer(): McpServer {
           isError: true,
         };
       return {
-        content: [
-          { type: "text", text: JSON.stringify(node, null, 2) },
-        ],
+        content: [{ type: "text", text: JSON.stringify(node, null, 2) }],
       };
     },
   );
@@ -253,9 +251,7 @@ function createConfiguredMcpServer(): McpServer {
           isError: true,
         };
       return {
-        content: [
-          { type: "text", text: JSON.stringify(node, null, 2) },
-        ],
+        content: [{ type: "text", text: JSON.stringify(node, null, 2) }],
       };
     },
   );

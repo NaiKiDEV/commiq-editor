@@ -1361,15 +1361,37 @@ const electronAPI = {
       ipcRenderer.invoke("mock-server:clear-ws-log", configId) as Promise<void>,
 
     exportConfig: (configId: string) =>
-      ipcRenderer.invoke(
-        "mock-server:export",
-        configId,
-      ) as Promise<{ success?: boolean; canceled?: boolean; path?: string; error?: string }>,
+      ipcRenderer.invoke("mock-server:export", configId) as Promise<{
+        success?: boolean;
+        canceled?: boolean;
+        path?: string;
+        error?: string;
+      }>,
 
     importConfig: () =>
-      ipcRenderer.invoke(
-        "mock-server:import",
-      ) as Promise<{ success?: boolean; canceled?: boolean; config?: unknown; error?: string }>,
+      ipcRenderer.invoke("mock-server:import") as Promise<{
+        success?: boolean;
+        canceled?: boolean;
+        config?: unknown;
+        error?: string;
+      }>,
+
+    startMcpServer: (port: number) =>
+      ipcRenderer.invoke("mock-server:start-mcp", port) as Promise<{
+        success: boolean;
+        error?: string;
+      }>,
+
+    stopMcpServer: () =>
+      ipcRenderer.invoke("mock-server:stop-mcp") as Promise<{
+        success: boolean;
+      }>,
+
+    getMcpStatus: () =>
+      ipcRenderer.invoke("mock-server:mcp-status") as Promise<{
+        running: boolean;
+        port: number | null;
+      }>,
   },
 };
 
