@@ -1393,6 +1393,46 @@ const electronAPI = {
         port: number | null;
       }>,
   },
+
+  codePlayground: {
+    detectRuntimes: () =>
+      ipcRenderer.invoke("code-playground:detect-runtimes") as Promise<
+        Array<{ id: string; name: string; cmd: string; args: string[]; ext: string }>
+      >,
+
+    execute: (
+      panelId: string,
+      runtime: { id: string; name: string; cmd: string; args: string[]; ext: string },
+      code: string,
+    ) =>
+      ipcRenderer.invoke("code-playground:execute", panelId, runtime, code) as Promise<{
+        started: boolean;
+      }>,
+
+    kill: (panelId: string) =>
+      ipcRenderer.invoke("code-playground:kill", panelId) as Promise<void>,
+
+    onOutput: (
+      panelId: string,
+      callback: (data: { type: "stdout" | "stderr"; text: string }) => void,
+    ) => {
+      const channel = `code-playground:output:${panelId}`;
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        data: { type: "stdout" | "stderr"; text: string },
+      ) => callback(data);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+
+    onExit: (panelId: string, callback: (code: number) => void) => {
+      const channel = `code-playground:exit:${panelId}`;
+      const listener = (_event: Electron.IpcRendererEvent, code: number) =>
+        callback(code);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld("electronAPI", electronAPI);

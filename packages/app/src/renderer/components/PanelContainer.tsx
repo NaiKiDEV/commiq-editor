@@ -32,6 +32,7 @@ import { DatabaseClientPanel } from "./DatabaseClientPanel";
 import { DockerPanel } from "./docker/DockerPanel";
 import { SslInspectorPanel } from "./SslInspectorPanel";
 import { MockServerPanel } from "./MockServerPanel";
+import { CodePlaygroundPanel } from "./CodePlaygroundPanel";
 import { getVisiblePanelIds } from "../lib/layout";
 import type { Panel } from "../stores/workspace";
 
@@ -100,6 +101,7 @@ function PanelContent({
       {panel.type === "docker" && <DockerPanel panelId={panel.id} />}
       {panel.type === "ssl" && <SslInspectorPanel panelId={panel.id} />}
       {panel.type === "mockserver" && <MockServerPanel panelId={panel.id} />}
+      {panel.type === "playground" && <CodePlaygroundPanel panelId={panel.id} />}
     </div>
   );
 }

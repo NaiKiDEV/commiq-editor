@@ -33,6 +33,7 @@ import {
   Package,
   ShieldAlert,
   Server,
+  SquareTerminal,
 } from "lucide-react";
 import {
   useTabs,
@@ -122,6 +123,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <ShieldAlert className="size-3" />;
     case "mockserver":
       return <Server className="size-3" />;
+    case "playground":
+      return <SquareTerminal className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -456,6 +459,12 @@ export function TabBar() {
               >
                 <Server />
                 Mock Server
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => createTab("playground", "Code Playground")}
+              >
+                <SquareTerminal />
+                Code Playground
               </DropdownMenuItem>
             </DropdownMenuGroup>
 

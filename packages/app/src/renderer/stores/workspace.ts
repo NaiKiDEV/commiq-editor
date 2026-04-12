@@ -48,7 +48,8 @@ export type PanelType =
   | "db"
   | "docker"
   | "ssl"
-  | "mockserver";
+  | "mockserver"
+  | "playground";
 
 export type Panel = {
   id: string;

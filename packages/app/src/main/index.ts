@@ -28,6 +28,7 @@ import {
   registerMockServerPush,
   stopAllMockServers,
 } from "./ipc/mock-server";
+import { registerCodePlaygroundIpc } from "./ipc/code-playground";
 
 if (started) {
   app.quit();
@@ -74,6 +75,7 @@ registerDbIpc();
 registerDockerIpc();
 registerSslIpc();
 registerMockServerIpc();
+registerCodePlaygroundIpc();
 
 const createWindow = () => {
   const isMac = process.platform === "darwin";

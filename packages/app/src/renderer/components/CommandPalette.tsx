@@ -42,6 +42,7 @@ import {
   Package,
   ShieldAlert,
   Server,
+  SquareTerminal,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -92,6 +93,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "docker") return <Package />;
   if (type === "ssl") return <ShieldAlert />;
   if (type === "mockserver") return <Server />;
+  if (type === "playground") return <SquareTerminal />;
   return <NotepadText />;
 }
 
@@ -392,6 +394,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <Server />
               <span>New Mock Server Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() =>
+                runAction(() => createTab("playground", "Code Playground"))
+              }
+            >
+              <SquareTerminal />
+              <span>New Code Playground Tab</span>
             </CommandItem>
           </CommandGroup>
 
