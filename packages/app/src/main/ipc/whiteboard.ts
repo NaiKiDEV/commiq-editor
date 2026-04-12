@@ -78,6 +78,8 @@ export function registerWhiteboardIpc(): void {
           | "height"
           | "text"
           | "color"
+          | "textAlign"
+          | "verticalAlign"
           | "frameId"
           | "metadata"
         >

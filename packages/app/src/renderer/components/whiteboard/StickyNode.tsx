@@ -19,6 +19,26 @@ interface StickyNodeProps {
   onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
 }
 
+const HTML_ENTITY_MAP: Record<string, string> = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&#39;': "'",
+  '&apos;': "'",
+  '&#x27;': "'",
+  '&#x2F;': '/',
+  '&nbsp;': ' ',
+};
+
+function decodeHtmlEntities(text: string): string {
+  return text.replace(/&[#\w]+;/g, (entity) => HTML_ENTITY_MAP[entity] ?? entity);
+}
+
+function formatStickyText(raw: string): string {
+  return decodeHtmlEntities(raw.replace(/\\n/g, '\n'));
+}
+
 function StickyNodeBase({
   sticky, isSelected, isConnectFrom, isEditing, isDraggable,
   onClick, onDblClick, onDragStart, onDragMove, onDragEnd, onContextMenu, onTransformEnd,
@@ -59,7 +79,7 @@ function StickyNodeBase({
       />
       {!isEditing && (
         <Text
-          text={sticky.text ? sticky.text.replace(/\\n/g, '\n') : '(double-click to edit)'}
+          text={sticky.text ? formatStickyText(sticky.text) : '(double-click to edit)'}
           x={10}
           y={10}
           width={sticky.width - 20}
@@ -68,6 +88,8 @@ function StickyNodeBase({
           fontFamily="'Inter Variable', 'Inter', system-ui, sans-serif"
           fontStyle="500"
           fill={sticky.text ? '#1e293b' : '#94a3b8'}
+          align={sticky.textAlign ?? 'left'}
+          verticalAlign={sticky.verticalAlign ?? 'top'}
           wrap="word"
           ellipsis
           listening={false}

@@ -35,6 +35,9 @@ export type Board = {
   updatedAt: string;
 };
 
+export type StickyTextAlign = "left" | "center" | "right";
+export type StickyVerticalAlign = "top" | "middle" | "bottom";
+
 export type Sticky = {
   id: string;
   x: number;
@@ -43,6 +46,8 @@ export type Sticky = {
   height: number;
   text: string;
   color: StickyColor;
+  textAlign: StickyTextAlign;
+  verticalAlign: StickyVerticalAlign;
   frameId: string | null;
   metadata: Record<string, string>;
   createdAt: string;

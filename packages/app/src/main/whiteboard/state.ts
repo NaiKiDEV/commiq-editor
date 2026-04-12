@@ -134,6 +134,8 @@ export class WhiteboardStateManager extends EventEmitter {
       y?: number;
       width?: number;
       height?: number;
+      textAlign?: import("../../shared/whiteboard-types").StickyTextAlign;
+      verticalAlign?: import("../../shared/whiteboard-types").StickyVerticalAlign;
       metadata?: Record<string, string>;
     },
   ): Sticky | null {
@@ -149,6 +151,8 @@ export class WhiteboardStateManager extends EventEmitter {
       height: data.height ?? 150,
       text: data.text ?? "",
       color: data.color ?? "yellow",
+      textAlign: data.textAlign ?? "left",
+      verticalAlign: data.verticalAlign ?? "top",
       frameId: null,
       metadata: data.metadata ?? {},
       createdAt: now,
@@ -188,6 +192,8 @@ export class WhiteboardStateManager extends EventEmitter {
         | "height"
         | "text"
         | "color"
+        | "textAlign"
+        | "verticalAlign"
         | "frameId"
         | "metadata"
       >

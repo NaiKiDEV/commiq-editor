@@ -43,10 +43,10 @@ This launches the Electron app via `electron-forge`. The renderer hot-reloads on
 
 Commiq exposes two MCP servers that let LLMs interact with your workspace:
 
-| Server | Default Port | What it controls |
-| -------- | ------------- | ------------------ |
-| **Whiteboard** | `3100` | Boards, stickies, frames, connections, text labels, color meanings |
-| **Mock Server** | `3200` | Mock server configs, HTTP routes, response rules, WebSocket endpoints, server lifecycle |
+| Server          | Default Port | What it controls                                                                        |
+| --------------- | ------------ | --------------------------------------------------------------------------------------- |
+| **Whiteboard**  | `3100`       | Boards, stickies, frames, connections, text labels, color meanings                      |
+| **Mock Server** | `3200`       | Mock server configs, HTTP routes, response rules, WebSocket endpoints, server lifecycle |
 
 ### Prerequisites
 
@@ -84,9 +84,11 @@ A `.vscode/mcp.json` is already included in this repo with both servers:
 2. **Use it** — open a Copilot Chat session and ask things like:
 
    Whiteboard:
+
    > Create a sticky on the board with text "Fix auth bug", color pink
 
    Mock Server:
+
    > Create a mock server called "Users API" on port 4000 with a GET /api/users route that returns a JSON array of users
 
 **Whiteboard tools:** `list_boards`, `create_board`, `create_sticky`, `create_frame`, `connect`, `set_color_meaning`, `create_text`, and more.

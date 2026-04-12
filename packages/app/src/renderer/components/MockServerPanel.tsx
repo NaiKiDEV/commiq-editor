@@ -1558,11 +1558,7 @@ export function MockServerPanel({ panelId: _panelId }: { panelId: string }) {
           <Tooltip>
             <TooltipTrigger
               render={
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={createConfig}
-                />
+                <Button variant="ghost" size="icon-xs" onClick={createConfig} />
               }
             >
               <Plus className="size-3.5" />

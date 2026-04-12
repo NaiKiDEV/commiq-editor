@@ -1,7 +1,7 @@
 import { memo } from "react";
-import { X } from "lucide-react";
+import { X, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Board } from "../../../shared/whiteboard-types";
+import type { Board, StickyTextAlign, StickyVerticalAlign } from "../../../shared/whiteboard-types";
 import {
   STICKY_COLORS,
   ALL_COLORS,
@@ -48,7 +48,10 @@ interface ContextMenusProps {
   onCloseMetadata: () => void;
   onConnectionLabelChange: (label: string) => void;
   onStickyColorChange: (stickyId: string, color: string) => void;
+  onStickyAlignChange: (stickyId: string, align: StickyTextAlign) => void;
+  onStickyVerticalAlignChange: (stickyId: string, align: StickyVerticalAlign) => void;
   onStickyDelete: (stickyId: string) => void;
+  onStickyDuplicate: (stickyId: string) => void;
   onStickyEditMetadata: (stickyId: string) => void;
   onFrameColorChange: (frameId: string, color: string) => void;
   onFrameRename: (frameId: string) => void;
@@ -90,7 +93,10 @@ export const ContextMenus = memo(function ContextMenus({
   onCloseMetadata,
   onConnectionLabelChange,
   onStickyColorChange,
+  onStickyAlignChange,
+  onStickyVerticalAlignChange,
   onStickyDelete,
+  onStickyDuplicate,
   onStickyEditMetadata,
   onFrameColorChange,
   onFrameRename,
@@ -116,7 +122,7 @@ export const ContextMenus = memo(function ContextMenus({
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="px-3 py-2 space-y-1">
+          <div className="px-3 py-2 space-y-2">
             <div className="flex items-center gap-2">
               {ALL_COLORS.map((color) => {
                 const currentColor = board?.stickies.find(
@@ -158,8 +164,71 @@ export const ContextMenus = memo(function ContextMenus({
                   </div>
                 ) : null;
               })()}
+            {/* Alignment */}
+            {(() => {
+              const sticky = board?.stickies.find((s) => s.id === contextMenu.stickyId);
+              const currentAlign = sticky?.textAlign ?? 'left';
+              const currentVAlign = sticky?.verticalAlign ?? 'top';
+              const hOptions: { align: StickyTextAlign; Icon: typeof AlignLeft; title: string }[] = [
+                { align: 'left', Icon: AlignLeft, title: 'Left' },
+                { align: 'center', Icon: AlignCenter, title: 'Center' },
+                { align: 'right', Icon: AlignRight, title: 'Right' },
+              ];
+              const vOptions: { align: StickyVerticalAlign; label: string }[] = [
+                { align: 'top', label: 'Top' },
+                { align: 'middle', label: 'Mid' },
+                { align: 'bottom', label: 'Bot' },
+              ];
+              return (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1">
+                    {hOptions.map(({ align, Icon, title }) => (
+                      <button
+                        key={align}
+                        onClick={() => onStickyAlignChange(contextMenu.stickyId, align)}
+                        className={cn(
+                          "flex-1 flex items-center justify-center py-1 rounded transition-colors",
+                          currentAlign === align
+                            ? "bg-blue-500/30 text-blue-300"
+                            : "text-white/40 hover:text-white/80 hover:bg-white/10",
+                        )}
+                        title={title}
+                      >
+                        <Icon size={13} />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {vOptions.map(({ align, label }) => (
+                      <button
+                        key={align}
+                        onClick={() => onStickyVerticalAlignChange(contextMenu.stickyId, align)}
+                        className={cn(
+                          "flex-1 py-0.5 rounded text-[10px] font-medium transition-colors",
+                          currentVAlign === align
+                            ? "bg-blue-500/30 text-blue-300"
+                            : "text-white/40 hover:text-white/80 hover:bg-white/10",
+                        )}
+                        title={align}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
           <div className="h-px bg-white/10" />
+          <button
+            className="w-full px-3 py-1.5 text-sm text-white/70 hover:text-white hover:bg-white/5 text-left"
+            onClick={() => {
+              onStickyDuplicate(contextMenu.stickyId);
+              onCloseStickyMenu();
+            }}
+          >
+            Duplicate
+          </button>
           <button
             className="w-full px-3 py-1.5 text-sm text-white/70 hover:text-white hover:bg-white/5 text-left"
             onClick={() => onStickyEditMetadata(contextMenu.stickyId)}

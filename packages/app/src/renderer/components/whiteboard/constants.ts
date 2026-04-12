@@ -2,22 +2,22 @@ import type { StickyColor } from "../../../shared/whiteboard-types";
 
 export const STICKY_COLORS: Record<StickyColor, string> = {
   yellow: "#fef08a",
-  blue: "#93c5fd",
-  green: "#86efac",
-  pink: "#f9a8d4",
-  purple: "#c4b5fd",
-  orange: "#fb923c",
-  red: "#f87171",
+  blue:   "#bfdbfe",
+  green:  "#bbf7d0",
+  pink:   "#fbcfe8",
+  purple: "#ddd6fe",
+  orange: "#fed7aa",
+  red:    "#fecaca",
 };
 
 export const STICKY_BORDER_COLORS: Record<StickyColor, string> = {
   yellow: "#eab308",
-  blue: "#3b82f6",
-  green: "#22c55e",
-  pink: "#ec4899",
+  blue:   "#3b82f6",
+  green:  "#22c55e",
+  pink:   "#ec4899",
   purple: "#8b5cf6",
-  orange: "#ea580c",
-  red: "#ef4444",
+  orange: "#f97316",
+  red:    "#ef4444",
 };
 
 export const ALL_COLORS: StickyColor[] = [
@@ -62,6 +62,7 @@ export const SHORTCUT_LABELS = [
   ["Zoom", "Pinch / Ctrl+scroll"],
   ["Multi-select", "Shift+click / drag"],
   ["Select all", "Ctrl+A"],
+  ["Duplicate", "Ctrl+D"],
   ["Delete", "Del key"],
   ["Resize", "Select item → drag handles"],
   ["Colors", "Right-click item"],

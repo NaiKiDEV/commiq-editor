@@ -31,13 +31,13 @@ export const BoardMenu = memo(function BoardMenu({
   const activeBoardName = boards.find((b) => b.id === activeBoardId)?.name ?? 'No Board';
 
   return (
-    <div className="absolute top-3 left-3 z-10">
+    <div className="relative">
       <button
         onClick={onToggleMenu}
-        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg text-sm text-white/80 hover:text-white shadow-xl"
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg text-sm text-white/80 hover:text-white shadow-xl max-w-[200px]"
       >
-        {activeBoardName}
-        <ChevronDown size={14} />
+        <span className="truncate">{activeBoardName}</span>
+        <ChevronDown size={14} className="shrink-0" />
       </button>
       {boardMenuOpen && (
         <div className="absolute top-full mt-1 left-0 min-w-[320px] bg-[#1e1e2e] border border-white/10 rounded-lg shadow-xl overflow-hidden">

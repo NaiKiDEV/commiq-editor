@@ -55,6 +55,74 @@ function createConfiguredMcpServer(): McpServer {
     return "\n\nConnection graph:\n" + lines.join("\n");
   }
 
+  // --- Usage guide ---
+
+  mcp.tool(
+    "get_usage_guide",
+    "Get comprehensive usage guide for the whiteboard MCP — read this before creating content",
+    {},
+    async () => {
+      const guide = `# Whiteboard MCP Usage Guide
+
+## Sticky Colors
+Use named colors to convey semantic meaning. Set color meanings per-board with set_color_meaning.
+
+Available sticky colors:
+  yellow   — default; general notes, ideas
+  blue     — information, references, links
+  green    — positive outcomes, done items, solutions
+  pink     — questions, unknowns, needs clarification
+  purple   — actions, tasks, next steps
+  orange   — warnings, blockers, risks
+  red      — critical issues, blockers, urgent
+
+Always call set_color_meaning before creating stickies if you are mapping colors to concepts.
+Check existing color meanings on the board with get_color_meanings before assigning colors.
+
+## Sticky Sizing Guide
+Default: width=160, height=100 (fits ~3-4 lines of text at 13px)
+- Short label (1 line):   width=140, height=60
+- Medium note (2-3 lines): width=160, height=100  (default)
+- Long note (4-5 lines):  width=200, height=130
+- Very long (6+ lines):   width=240, height=160
+
+Estimate: ~18 chars per line at width=160. Increase width for longer lines.
+Always prefer slightly taller over ellipsis — text gets clipped if height is too small.
+
+## Frame Colors
+Use these predefined hex values for frames:
+  slate:  #e2e8f0  — neutral grouping (default)
+  blue:   #93c5fd  — informational sections
+  green:  #86efac  — completed / positive areas
+  yellow: #fef08a  — in-progress / attention areas
+  pink:   #f9a8d4  — design / UX areas
+  purple: #c4b5fd  — architecture / technical areas
+  orange: #fb923c  — warnings / risky areas
+  red:    #f87171  — critical / blocked areas
+
+## Frame Sizing
+- Leave at least 20px padding around stickies inside a frame
+- Typical frame: width = (cols * (stickyWidth + gap)) + 40
+                 height = (rows * (stickyHeight + gap)) + 60
+
+## Layout Guidance
+- Position stickies in a grid: increment x by (stickyWidth + 20), y by (stickyHeight + 20)
+- Use frames to group related stickies — set frameId on stickies after creating them
+- Place frames at least 40px apart to keep labels readable
+- Connections go between stickies — connect after creating all stickies
+- Label connections with a verb phrase: "triggers", "depends on", "produces"
+
+## Recommended Workflow
+1. get_color_meanings — check existing legend
+2. set_color_meaning — define your color semantics if not set
+3. create_frame — create section containers first
+4. create_sticky — populate content, using consistent colors
+5. connect — add relationships last
+`;
+      return { content: [{ type: "text", text: guide }] };
+    },
+  );
+
   // --- Board tools ---
 
   mcp.tool("list_boards", "List all whiteboard boards", {}, async () => {
@@ -120,13 +188,15 @@ function createConfiguredMcpServer(): McpServer {
 
   mcp.tool(
     "create_sticky",
-    "Create a sticky note on a board",
+    "Create a sticky note on a board. Colors: yellow(default/ideas), blue(info), green(done/positive), pink(questions), purple(actions), orange(warnings), red(critical). Size guide: 1-line→160×60, 2-3 lines→160×100, 4-5 lines→200×130. ~18 chars fit per line at width=160. Call get_color_meanings first to respect the board's color legend.",
     {
       boardId: z.string(),
       text: z.string().optional(),
       color: z
         .enum(["yellow", "blue", "green", "pink", "purple", "orange", "red"])
         .optional(),
+      textAlign: z.enum(["left", "center", "right"]).optional(),
+      verticalAlign: z.enum(["top", "middle", "bottom"]).optional(),
       x: z.number().optional(),
       y: z.number().optional(),
       width: z.number().optional(),
@@ -160,6 +230,8 @@ function createConfiguredMcpServer(): McpServer {
       color: z
         .enum(["yellow", "blue", "green", "pink", "purple", "orange", "red"])
         .optional(),
+      textAlign: z.enum(["left", "center", "right"]).optional(),
+      verticalAlign: z.enum(["top", "middle", "bottom"]).optional(),
       x: z.number().optional(),
       y: z.number().optional(),
       width: z.number().optional(),
@@ -365,7 +437,7 @@ function createConfiguredMcpServer(): McpServer {
 
   mcp.tool(
     "create_frame",
-    "Create a frame to group stickies",
+    "Create a frame to group stickies. Use predefined hex colors: #e2e8f0(slate/default), #93c5fd(blue), #86efac(green), #fef08a(yellow), #f9a8d4(pink), #c4b5fd(purple), #fb923c(orange), #f87171(red). Size: width = cols*(stickyW+20)+40, height = rows*(stickyH+20)+60. Leave 20px padding around inner stickies.",
     {
       boardId: z.string(),
       label: z.string(),
@@ -434,7 +506,7 @@ function createConfiguredMcpServer(): McpServer {
 
   mcp.tool(
     "connect",
-    "Create a directed connection between two stickies",
+    "Create a directed connection (arrow) from one sticky to another. Use a short verb phrase as label: 'triggers', 'depends on', 'produces', 'blocks'. Multiple connections between the same pair are automatically routed with curved offsets to avoid overlap.",
     {
       boardId: z.string(),
       fromStickyId: z.string(),

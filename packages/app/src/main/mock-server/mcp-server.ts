@@ -25,7 +25,9 @@ export type MockServerMcpBridge = {
   listConfigs: () => Promise<MockServerConfig[]>;
   saveConfig: (config: MockServerConfig) => Promise<MockServerConfig>;
   deleteConfig: (configId: string) => Promise<void>;
-  startServer: (configId: string) => Promise<{ status: string; error?: string }>;
+  startServer: (
+    configId: string,
+  ) => Promise<{ status: string; error?: string }>;
   stopServer: (configId: string) => Promise<{ status: string }>;
   getServerState: (configId: string) => Promise<{
     status: string;
@@ -88,7 +90,11 @@ async function getConfig(configId: string): Promise<MockServerConfig | null> {
 async function getConfigAndRoute(
   configId: string,
   routeId: string,
-): Promise<{ config: MockServerConfig; route: MockRoute; routeIndex: number } | null> {
+): Promise<{
+  config: MockServerConfig;
+  route: MockRoute;
+  routeIndex: number;
+} | null> {
   const config = await getConfig(configId);
   if (!config) return null;
   const routeIndex = config.routes.findIndex((r) => r.id === routeId);
@@ -198,7 +204,8 @@ function createConfiguredMcpServer(): McpServer {
       if (patch.name !== undefined) config.name = patch.name;
       if (patch.port !== undefined) config.port = patch.port;
       if (patch.corsOrigin !== undefined) config.corsOrigin = patch.corsOrigin;
-      if (patch.proxyBaseUrl !== undefined) config.proxyBaseUrl = patch.proxyBaseUrl;
+      if (patch.proxyBaseUrl !== undefined)
+        config.proxyBaseUrl = patch.proxyBaseUrl;
       const saved = await bridge.saveConfig(config);
       return ok(saved);
     },
@@ -256,7 +263,15 @@ function createConfiguredMcpServer(): McpServer {
     "Create a new route (endpoint) on a mock server. The route will return the specified status/body when its method+path matches an incoming request. Supports template variables like {{params.id}}, {{query.name}}, {{body.field}}, {{randomUUID}}, {{now}}, {{randomInt min max}} in the response body.",
     {
       configId: z.string(),
-      method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]),
+      method: z.enum([
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "HEAD",
+        "OPTIONS",
+      ]),
       path: z.string().describe("URL path pattern, e.g. /api/users/:id"),
       name: z.string().optional().default(""),
       enabled: z.boolean().optional().default(true),
@@ -265,7 +280,17 @@ function createConfiguredMcpServer(): McpServer {
       body: z.string().optional().default(""),
       delay: z.number().int().min(0).optional().default(0),
     },
-    async ({ configId, method, path, name, enabled, status, headers, body, delay }) => {
+    async ({
+      configId,
+      method,
+      path,
+      name,
+      enabled,
+      status,
+      headers,
+      body,
+      delay,
+    }) => {
       if (!bridge) return err("Bridge not initialised");
       const config = await getConfig(configId);
       if (!config) return err("Config not found");
@@ -296,7 +321,9 @@ function createConfiguredMcpServer(): McpServer {
     {
       configId: z.string(),
       routeId: z.string(),
-      method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]).optional(),
+      method: z
+        .enum(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
+        .optional(),
       path: z.string().optional(),
       name: z.string().optional(),
       enabled: z.boolean().optional(),
@@ -310,12 +337,14 @@ function createConfiguredMcpServer(): McpServer {
       const found = await getConfigAndRoute(configId, routeId);
       if (!found) return err("Config or route not found");
       const { config, route } = found;
-      if (patch.method !== undefined) route.method = patch.method as MockHttpMethod;
+      if (patch.method !== undefined)
+        route.method = patch.method as MockHttpMethod;
       if (patch.path !== undefined) route.path = patch.path;
       if (patch.name !== undefined) route.name = patch.name;
       if (patch.enabled !== undefined) route.enabled = patch.enabled;
       if (patch.status !== undefined) route.status = patch.status;
-      if (patch.headers !== undefined) route.headers = patch.headers as MockHeader[];
+      if (patch.headers !== undefined)
+        route.headers = patch.headers as MockHeader[];
       if (patch.body !== undefined) route.body = patch.body;
       if (patch.delay !== undefined) route.delay = patch.delay;
       await bridge.saveConfig(config);
@@ -391,11 +420,13 @@ function createConfiguredMcpServer(): McpServer {
       const found = await getConfigAndRoute(configId, routeId);
       if (!found) return err("Config or route not found");
       const { config, route } = found;
-      if (ruleIndex >= route.rules.length) return err("Rule index out of range");
+      if (ruleIndex >= route.rules.length)
+        return err("Rule index out of range");
       const rule = route.rules[ruleIndex];
       if (patch.condition !== undefined) rule.condition = patch.condition;
       if (patch.status !== undefined) rule.status = patch.status;
-      if (patch.headers !== undefined) rule.headers = patch.headers as MockHeader[];
+      if (patch.headers !== undefined)
+        rule.headers = patch.headers as MockHeader[];
       if (patch.body !== undefined) rule.body = patch.body;
       if (patch.delay !== undefined) rule.delay = patch.delay;
       await bridge.saveConfig(config);
@@ -416,7 +447,8 @@ function createConfiguredMcpServer(): McpServer {
       const found = await getConfigAndRoute(configId, routeId);
       if (!found) return err("Config or route not found");
       const { config, route } = found;
-      if (ruleIndex >= route.rules.length) return err("Rule index out of range");
+      if (ruleIndex >= route.rules.length)
+        return err("Rule index out of range");
       route.rules.splice(ruleIndex, 1);
       await bridge.saveConfig(config);
       return ok("Deleted");
@@ -497,8 +529,11 @@ function createConfiguredMcpServer(): McpServer {
       const config = await getConfig(configId);
       if (!config) return err("Config not found");
       const before = (config.wsEndpoints ?? []).length;
-      config.wsEndpoints = (config.wsEndpoints ?? []).filter((e) => e.id !== endpointId);
-      if (config.wsEndpoints.length === before) return err("Endpoint not found");
+      config.wsEndpoints = (config.wsEndpoints ?? []).filter(
+        (e) => e.id !== endpointId,
+      );
+      if (config.wsEndpoints.length === before)
+        return err("Endpoint not found");
       await bridge.saveConfig(config);
       return ok("Deleted");
     },
@@ -515,7 +550,9 @@ function createConfiguredMcpServer(): McpServer {
     async ({ configId }) => {
       if (!bridge) return err("Bridge not initialised");
       const result = await bridge.startServer(configId);
-      return result.status === "error" ? err(result.error ?? "Failed to start") : ok(result);
+      return result.status === "error"
+        ? err(result.error ?? "Failed to start")
+        : ok(result);
     },
   );
 
@@ -552,7 +589,10 @@ function createConfiguredMcpServer(): McpServer {
       description: "List all mock server configurations with summary info",
     },
     async (uri) => {
-      if (!bridge) return { contents: [{ uri: uri.href, text: "Bridge not initialised" }] };
+      if (!bridge)
+        return {
+          contents: [{ uri: uri.href, text: "Bridge not initialised" }],
+        };
       const configs = await bridge.listConfigs();
       const summary = configs.map((c) => ({
         id: c.id,
@@ -652,7 +692,8 @@ const sessions = new Map<
 export async function startMockServerMcp(
   port: number,
 ): Promise<{ success: boolean; error?: string }> {
-  if (httpServer) return { success: false, error: "MCP server already running" };
+  if (httpServer)
+    return { success: false, error: "MCP server already running" };
 
   return new Promise((resolve) => {
     httpServer = createServer(async (req, res) => {

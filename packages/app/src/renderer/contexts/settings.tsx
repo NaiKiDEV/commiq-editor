@@ -1,15 +1,29 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
-type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
+};
 
-export type Theme = 'amoled' | 'midnight' | 'light' | 'catppuccin-mocha' | 'gruvbox-material-dark-hard' | 'rose-pine-moon' | 'rose-pine' | 'kanagawa-wave' | 'kanagawa-dragon' | 'rose-pine-light' | 'catppuccin-latte' | 'gruvbox-material-light';
+export type Theme =
+  | "amoled"
+  | "midnight"
+  | "light"
+  | "catppuccin-mocha"
+  | "gruvbox-material-dark-hard"
+  | "rose-pine-moon"
+  | "rose-pine"
+  | "kanagawa-wave"
+  | "kanagawa-dragon"
+  | "rose-pine-light"
+  | "catppuccin-latte"
+  | "gruvbox-material-light";
 
 export type AppSettings = {
   theme: Theme;
   terminal: {
     fontFamily: string;
     fontSize: number;
-    cursorStyle: 'block' | 'underline' | 'bar';
+    cursorStyle: "block" | "underline" | "bar";
     scrollback: number;
     shell: string;
   };
@@ -25,16 +39,17 @@ export type AppSettings = {
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  theme: 'amoled',
+  theme: "amoled",
   terminal: {
-    fontFamily: "'CommitMono NF', 'CommitMono NF Mono', Menlo, Monaco, monospace",
+    fontFamily:
+      "'CommitMono NF', 'CommitMono NF Mono', Menlo, Monaco, monospace",
     fontSize: 13,
-    cursorStyle: 'bar',
+    cursorStyle: "bar",
     scrollback: 1000,
-    shell: '',
+    shell: "",
   },
   browser: {
-    defaultUrl: 'https://www.google.com',
+    defaultUrl: "https://www.google.com",
   },
   whiteboard: {
     mcpPort: 3100,
@@ -51,12 +66,15 @@ function deepMerge<T extends object>(base: T, patch: DeepPartial<T>): T {
     const baseVal = base[key];
     if (
       patchVal !== undefined &&
-      typeof patchVal === 'object' &&
+      typeof patchVal === "object" &&
       !Array.isArray(patchVal) &&
-      typeof baseVal === 'object' &&
+      typeof baseVal === "object" &&
       baseVal !== null
     ) {
-      result[key] = deepMerge(baseVal as object, patchVal as object) as T[typeof key];
+      result[key] = deepMerge(
+        baseVal as object,
+        patchVal as object,
+      ) as T[typeof key];
     } else if (patchVal !== undefined) {
       result[key] = patchVal as T[typeof key];
     }
@@ -74,17 +92,23 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    window.electronAPI.settings.load()
+    window.electronAPI.settings
+      .load()
       .then((loaded) => {
-        const merged = deepMerge(DEFAULT_SETTINGS, loaded as DeepPartial<AppSettings>);
+        const merged = deepMerge(
+          DEFAULT_SETTINGS,
+          loaded as DeepPartial<AppSettings>,
+        );
         setSettings(merged);
-        document.documentElement.setAttribute('data-theme', merged.theme);
+        document.documentElement.setAttribute("data-theme", merged.theme);
       })
-      .catch(() => {/* keep defaults */});
+      .catch(() => {
+        /* keep defaults */
+      });
   }, []);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', settings.theme);
+    document.documentElement.setAttribute("data-theme", settings.theme);
   }, [settings.theme]);
 
   const updateSettings = (patch: DeepPartial<AppSettings>) => {

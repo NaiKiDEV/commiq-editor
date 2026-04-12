@@ -75,7 +75,7 @@ export const Toolbar = memo(function Toolbar({
   onRedo,
 }: ToolbarProps) {
   return (
-    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg px-2 py-1.5 shadow-xl">
+    <div className="flex items-center gap-1 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg px-2 py-1.5 shadow-xl">
       <button
         onClick={onUndo}
         disabled={!canUndo}

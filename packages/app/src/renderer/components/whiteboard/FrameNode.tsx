@@ -16,6 +16,9 @@ interface FrameNodeProps {
   onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
 }
 
+const LABEL_HEIGHT = 22;
+const LABEL_PADDING_X = 10;
+
 function FrameNodeBase({
   frame, isSelected, isDraggable,
   onClick, onDblClick, onDragStart, onDragMove, onDragEnd, onContextMenu, onTransformEnd,
@@ -28,6 +31,8 @@ function FrameNodeBase({
   const handleContextMenu = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => onContextMenu(frame.id, e), [frame.id, onContextMenu]);
 
   const borderColor = isSelected ? '#3b82f6' : frame.color;
+  // Estimate label background width from text length
+  const labelBgWidth = Math.max(60, frame.label.length * 8 + LABEL_PADDING_X * 2);
 
   return (
     <Group
@@ -43,23 +48,35 @@ function FrameNodeBase({
       onContextMenu={handleContextMenu}
       onTransformEnd={onTransformEnd}
     >
+      {/* Frame body */}
       <Rect
         width={frame.width}
         height={frame.height}
-        fill={frame.color + '20'}
+        fill={frame.color + '4d'}
         stroke={borderColor}
-        strokeWidth={isSelected ? 2.5 : 2}
-        cornerRadius={8}
-        dash={[8, 4]}
+        strokeWidth={isSelected ? 2.5 : 1.5}
+        cornerRadius={6}
+        dash={[8, 5]}
+      />
+      {/* Label background pill */}
+      <Rect
+        x={6}
+        y={-LABEL_HEIGHT + 2}
+        width={labelBgWidth}
+        height={LABEL_HEIGHT}
+        fill={frame.color}
+        cornerRadius={[4, 4, 0, 0]}
+        listening={false}
       />
       <Text
         text={frame.label}
-        x={8}
-        y={-22}
-        fontSize={14}
+        x={6 + LABEL_PADDING_X}
+        y={-LABEL_HEIGHT + 7}
+        fontSize={12}
         fontFamily="'Inter Variable', 'Inter', system-ui, sans-serif"
-        fill={frame.color}
+        fill="#1e293b"
         fontStyle="bold"
+        listening={false}
       />
     </Group>
   );

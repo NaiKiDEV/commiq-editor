@@ -227,19 +227,19 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
           setBoard(updated);
           refreshUndoRedo();
         }
-        setBoards((prev) =>
-          prev.map((bs) =>
-            bs.id === updated.id
-              ? {
-                  id: updated.id,
-                  name: updated.name,
-                  workspaceId: updated.workspaceId,
-                  createdAt: updated.createdAt,
-                  updatedAt: updated.updatedAt,
-                }
-              : bs,
-          ),
-        );
+        const summary = {
+          id: updated.id,
+          name: updated.name,
+          workspaceId: updated.workspaceId,
+          createdAt: updated.createdAt,
+          updatedAt: updated.updatedAt,
+        };
+        setBoards((prev) => {
+          const exists = prev.some((bs) => bs.id === updated.id);
+          return exists
+            ? prev.map((bs) => (bs.id === updated.id ? summary : bs))
+            : [...prev, summary];
+        });
       },
     );
     const cleanupDeleted = window.electronAPI.whiteboard.onBoardDeleted(
@@ -342,7 +342,7 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         stateRef.current;
 
       if (
-        e.key === "z" &&
+        e.key.toLowerCase() === "z" &&
         (e.ctrlKey || e.metaKey) &&
         !e.shiftKey &&
         !editingSticky &&
@@ -353,8 +353,8 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         return;
       }
       if (
-        ((e.key === "z" && (e.ctrlKey || e.metaKey) && e.shiftKey) ||
-          (e.key === "y" && (e.ctrlKey || e.metaKey))) &&
+        ((e.key.toLowerCase() === "z" && (e.ctrlKey || e.metaKey) && e.shiftKey) ||
+          (e.key.toLowerCase() === "y" && (e.ctrlKey || e.metaKey))) &&
         !editingSticky &&
         !editingFrame
       ) {
@@ -417,7 +417,7 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         return;
       }
       if (
-        e.key === "a" &&
+        e.key.toLowerCase() === "a" &&
         (e.ctrlKey || e.metaKey) &&
         !editingSticky &&
         !editingFrame &&
@@ -430,6 +430,32 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
           board.frames.forEach((f) => all.add(f.id));
           board.texts.forEach((t) => all.add(t.id));
           setSelectedIds(all);
+        }
+      }
+      if (
+        e.key.toLowerCase() === "d" &&
+        (e.ctrlKey || e.metaKey) &&
+        !editingSticky &&
+        !editingFrame &&
+        !editingTextNode &&
+        selectedIds.size > 0 &&
+        activeBoardId &&
+        board
+      ) {
+        e.preventDefault();
+        for (const id of selectedIds) {
+          const sticky = board.stickies.find((s) => s.id === id);
+          if (sticky) {
+            window.electronAPI.whiteboard.createSticky(activeBoardId, {
+              text: sticky.text,
+              color: sticky.color,
+              x: sticky.x + 20,
+              y: sticky.y + 20,
+              width: sticky.width,
+              height: sticky.height,
+              metadata: { ...sticky.metadata },
+            });
+          }
         }
       }
     };
@@ -1554,11 +1580,42 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     },
     [],
   );
+  const handleStickyAlignChange = useCallback(
+    (stickyId: string, textAlign: import("../../shared/whiteboard-types").StickyTextAlign) => {
+      const { activeBoardId } = stateRef.current;
+      if (activeBoardId)
+        window.electronAPI.whiteboard.updateSticky(activeBoardId, stickyId, { textAlign });
+    },
+    [],
+  );
+  const handleStickyVerticalAlignChange = useCallback(
+    (stickyId: string, verticalAlign: import("../../shared/whiteboard-types").StickyVerticalAlign) => {
+      const { activeBoardId } = stateRef.current;
+      if (activeBoardId)
+        window.electronAPI.whiteboard.updateSticky(activeBoardId, stickyId, { verticalAlign });
+    },
+    [],
+  );
   const handleStickyDelete = useCallback((stickyId: string) => {
     const { activeBoardId } = stateRef.current;
     if (activeBoardId)
       window.electronAPI.whiteboard.deleteSticky(activeBoardId, stickyId);
     setContextMenu(null);
+  }, []);
+  const handleStickyDuplicate = useCallback((stickyId: string) => {
+    const { activeBoardId, board } = stateRef.current;
+    if (!activeBoardId || !board) return;
+    const sticky = board.stickies.find((s) => s.id === stickyId);
+    if (!sticky) return;
+    window.electronAPI.whiteboard.createSticky(activeBoardId, {
+      text: sticky.text,
+      color: sticky.color,
+      x: sticky.x + 20,
+      y: sticky.y + 20,
+      width: sticky.width,
+      height: sticky.height,
+      metadata: { ...sticky.metadata },
+    });
   }, []);
   const handleStickyEditMetadata = useCallback((stickyId: string) => {
     setMetadataEditor(stickyId);
@@ -1668,6 +1725,30 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
     () => new Map(board?.stickies.map((s) => [s.id, s]) ?? []),
     [board],
   );
+
+  // Compute curve offsets so parallel connections between the same pair spread out.
+  // Connections in the "reversed" direction (fromId > toId lexicographically) have their
+  // perpendicular vector flipped, so we negate the offset for them to land on opposite sides.
+  const connectionCurveOffsets = useMemo(() => {
+    if (!board) return new Map<string, number>();
+    const pairGroups = new Map<string, { id: string; reversed: boolean }[]>();
+    for (const conn of board.connections) {
+      const sorted = [conn.fromStickyId, conn.toStickyId].sort();
+      const key = sorted.join('|');
+      const reversed = conn.fromStickyId !== sorted[0];
+      if (!pairGroups.has(key)) pairGroups.set(key, []);
+      pairGroups.get(key)!.push({ id: conn.id, reversed });
+    }
+    const offsets = new Map<string, number>();
+    for (const [, entries] of pairGroups) {
+      const count = entries.length;
+      entries.forEach(({ id, reversed }, i) => {
+        const raw = (i - (count - 1) / 2) * 55;
+        offsets.set(id, reversed ? -raw : raw);
+      });
+    }
+    return offsets;
+  }, [board?.connections]);
   const isDraggable = tool === "select";
   const connectFromSticky = connectFrom
     ? board?.stickies.find((s) => s.id === connectFrom)
@@ -1839,6 +1920,7 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
                 conn={conn}
                 fromSticky={from}
                 toSticky={to}
+                curveOffset={connectionCurveOffsets.get(conn.id) ?? 0}
                 onClick={handleConnectionClick}
                 onContextMenu={handleConnectionContextMenu}
               />
@@ -1990,67 +2072,77 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         />
       )}
 
-      <Toolbar
-        tool={tool}
-        stageScale={stageScale}
-        preCreationStickyColor={preCreationStickyColor}
-        preCreationFrameColor={preCreationFrameColor}
-        preCreationTextColor={preCreationTextColor}
-        preCreationTextSize={preCreationTextSize}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        onToolChange={handleToolChange}
-        onStickyColorChange={setPreCreationStickyColor}
-        onFrameColorChange={setPreCreationFrameColor}
-        onTextColorChange={setPreCreationTextColor}
-        onTextSizeChange={setPreCreationTextSize}
-        onZoomIn={zoomIn}
-        onZoomOut={zoomOut}
-        onFitToScreen={fitToScreen}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-      />
+      {/* Top bar: grid keeps left/center/right from ever overlapping */}
+      <div className="absolute top-3 left-3 right-3 z-10 grid grid-cols-[1fr_auto_1fr] items-start gap-2 pointer-events-none">
+        {/* Left: board selector */}
+        <div className="pointer-events-auto">
+          <BoardMenu
+            boards={boards}
+            activeBoardId={activeBoardId}
+            boardMenuOpen={boardMenuOpen}
+            renamingBoardId={renamingBoardId}
+            renameValue={renameValue}
+            importFileRef={importFileRef}
+            onToggleMenu={() => setBoardMenuOpen((p) => !p)}
+            onSelectBoard={(id) => {
+              setActiveBoardId(id);
+              setBoardMenuOpen(false);
+            }}
+            onStartRename={(id, name) => {
+              setRenamingBoardId(id);
+              setRenameValue(name);
+            }}
+            onRenameChange={setRenameValue}
+            onRenameCommit={handleRenameBoard}
+            onRenameCancel={() => setRenamingBoardId(null)}
+            onDeleteBoard={handleDeleteBoard}
+            onExportBoard={handleExportBoard}
+            onCreateBoard={handleCreateBoard}
+            onImportClick={() => importFileRef.current?.click()}
+            onImportFile={handleImportBoard}
+          />
+        </div>
 
-      <BoardMenu
-        boards={boards}
-        activeBoardId={activeBoardId}
-        boardMenuOpen={boardMenuOpen}
-        renamingBoardId={renamingBoardId}
-        renameValue={renameValue}
-        importFileRef={importFileRef}
-        onToggleMenu={() => setBoardMenuOpen((p) => !p)}
-        onSelectBoard={(id) => {
-          setActiveBoardId(id);
-          setBoardMenuOpen(false);
-        }}
-        onStartRename={(id, name) => {
-          setRenamingBoardId(id);
-          setRenameValue(name);
-        }}
-        onRenameChange={setRenameValue}
-        onRenameCommit={handleRenameBoard}
-        onRenameCancel={() => setRenamingBoardId(null)}
-        onDeleteBoard={handleDeleteBoard}
-        onExportBoard={handleExportBoard}
-        onCreateBoard={handleCreateBoard}
-        onImportClick={() => importFileRef.current?.click()}
-        onImportFile={handleImportBoard}
-      />
+        {/* Center: main toolbar — always centered between the side columns */}
+        <div className="pointer-events-auto">
+          <Toolbar
+            tool={tool}
+            stageScale={stageScale}
+            preCreationStickyColor={preCreationStickyColor}
+            preCreationFrameColor={preCreationFrameColor}
+            preCreationTextColor={preCreationTextColor}
+            preCreationTextSize={preCreationTextSize}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onToolChange={handleToolChange}
+            onStickyColorChange={setPreCreationStickyColor}
+            onFrameColorChange={setPreCreationFrameColor}
+            onTextColorChange={setPreCreationTextColor}
+            onTextSizeChange={setPreCreationTextSize}
+            onZoomIn={zoomIn}
+            onZoomOut={zoomOut}
+            onFitToScreen={fitToScreen}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+          />
+        </div>
 
-      <div className="absolute top-3 right-3 z-10">
-        <button
-          onClick={handleToggleMcp}
-          className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg text-sm shadow-xl transition-colors",
-            mcpRunning
-              ? "text-green-300 border-green-500/30"
-              : "text-white/50 hover:text-white/80",
-          )}
-          title={mcpRunning ? "Stop MCP Server" : "Start MCP Server"}
-        >
-          <Radio size={14} />
-          {mcpRunning ? "MCP" : "MCP Off"}
-        </button>
+        {/* Right: MCP button */}
+        <div className="pointer-events-auto flex justify-end">
+          <button
+            onClick={handleToggleMcp}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 bg-[#1e1e2e]/90 backdrop-blur border border-white/10 rounded-lg text-sm shadow-xl transition-colors",
+              mcpRunning
+                ? "text-green-300 border-green-500/30"
+                : "text-white/50 hover:text-white/80",
+            )}
+            title={mcpRunning ? "Stop MCP Server" : "Start MCP Server"}
+          >
+            <Radio size={14} />
+            {mcpRunning ? "MCP" : "MCP Off"}
+          </button>
+        </div>
       </div>
 
       <div className="absolute bottom-3 right-3 z-10 flex flex-col items-end gap-1">
@@ -2146,7 +2238,10 @@ export function WhiteboardPanel({ panelId: _panelId }: WhiteboardPanelProps) {
         onCloseMetadata={() => setMetadataEditor(null)}
         onConnectionLabelChange={handleConnectionLabelChange}
         onStickyColorChange={handleStickyColorChange}
+        onStickyAlignChange={handleStickyAlignChange}
+        onStickyVerticalAlignChange={handleStickyVerticalAlignChange}
         onStickyDelete={handleStickyDelete}
+        onStickyDuplicate={handleStickyDuplicate}
         onStickyEditMetadata={handleStickyEditMetadata}
         onFrameColorChange={handleFrameColorChange}
         onFrameRename={handleFrameRename}
