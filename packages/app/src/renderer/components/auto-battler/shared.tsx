@@ -304,7 +304,7 @@ export function UnitCard({
       <StarBadge star={starLevel} />
       <div className="leading-none">{unit.emoji}</div>
       {!compact && (
-        <div className="mt-0.5 text-[9px] leading-tight text-center text-foreground/90 truncate max-w-full px-0.5">
+        <div className="mt-1 text-[9px] leading-tight text-center text-foreground/90 truncate max-w-full px-0.5">
           {unit.name}
         </div>
       )}
@@ -340,11 +340,13 @@ export function ShopCard({
   slot,
   unit,
   canAfford,
+  willMerge,
   onBuy,
 }: {
   slot: ShopSlot;
   unit: UnitDef | undefined;
   canAfford: boolean;
+  willMerge?: boolean;
   onBuy: () => void;
 }) {
   if (!unit) {
@@ -362,6 +364,7 @@ export function ShopCard({
         slot.sold && "opacity-30 grayscale",
         !slot.sold && !canAfford && "opacity-50",
         !slot.sold && canAfford && "hover:scale-105 hover:border-accent cursor-pointer",
+        !slot.sold && canAfford && willMerge && "ring-2 ring-amber-400/60 animate-pulse",
       )}
     >
       <div className={cn("text-[9px] uppercase tracking-wide font-semibold", TIER_TEXT[unit.tier])}>
@@ -394,20 +397,20 @@ export function SpeedSelector({
   value: GameSettings["combatSpeed"];
   onChange: (speed: GameSettings["combatSpeed"]) => void;
 }) {
-  const options: GameSettings["combatSpeed"][] = ["normal", "fast", "instant"];
+  const options: GameSettings["combatSpeed"][] = ["slow", "normal", "fast", "instant"];
   return (
     <div
-      className="flex items-center gap-1 px-1.5 py-1 rounded-md border border-border bg-muted/20"
+      className="flex items-center justify-between gap-0.5 px-1 py-0.5 rounded-md border border-border bg-muted/20 shrink-0"
       title="Combat playback speed"
     >
-      <Gauge className="size-3 text-muted-foreground" />
+      <Gauge className="size-3 text-muted-foreground shrink-0 mx-1" />
       {options.map((s) => (
         <Button
           key={s}
           size="xs"
           variant={value === s ? "default" : "ghost"}
           onClick={() => onChange(s)}
-          className="capitalize h-5 px-1.5 text-[10px]"
+          className="capitalize h-5 px-1 text-[10px]"
         >
           {s}
         </Button>

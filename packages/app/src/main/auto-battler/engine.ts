@@ -221,7 +221,11 @@ function resolveMerges(
     const merge = merges[0];
 
     // Remove 2 of the consumed; keep 1 and upgrade it (becomes the merged unit)
-    const [keep, ...toRemove] = merge.consumed;
+    // Prefer keeping a board unit so the merged result stays on the board
+    const boardIdx = merge.consumed.findIndex((c) => c.kind === "board");
+    const keepIdx = boardIdx >= 0 ? boardIdx : 0;
+    const keep = merge.consumed[keepIdx];
+    const toRemove = merge.consumed.filter((_, i) => i !== keepIdx);
     const toRemoveIds = new Set(toRemove.map((c) => c.instanceId));
 
     bench = {

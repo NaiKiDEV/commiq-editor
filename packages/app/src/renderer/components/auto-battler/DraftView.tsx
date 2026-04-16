@@ -105,7 +105,7 @@ export function DraftView({
           setDraggingId={setDraggingId}
           dispatch={dispatch}
         />
-        <div className="absolute right-0 top-0 bottom-0 flex flex-col gap-2 w-[180px] py-1 overflow-y-auto">
+        <div className="absolute right-0 top-0 bottom-0 flex flex-col gap-2 w-55 shrink-0 grow-0 py-1 overflow-y-auto overflow-x-hidden">
           <SpeedSelector
             value={combatSpeed}
             onChange={(s) =>
@@ -194,15 +194,28 @@ export function DraftView({
           </Button>
         </div>
         <div className="flex items-center gap-2 justify-center">
-          {run.shop.available.map((slot, i) => (
+          {run.shop.available.map((slot, i) => {
+            // Count copies of this unit (same def + star 1) on bench+board
+            const defId = slot.unitDefId;
+            let copies = 0;
+            if (!slot.sold) {
+              for (const u of run.bench.units) {
+                if (u.unitDefId === defId && u.starLevel === 1) copies++;
+              }
+              for (const u of run.board.slots) {
+                if (u && u.unitDefId === defId && u.starLevel === 1) copies++;
+              }
+            }
+            return (
             <ShopCard
               key={i}
               slot={slot}
               unit={unitMap[slot.unitDefId]}
               canAfford={run.gold >= slot.cost}
+              willMerge={copies >= 2}
               onBuy={() => dispatch({ type: "BUY_UNIT", shopIndex: i })}
-            />
-          ))}
+            />);
+          })}
         </div>
       </div>
     </div>
@@ -378,7 +391,7 @@ function BenchRow({
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleBenchDrop}
       className={cn(
-        "flex items-center gap-1.5 p-2 rounded-lg border border-border bg-muted/10",
+        "flex items-center gap-1.5 p-2 rounded-lg border border-white/10 bg-white/3",
         draggingId && "border-accent/50 bg-accent/5",
       )}
     >
@@ -390,7 +403,7 @@ function BenchRow({
           return (
             <div
               key={i}
-              className="size-14 rounded-md border border-dashed border-muted/30 bg-muted/5"
+              className="size-14 rounded-md border border-dashed border-white/12 bg-white/4"
             />
           );
         }

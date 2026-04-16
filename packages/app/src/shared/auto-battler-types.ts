@@ -341,7 +341,7 @@ export type AutoBattlerMeta = {
 };
 
 export type GameSettings = {
-  combatSpeed: "instant" | "fast" | "normal";
+  combatSpeed: "instant" | "fast" | "normal" | "slow";
   autoSave: boolean;
   showDamageNumbers: boolean;
 };

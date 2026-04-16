@@ -1,21 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
-import { Play, Pause, FastForward, SkipForward, ChevronRight } from "lucide-react";
+import { Play, Pause, FastForward, SkipForward, ChevronRight, Heart, Zap } from "lucide-react";
 import type {
   AutoBattlerRun,
   CombatSnapshot,
   CombatantSnapshot,
+  CombatEvent,
   GameAction,
   GameSettings,
   UnitDef,
 } from "../../../shared/auto-battler-types";
-import { SpeedSelector, StatBar, TIER_COLORS } from "./shared";
+import { SpeedSelector, StatBar, TIER_COLORS, TIER_GLOW } from "./shared";
 
 const SPEED_MS: Record<GameSettings["combatSpeed"], number> = {
   instant: 0,
   fast: 80,
   normal: 240,
+  slow: 500,
 };
 
 type Dispatch = (action: GameAction) => Promise<unknown>;
@@ -72,6 +74,17 @@ export function CombatView({
     return "🤝 Draw";
   }, [result]);
 
+  // Build a name lookup from the first snapshot for event descriptions
+  const nameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    if (snapshots.length > 0) {
+      for (const c of snapshots[0].combatants) {
+        map[c.instanceId] = c.name;
+      }
+    }
+    return map;
+  }, [snapshots]);
+
   if (!result || !snapshot) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -83,35 +96,71 @@ export function CombatView({
   const players = snapshot.combatants.filter((c) => c.side === "player");
   const enemies = snapshot.combatants.filter((c) => c.side === "enemy");
 
+  // Progress bar for tick timeline
+  const tickPct = total > 1 ? (tick / (total - 1)) * 100 : 100;
+
   return (
     <div className="h-full flex flex-col p-3 gap-3">
-      {/* Status */}
-      <div className="flex items-center gap-3">
-        <div className="text-sm font-semibold">Wave {run.wave}</div>
-        <div className="text-xs text-muted-foreground">
-          Tick {snapshot.tick} / {snapshots[total - 1]?.tick ?? 0}
+      {/* Status bar */}
+      <div className="flex items-center gap-3 px-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold">Wave {run.wave}</span>
+          <span className="text-[10px] text-muted-foreground/60 tabular-nums">
+            Tick {snapshot.tick}/{snapshots[total - 1]?.tick ?? 0}
+          </span>
         </div>
-        <div className="flex-1" />
+        <div className="flex-1 h-1 rounded-full bg-white/5 overflow-hidden mx-2">
+          <div
+            className="h-full bg-white/20 transition-[width] duration-100 rounded-full"
+            style={{ width: `${tickPct}%` }}
+          />
+        </div>
         <SpeedSelector
           value={combatSpeed}
           onChange={(s) =>
             dispatch({ type: "UPDATE_SETTINGS", settings: { combatSpeed: s } })
           }
         />
-        {finished && (
-          <div className="text-sm font-bold">{winnerLabel}</div>
-        )}
       </div>
 
       {/* Battlefield: enemies on top, players on bottom */}
-      <div className="flex-1 flex flex-col justify-center gap-6">
+      <div className="flex-1 flex flex-col justify-center gap-4">
+        <div className="h-8 flex items-center justify-center">
+          {finished ? (
+            <span className={cn(
+              "text-2xl font-bold tracking-wide",
+              result?.winner === "player" && "text-emerald-400",
+              result?.winner === "enemy" && "text-red-400",
+              result?.winner !== "player" && result?.winner !== "enemy" && "text-zinc-300",
+            )}>
+              {winnerLabel}
+              {result?.winner === "player" && result.goldEarned > 0 && (
+                <span className="ml-2 text-base font-semibold text-amber-400/80">
+                  +{result.goldEarned} 💰
+                </span>
+              )}
+              {result?.winner === "enemy" && result.damageToServer > 0 && (
+                <span className="ml-2 text-base font-semibold text-red-400/80">
+                  −{result.damageToServer} HP
+                </span>
+              )}
+            </span>
+          ) : (
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground/40">
+              Enemies
+            </span>
+          )}
+        </div>
         <BattleRow combatants={enemies} unitMap={unitMap} side="enemy" />
-        <div className="border-t-2 border-dashed border-border/60" />
+        <div className="border-t border-dashed border-white/8 mx-8" />
         <BattleRow combatants={players} unitMap={unitMap} side="player" />
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground/40 text-center">
+          Your Stack
+        </div>
       </div>
 
       {/* Event feed */}
-      <EventFeed snapshots={snapshots} tick={tick} />
+      <EventFeed snapshots={snapshots} tick={tick} nameMap={nameMap} />
 
       {/* Controls */}
       <div className="flex items-center gap-2">
@@ -183,42 +232,60 @@ function BattleRow({
   unitMap: Record<string, UnitDef>;
   side: "player" | "enemy";
 }) {
-  // Sort roughly by row/col for stable placement. Enemies flipped vertically.
   const sorted = [...combatants].sort(
     (a, b) => a.row * 10 + a.col - (b.row * 10 + b.col),
   );
   return (
-    <div className="flex items-center justify-center gap-2 flex-wrap">
+    <div className="flex items-center justify-center gap-3 flex-wrap">
       {sorted.map((c) => {
         const def = unitMap[c.unitDefId];
         const tier = def?.tier ?? 1;
+        const hpPct = c.maxHp > 0 ? Math.round((c.hp / c.maxHp) * 100) : 0;
         return (
           <div
             key={c.instanceId}
             className={cn(
-              "relative size-16 rounded-md border-2 flex flex-col items-center justify-center p-0.5 transition-all",
+              "relative w-20 rounded-lg border-2 flex flex-col items-center p-1.5 gap-0.5 transition-all",
               TIER_COLORS[tier],
+              TIER_GLOW[tier],
+              "shadow-md",
               !c.alive && "opacity-20 grayscale",
               side === "enemy" && "border-red-500/40",
               c.stunned && "ring-2 ring-yellow-400",
             )}
-            title={`${c.name} (${c.hp}/${c.maxHp} HP, ${c.mana}/${c.maxMana} MP)`}
           >
-            <div className="text-2xl leading-none">{c.emoji}</div>
-            <div className="absolute bottom-0.5 left-0.5 right-0.5 flex flex-col gap-px">
-              <StatBar current={c.hp} max={c.maxHp} color="bg-red-500" />
-              {c.maxMana > 0 && (
-                <StatBar current={c.mana} max={c.maxMana} color="bg-blue-400" />
-              )}
-            </div>
+            {/* Star badge */}
+            {c.starLevel > 1 && (
+              <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-[9px] text-amber-400 bg-black/70 rounded-full px-1">
+                {"★".repeat(c.starLevel)}
+              </div>
+            )}
+            {/* Shield badge */}
             {c.shield > 0 && (
-              <div className="absolute top-0 right-0 text-[9px] text-cyan-300 font-bold bg-black/60 rounded px-0.5">
+              <div className="absolute -top-1.5 -right-1.5 text-[9px] text-cyan-300 font-bold bg-black/70 rounded-full px-1">
                 🛡{c.shield}
               </div>
             )}
-            {c.starLevel > 1 && (
-              <div className="absolute top-0 left-0 text-[9px] text-amber-400 bg-black/60 rounded px-0.5">
-                {"★".repeat(c.starLevel)}
+
+            {/* Emoji */}
+            <div className="text-2xl leading-none mt-0.5">{c.emoji}</div>
+
+            {/* Name */}
+            <div className="mt-1 text-[9px] font-medium text-foreground/80 truncate w-full text-center leading-tight">
+              {c.name}
+            </div>
+
+            {/* HP bar + number */}
+            <div className="w-full flex items-center gap-1">
+              <StatBar current={c.hp} max={c.maxHp} color={hpPct > 30 ? "bg-emerald-500" : "bg-red-500"} height="h-1.5" />
+              <span className="text-[8px] tabular-nums text-red-300/80 min-w-5 text-right">{c.hp}</span>
+            </div>
+
+            {/* Mana bar + number */}
+            {c.maxMana > 0 && (
+              <div className="w-full flex items-center gap-1">
+                <StatBar current={c.mana} max={c.maxMana} color="bg-blue-400" height="h-1" />
+                <span className="text-[8px] tabular-nums text-blue-300/80 min-w-5 text-right">{c.mana}</span>
               </div>
             )}
           </div>
@@ -231,32 +298,33 @@ function BattleRow({
 function EventFeed({
   snapshots,
   tick,
+  nameMap,
 }: {
   snapshots: CombatSnapshot[];
   tick: number;
+  nameMap: Record<string, string>;
 }) {
   const MAX_LINES = 6;
   const LINE_HEIGHT_PX = 18;
-  // Show recent events from past ticks including current
   const recent = snapshots.slice(Math.max(0, tick - 5), tick + 1);
   const lines: string[] = [];
   for (const s of recent) {
     for (const e of s.events) {
-      lines.push(describeEvent(e, s.tick));
+      lines.push(describeEvent(e, s.tick, nameMap));
     }
   }
   const tail = lines.slice(-MAX_LINES);
   return (
     <div
-      className="px-2 py-1 rounded-md bg-muted/10 border border-border text-[11px] font-mono overflow-hidden flex flex-col-reverse"
+      className="px-2 py-1 rounded-lg bg-white/3 border border-white/6 text-[11px] font-mono overflow-hidden flex flex-col-reverse"
       style={{ height: `${MAX_LINES * LINE_HEIGHT_PX + 8}px` }}
     >
       {tail.length === 0 && (
         <div
-          className="text-muted-foreground italic"
+          className="text-muted-foreground/50 italic"
           style={{ height: `${LINE_HEIGHT_PX}px`, lineHeight: `${LINE_HEIGHT_PX}px` }}
         >
-          No events yet…
+          Waiting for combat…
         </div>
       )}
       {tail
@@ -275,26 +343,31 @@ function EventFeed({
   );
 }
 
+function n(nameMap: Record<string, string>, id: string): string {
+  return nameMap[id] ?? id.slice(0, 6);
+}
+
 function describeEvent(
-  e: import("../../../shared/auto-battler-types").CombatEvent,
+  e: CombatEvent,
   tick: number,
+  nameMap: Record<string, string>,
 ): string {
   const t = `[T${tick}]`;
   switch (e.type) {
     case "attack":
-      return `${t} ⚔️ ${e.sourceId.slice(0, 6)} → ${e.targetId.slice(0, 6)} (-${e.damage})`;
+      return `${t} ⚔️ ${n(nameMap, e.sourceId)} → ${n(nameMap, e.targetId)} (-${e.damage})`;
     case "ability":
-      return `${t} ✨ ${e.sourceId.slice(0, 6)} cast ${e.abilityId}`;
+      return `${t} ✨ ${n(nameMap, e.sourceId)} cast ${e.abilityId}`;
     case "death":
-      return `${t} 💀 ${e.unitId.slice(0, 6)} died`;
+      return `${t} 💀 ${n(nameMap, e.unitId)} died`;
     case "heal":
-      return `${t} 💚 ${e.targetId.slice(0, 6)} healed ${e.value}`;
+      return `${t} 💚 ${n(nameMap, e.targetId)} healed ${e.value}`;
     case "shield":
-      return `${t} 🛡 ${e.targetId.slice(0, 6)} +${e.value} shield`;
+      return `${t} 🛡 ${n(nameMap, e.targetId)} +${e.value} shield`;
     case "buff_applied":
-      return `${t} ⬆ ${e.targetId.slice(0, 6)} ${e.stat} +${e.value}`;
+      return `${t} ⬆ ${n(nameMap, e.targetId)} ${e.stat} +${e.value}`;
     case "debuff_applied":
-      return `${t} ⬇ ${e.targetId.slice(0, 6)} ${e.stat} -${e.value}`;
+      return `${t} ⬇ ${n(nameMap, e.targetId)} ${e.stat} -${e.value}`;
     case "summon":
       return `${t} 🪄 summoned ${e.unitDefId}`;
     case "synergy_proc":
