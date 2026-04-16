@@ -43,6 +43,7 @@ import {
   ShieldAlert,
   Server,
   SquareTerminal,
+  Swords,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -94,6 +95,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "ssl") return <ShieldAlert />;
   if (type === "mockserver") return <Server />;
   if (type === "playground") return <SquareTerminal />;
+  if (type === "autobattler") return <Swords />;
   return <NotepadText />;
 }
 
@@ -402,6 +404,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <SquareTerminal />
               <span>New Code Playground Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() =>
+                runAction(() => createTab("autobattler", "Deploy & Pray"))
+              }
+            >
+              <Swords />
+              <span>New Deploy &amp; Pray Tab</span>
             </CommandItem>
           </CommandGroup>
 

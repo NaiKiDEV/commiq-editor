@@ -1433,6 +1433,21 @@ const electronAPI = {
       return () => ipcRenderer.removeListener(channel, listener);
     },
   },
+
+  autoBattler: {
+    getSave: () => ipcRenderer.invoke("auto-battler:get-save"),
+    dispatch: (action: unknown) =>
+      ipcRenderer.invoke("auto-battler:dispatch", action),
+    resetSave: () => ipcRenderer.invoke("auto-battler:reset-save"),
+    getConfig: () => ipcRenderer.invoke("auto-battler:get-config"),
+    onStateChanged: (callback: (save: unknown) => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, save: unknown) =>
+        callback(save);
+      ipcRenderer.on("auto-battler:state-changed", listener);
+      return () =>
+        ipcRenderer.removeListener("auto-battler:state-changed", listener);
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld("electronAPI", electronAPI);

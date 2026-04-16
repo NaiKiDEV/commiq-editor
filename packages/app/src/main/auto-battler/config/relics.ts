@@ -1,0 +1,115 @@
+import type { RelicDef } from "../../../shared/auto-battler-types";
+
+export const RELICS: RelicDef[] = [
+  {
+    id: "rubber_duck",
+    name: "Rubber Duck",
+    emoji: "🦆",
+    description: "Equipped unit gains +3 attack.",
+    rarity: "common",
+    type: "unit",
+    effect: { type: "stat_boost", stat: "attack", value: 3 },
+  },
+  {
+    id: "mechanical_keyboard",
+    name: "Mechanical Keyboard",
+    emoji: "⌨️",
+    description: "Equipped unit attacks 1 tick faster.",
+    rarity: "uncommon",
+    type: "unit",
+    effect: { type: "stat_boost", stat: "attackSpeed", value: -1 },
+  },
+  {
+    id: "ergonomic_chair",
+    name: "Ergonomic Chair",
+    emoji: "🪑",
+    description: "Equipped unit gains +30 HP.",
+    rarity: "common",
+    type: "unit",
+    effect: { type: "stat_boost", stat: "hp", value: 30 },
+  },
+  {
+    id: "stackoverflow_bookmark",
+    name: "Stack Overflow Bookmark",
+    emoji: "🔖",
+    description: "Equipped unit heals 5 HP on ability cast.",
+    rarity: "uncommon",
+    type: "unit",
+    effect: {
+      type: "on_ability_cast",
+      effect: { type: "heal", value: 5 },
+    },
+  },
+  {
+    id: "ci_pipeline",
+    name: "CI Pipeline",
+    emoji: "🔄",
+    description: "All units heal 10 HP at the start of each combat.",
+    rarity: "uncommon",
+    type: "global",
+    effect: {
+      type: "on_combat_start",
+      effect: { type: "heal", value: 10 },
+    },
+  },
+  {
+    id: "venture_capital",
+    name: "Venture Capital",
+    emoji: "💰",
+    description: "+3 gold per wave.",
+    rarity: "rare",
+    type: "global",
+    effect: { type: "gold_per_wave", value: 3 },
+  },
+  {
+    id: "hedge_fund",
+    name: "Hedge Fund",
+    emoji: "🏦",
+    description: "+2 interest cap.",
+    rarity: "rare",
+    type: "global",
+    effect: { type: "interest_bonus", value: 2 },
+  },
+  {
+    id: "bigger_monitor",
+    name: "Bigger Monitor",
+    emoji: "🖥️",
+    description: "+1 shop slot.",
+    rarity: "rare",
+    type: "global",
+    effect: { type: "shop_size_increase", value: 1 },
+  },
+  {
+    id: "pair_programmer",
+    name: "Pair Programmer",
+    emoji: "👥",
+    description: "+1 free reroll per round.",
+    rarity: "rare",
+    type: "global",
+    effect: { type: "free_reroll_per_round", value: 1 },
+  },
+  {
+    id: "github_copilot",
+    name: "GitHub Copilot",
+    emoji: "🤖",
+    description: "All units deal 10 damage at combat start.",
+    rarity: "legendary",
+    type: "global",
+    effect: {
+      type: "on_combat_start",
+      effect: { type: "damage", value: 10 },
+    },
+  },
+];
+
+export const RELIC_MAP: Record<string, RelicDef> = Object.fromEntries(
+  RELICS.map((r) => [r.id, r]),
+);
+
+export const DEFAULT_UNLOCKED_RELICS: string[] = [
+  "rubber_duck",
+  "ergonomic_chair",
+  "mechanical_keyboard",
+  "ci_pipeline",
+  "venture_capital",
+];

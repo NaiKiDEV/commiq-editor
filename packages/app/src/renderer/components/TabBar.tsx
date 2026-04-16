@@ -34,6 +34,7 @@ import {
   ShieldAlert,
   Server,
   SquareTerminal,
+  Swords,
 } from "lucide-react";
 import {
   useTabs,
@@ -125,6 +126,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <Server className="size-3" />;
     case "playground":
       return <SquareTerminal className="size-3" />;
+    case "autobattler":
+      return <Swords className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -465,6 +468,12 @@ export function TabBar() {
               >
                 <SquareTerminal />
                 Code Playground
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => createTab("autobattler", "Deploy & Pray")}
+              >
+                <Swords />
+                Deploy & Pray
               </DropdownMenuItem>
             </DropdownMenuGroup>
 

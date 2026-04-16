@@ -29,6 +29,8 @@ import {
   stopAllMockServers,
 } from "./ipc/mock-server";
 import { registerCodePlaygroundIpc } from "./ipc/code-playground";
+import { registerAutoBattlerIpc } from "./ipc/auto-battler";
+import { getAutoBattlerState } from "./auto-battler/state";
 
 if (started) {
   app.quit();
@@ -76,6 +78,7 @@ registerDockerIpc();
 registerSslIpc();
 registerMockServerIpc();
 registerCodePlaygroundIpc();
+registerAutoBattlerIpc();
 
 const createWindow = () => {
   const isMac = process.platform === "darwin";
@@ -119,6 +122,7 @@ app.on("ready", createWindow);
 
 app.on("before-quit", () => {
   whiteboardState.flushAll();
+  getAutoBattlerState().shutdown();
 });
 
 app.on("window-all-closed", () => {

@@ -49,7 +49,8 @@ export type PanelType =
   | "docker"
   | "ssl"
   | "mockserver"
-  | "playground";
+  | "playground"
+  | "autobattler";
 
 export type Panel = {
   id: string;
