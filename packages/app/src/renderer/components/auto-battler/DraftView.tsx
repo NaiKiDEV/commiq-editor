@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import {
   Coins,
   RefreshCw,
@@ -24,6 +25,25 @@ import type {
 } from "../../../shared/auto-battler-types";
 import { ShopCard, SpeedSelector, SynergyBadge, UnitCard } from "./shared";
 
+const SELL_REFUND: Record<1 | 2 | 3, number> = { 1: 1, 2: 3, 3: 9 };
+const BASE_INCOME = 5;
+const INTEREST_RATE = 0.1;
+const INTEREST_CAP = 5;
+const STREAK_BONUSES: Record<number, number> = { 2: 1, 3: 2, 4: 3 };
+
+function computeNextRoundGold(run: AutoBattlerRun): {
+  base: number;
+  interest: number;
+  streak: number;
+  total: number;
+} {
+  const base = BASE_INCOME;
+  const interest = Math.min(Math.floor(run.gold * INTEREST_RATE), INTEREST_CAP);
+  const streakCount = Math.min(4, Math.max(run.winStreak, run.loseStreak));
+  const streak = streakCount >= 2 ? (STREAK_BONUSES[streakCount] ?? 0) : 0;
+  return { base, interest, streak, total: base + interest + streak };
+}
+
 type Dispatch = (action: GameAction) => Promise<unknown>;
 
 export function DraftView({
@@ -44,18 +64,120 @@ export function DraftView({
   combatSpeed: GameSettings["combatSpeed"];
 }) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [mergedIds, setMergedIds] = useState<Set<string>>(new Set());
+  const prevStarsRef = useRef<Map<string, number>>(new Map());
 
   const canStart = run.board.slots.some((s) => s !== null);
+
+  // Detect merges by tracking star level changes
+  useEffect(() => {
+    const prev = prevStarsRef.current;
+    const next = new Map<string, number>();
+    const newMerged = new Set<string>();
+
+    for (const u of run.bench.units) {
+      if (prev.has(u.instanceId) && prev.get(u.instanceId)! < u.starLevel) {
+        newMerged.add(u.instanceId);
+      }
+      next.set(u.instanceId, u.starLevel);
+    }
+    for (const u of run.board.slots) {
+      if (!u) continue;
+      if (prev.has(u.instanceId) && prev.get(u.instanceId)! < u.starLevel) {
+        newMerged.add(u.instanceId);
+      }
+      next.set(u.instanceId, u.starLevel);
+    }
+
+    prevStarsRef.current = next;
+    if (newMerged.size > 0) {
+      setMergedIds(newMerged);
+      const timer = setTimeout(() => setMergedIds(new Set()), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [run.bench.units, run.board.slots]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      )
+        return;
+      const key = e.key.toLowerCase();
+      if (key === "r") {
+        if (run.freeRerollsAvailable > 0 || run.gold >= run.shop.rerollCost) {
+          dispatch({ type: "REROLL_SHOP" });
+        }
+      } else if (key === "f") {
+        dispatch({ type: "FREEZE_SHOP" });
+      } else if (key === " ") {
+        e.preventDefault();
+        if (canStart) dispatch({ type: "START_COMBAT" });
+      } else if (key >= "1" && key <= "5") {
+        const idx = parseInt(key) - 1;
+        const slot = run.shop.available[idx];
+        if (slot && !slot.sold && run.gold >= slot.cost) {
+          dispatch({ type: "BUY_UNIT", shopIndex: idx });
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [run, canStart, dispatch]);
 
   return (
     <div className="h-full flex flex-col gap-3 p-3">
       {/* Top bar: gold, hp, wave, end run */}
       <div className="flex items-center gap-3">
-        <ResourceCard
-          icon={<Coins className="size-4 text-amber-400" />}
-          label="Gold"
-          value={run.gold}
-        />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div>
+              <ResourceCard
+                icon={<Coins className="size-4 text-amber-400" />}
+                label="Gold"
+                value={run.gold}
+              />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent
+            side="bottom"
+            className="text-[11px] font-mono space-y-0.5 p-2"
+          >
+            {(() => {
+              const inc = computeNextRoundGold(run);
+              return (
+                <div className="space-y-0.5">
+                  <div className="font-semibold text-xs mb-1">
+                    Next Round Income
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Base</span>
+                    <span>+{inc.base}g</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">
+                      Interest (10%)
+                    </span>
+                    <span>+{inc.interest}g</span>
+                  </div>
+                  {inc.streak > 0 && (
+                    <div className="flex justify-between gap-4">
+                      <span className="text-muted-foreground">Streak</span>
+                      <span>+{inc.streak}g</span>
+                    </div>
+                  )}
+                  <div className="border-t border-border pt-0.5 flex justify-between gap-4 font-semibold text-amber-400">
+                    <span>Total</span>
+                    <span>+{inc.total}g</span>
+                  </div>
+                </div>
+              );
+            })()}
+          </TooltipContent>
+        </Tooltip>
         <ResourceCard
           icon={<Heart className="size-4 text-red-400" />}
           label="Server HP"
@@ -104,6 +226,7 @@ export function DraftView({
           draggingId={draggingId}
           setDraggingId={setDraggingId}
           dispatch={dispatch}
+          mergedIds={mergedIds}
         />
         <div className="absolute right-0 top-0 bottom-0 flex flex-col gap-2 w-55 shrink-0 grow-0 py-1 overflow-y-auto overflow-x-hidden">
           <SpeedSelector
@@ -148,6 +271,7 @@ export function DraftView({
         draggingId={draggingId}
         setDraggingId={setDraggingId}
         dispatch={dispatch}
+        mergedIds={mergedIds}
       />
 
       {/* Shop */}
@@ -160,7 +284,9 @@ export function DraftView({
             size="xs"
             variant="outline"
             onClick={() => dispatch({ type: "REROLL_SHOP" })}
-            disabled={run.freeRerollsAvailable === 0 && run.gold < run.shop.rerollCost}
+            disabled={
+              run.freeRerollsAvailable === 0 && run.gold < run.shop.rerollCost
+            }
             className="gap-1"
           >
             <RefreshCw className="size-3" />
@@ -207,14 +333,15 @@ export function DraftView({
               }
             }
             return (
-            <ShopCard
-              key={i}
-              slot={slot}
-              unit={unitMap[slot.unitDefId]}
-              canAfford={run.gold >= slot.cost}
-              willMerge={copies >= 2}
-              onBuy={() => dispatch({ type: "BUY_UNIT", shopIndex: i })}
-            />);
+              <ShopCard
+                key={i}
+                slot={slot}
+                unit={unitMap[slot.unitDefId]}
+                canAfford={run.gold >= slot.cost}
+                willMerge={copies >= 2}
+                onBuy={() => dispatch({ type: "BUY_UNIT", shopIndex: i })}
+              />
+            );
           })}
         </div>
       </div>
@@ -251,6 +378,7 @@ function BoardGridView({
   draggingId,
   setDraggingId,
   dispatch,
+  mergedIds,
 }: {
   run: AutoBattlerRun;
   unitMap: Record<string, UnitDef>;
@@ -258,6 +386,7 @@ function BoardGridView({
   draggingId: string | null;
   setDraggingId: (id: string | null) => void;
   dispatch: Dispatch;
+  mergedIds: Set<string>;
 }) {
   const { rows, cols, slots } = run.board;
   const grid: (PlacedUnit | null)[][] = [];
@@ -279,6 +408,7 @@ function BoardGridView({
               draggingId={draggingId}
               setDraggingId={setDraggingId}
               dispatch={dispatch}
+              merged={cell ? mergedIds.has(cell.instanceId) : false}
             />
           ))}
         </div>
@@ -296,6 +426,7 @@ function BoardSlot({
   draggingId,
   setDraggingId,
   dispatch,
+  merged,
 }: {
   row: number;
   col: number;
@@ -305,6 +436,7 @@ function BoardSlot({
   draggingId: string | null;
   setDraggingId: (id: string | null) => void;
   dispatch: Dispatch;
+  merged: boolean;
 }) {
   const def = unit ? unitMap[unit.unitDefId] : undefined;
   const relic = unit?.equippedRelicId ? relicMap[unit.equippedRelicId] : null;
@@ -352,6 +484,8 @@ function BoardSlot({
             hp={unit.currentHp}
             maxHp={unit.maxHp}
             relic={relic}
+            sellPrice={SELL_REFUND[unit.starLevel] * def.tier}
+            className={merged ? "animate-merge-flash" : undefined}
           />
         </div>
       )}
@@ -366,6 +500,7 @@ function BenchRow({
   draggingId,
   setDraggingId,
   dispatch,
+  mergedIds,
 }: {
   run: AutoBattlerRun;
   unitMap: Record<string, UnitDef>;
@@ -373,6 +508,7 @@ function BenchRow({
   draggingId: string | null;
   setDraggingId: (id: string | null) => void;
   dispatch: Dispatch;
+  mergedIds: Set<string>;
 }) {
   const slots: (BenchUnit | null)[] = Array.from({
     length: run.bench.maxSize,
@@ -409,7 +545,9 @@ function BenchRow({
         }
         const def = unitMap[unit.unitDefId];
         if (!def) return null;
-        const relic = unit.equippedRelicId ? relicMap[unit.equippedRelicId] : null;
+        const relic = unit.equippedRelicId
+          ? relicMap[unit.equippedRelicId]
+          : null;
         return (
           <div
             key={unit.instanceId}
@@ -431,6 +569,8 @@ function BenchRow({
               starLevel={unit.starLevel}
               relic={relic}
               compact
+              sellPrice={SELL_REFUND[unit.starLevel] * def.tier}
+              className={mergedIds.has(unit.instanceId) ? "animate-merge-flash" : undefined}
             />
           </div>
         );

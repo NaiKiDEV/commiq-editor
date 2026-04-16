@@ -70,7 +70,9 @@ export function StatBar({
 }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0;
   return (
-    <div className={cn("w-full bg-black/40 rounded-full overflow-hidden", height)}>
+    <div
+      className={cn("w-full bg-black/40 rounded-full overflow-hidden", height)}
+    >
       <div
         className={cn("h-full transition-[width] duration-100", color)}
         style={{ width: `${pct}%` }}
@@ -94,10 +96,12 @@ export function UnitInfo({
   unit,
   starLevel,
   relic,
+  sellPrice,
 }: {
   unit: UnitDef;
   starLevel?: StarLevel;
   relic?: RelicDef | null;
+  sellPrice?: number;
 }) {
   const star = starLevel ?? 1;
   const stats = effectiveStats(unit, star);
@@ -110,9 +114,7 @@ export function UnitInfo({
           <div className="flex items-center gap-1.5">
             <span className="font-semibold text-sm truncate">{unit.name}</span>
             {star > 1 && (
-              <span className="text-amber-400 text-xs">
-                {"★".repeat(star)}
-              </span>
+              <span className="text-amber-400 text-xs">{"★".repeat(star)}</span>
             )}
           </div>
           <div className="flex items-center gap-1 mt-0.5">
@@ -131,7 +133,9 @@ export function UnitInfo({
         </div>
       </div>
 
-      <div className="text-popover-foreground/70 italic">{unit.description}</div>
+      <div className="text-popover-foreground/70 italic">
+        {unit.description}
+      </div>
 
       <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 font-mono">
         <Stat label="HP" value={stats.hp} />
@@ -153,7 +157,10 @@ export function UnitInfo({
         <div className="text-popover-foreground/80">
           {unit.ability.description}
           {star > 1 && abilityMult !== 1 && (
-            <span className="text-emerald-400"> (×{abilityMult.toFixed(2)})</span>
+            <span className="text-emerald-400">
+              {" "}
+              (×{abilityMult.toFixed(2)})
+            </span>
           )}
         </div>
       </div>
@@ -178,6 +185,13 @@ export function UnitInfo({
             <span className="font-semibold">{relic.name}</span>
           </div>
           <div className="text-popover-foreground/80">{relic.description}</div>
+        </div>
+      )}
+
+      {sellPrice !== undefined && (
+        <div className="border-t border-border pt-1.5 flex items-center gap-1 text-amber-400 font-semibold">
+          <span>💰</span>
+          <span>Sell: {sellPrice}g</span>
         </div>
       )}
     </div>
@@ -213,7 +227,9 @@ export function SynergyInfo({
           </div>
         </div>
       </div>
-      <div className="text-popover-foreground/70 italic">{synergy.description}</div>
+      <div className="text-popover-foreground/70 italic">
+        {synergy.description}
+      </div>
       <div className="border-t border-border pt-1.5 space-y-1">
         {synergy.thresholds.map((t) => {
           const reached = unitCount >= t.count;
@@ -272,6 +288,7 @@ export function UnitCard({
   compact,
   relic,
   tooltip = true,
+  sellPrice,
 }: {
   unit: UnitDef;
   starLevel: StarLevel;
@@ -285,6 +302,7 @@ export function UnitCard({
   compact?: boolean;
   relic?: RelicDef | null;
   tooltip?: boolean;
+  sellPrice?: number;
 }) {
   const card = (
     <div
@@ -330,7 +348,12 @@ export function UnitCard({
     <Tooltip>
       <TooltipTrigger render={<div />}>{card}</TooltipTrigger>
       <TooltipContent className={TOOLTIP_CLASS}>
-        <UnitInfo unit={unit} starLevel={starLevel} relic={relic} />
+        <UnitInfo
+          unit={unit}
+          starLevel={starLevel}
+          relic={relic}
+          sellPrice={sellPrice}
+        />
       </TooltipContent>
     </Tooltip>
   );
@@ -363,11 +386,21 @@ export function ShopCard({
         TIER_COLORS[unit.tier],
         slot.sold && "opacity-30 grayscale",
         !slot.sold && !canAfford && "opacity-50",
-        !slot.sold && canAfford && "hover:scale-105 hover:border-accent cursor-pointer",
-        !slot.sold && canAfford && willMerge && "ring-2 ring-amber-400/60 animate-pulse",
+        !slot.sold &&
+          canAfford &&
+          "hover:scale-105 hover:border-accent cursor-pointer",
+        !slot.sold &&
+          canAfford &&
+          willMerge &&
+          "ring-2 ring-amber-400/60 animate-pulse",
       )}
     >
-      <div className={cn("text-[9px] uppercase tracking-wide font-semibold", TIER_TEXT[unit.tier])}>
+      <div
+        className={cn(
+          "text-[9px] uppercase tracking-wide font-semibold",
+          TIER_TEXT[unit.tier],
+        )}
+      >
         T{unit.tier}
       </div>
       <div className="text-3xl leading-none">{unit.emoji}</div>
@@ -397,7 +430,12 @@ export function SpeedSelector({
   value: GameSettings["combatSpeed"];
   onChange: (speed: GameSettings["combatSpeed"]) => void;
 }) {
-  const options: GameSettings["combatSpeed"][] = ["slow", "normal", "fast", "instant"];
+  const options: GameSettings["combatSpeed"][] = [
+    "slow",
+    "normal",
+    "fast",
+    "instant",
+  ];
   return (
     <div
       className="flex items-center justify-between gap-0.5 px-1 py-0.5 rounded-md border border-border bg-muted/20 shrink-0"

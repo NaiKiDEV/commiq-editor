@@ -418,3 +418,14 @@
   font-weight: 700;
   font-style: italic;
 }
+
+/* Auto-battler merge flash animation */
+@keyframes merge-flash {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.6); }
+  30% { transform: scale(1.15); box-shadow: 0 0 16px 4px rgba(251, 191, 36, 0.5); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+}
+
+.animate-merge-flash {
+  animation: merge-flash 0.6s ease-out;
+}

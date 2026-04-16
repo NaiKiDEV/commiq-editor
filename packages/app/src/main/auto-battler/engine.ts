@@ -28,10 +28,7 @@ import {
   UNIT_TIER_COST,
   soulsFromRun,
 } from "./config/balance";
-import {
-  DEFAULT_UNLOCKED_UNITS,
-  UNIT_MAP,
-} from "./config/units";
+import { DEFAULT_UNLOCKED_UNITS, UNIT_MAP } from "./config/units";
 import { DEFAULT_UNLOCKED_RELICS, RELIC_MAP } from "./config/relics";
 import {
   DEFAULT_UNLOCKED_SYNERGIES,
@@ -448,7 +445,8 @@ export function gameReducer(
       const def = UNIT_MAP[benchUnit.unitDefId];
       if (!def) return state;
       const maxHp = Math.round(
-        def.baseStats.hp * Math.pow(def.starScaling.hpMult, benchUnit.starLevel - 1),
+        def.baseStats.hp *
+          Math.pow(def.starScaling.hpMult, benchUnit.starLevel - 1),
       );
 
       const placed: PlacedUnit = {
@@ -500,7 +498,10 @@ export function gameReducer(
       const moving = slots[oldIdx]!;
       const other = slots[newIdx];
       // Swap or place
-      slots[newIdx] = { ...moving, position: { row: action.row, col: action.col } };
+      slots[newIdx] = {
+        ...moving,
+        position: { row: action.row, col: action.col },
+      };
       slots[oldIdx] = other
         ? {
             ...other,
@@ -677,18 +678,16 @@ export function gameReducer(
         rng,
       );
 
-      const winStreak =
-        result.winner === "player" ? run.winStreak + 1 : 0;
-      const loseStreak =
-        result.winner === "enemy" ? run.loseStreak + 1 : 0;
+      const winStreak = result.winner === "player" ? run.winStreak + 1 : 0;
+      const loseStreak = result.winner === "enemy" ? run.loseStreak + 1 : 0;
 
       const newServerHp = Math.max(0, run.serverHp - result.damageToServer);
       const phase =
         newServerHp <= 0
           ? "game_over"
           : run.wave >= MAX_WAVE && result.winner === "player"
-          ? "victory"
-          : "combat_result";
+            ? "victory"
+            : "combat_result";
 
       const enemyKills =
         result.winner === "player"
@@ -770,7 +769,8 @@ export function gameReducer(
         b.shopSize +
         run.activeRelics.reduce((sum, rid) => {
           const r = RELIC_MAP[rid];
-          if (r?.effect.type === "shop_size_increase") return sum + r.effect.value;
+          if (r?.effect.type === "shop_size_increase")
+            return sum + r.effect.value;
           return sum;
         }, 0);
       const freeRerolls =
@@ -796,7 +796,10 @@ export function gameReducer(
         u ? { ...u, currentHp: u.maxHp } : u,
       );
 
-      const discountedRerollCost = Math.max(0, DEFAULT_REROLL_COST - b.rerollCost);
+      const discountedRerollCost = Math.max(
+        0,
+        DEFAULT_REROLL_COST - b.rerollCost,
+      );
 
       return {
         ...state,
@@ -816,8 +819,7 @@ export function gameReducer(
     }
 
     case "UNLOCK_NODE": {
-      const node: ProgressionNode | undefined =
-        PROGRESSION_MAP[action.nodeId];
+      const node: ProgressionNode | undefined = PROGRESSION_MAP[action.nodeId];
       if (!node) return state;
       if (state.meta.progressionNodes.includes(node.id)) return state;
       if (state.meta.souls < node.cost) return state;

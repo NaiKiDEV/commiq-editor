@@ -1,7 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
-import { Play, Pause, FastForward, SkipForward, ChevronRight, Heart, Zap } from "lucide-react";
+import {
+  Play,
+  Pause,
+  FastForward,
+  SkipForward,
+  ChevronRight,
+  Heart,
+  Zap,
+} from "lucide-react";
 import type {
   AutoBattlerRun,
   CombatSnapshot,
@@ -19,6 +34,19 @@ const SPEED_MS: Record<GameSettings["combatSpeed"], number> = {
   normal: 240,
   slow: 500,
 };
+
+const BASE_INCOME = 5;
+const INTEREST_RATE = 0.1;
+const INTEREST_CAP = 5;
+const STREAK_BONUSES: Record<number, number> = { 2: 1, 3: 2, 4: 3 };
+
+function computeRoundGold(run: AutoBattlerRun): number {
+  const interest = Math.min(Math.floor(run.gold * INTEREST_RATE), INTEREST_CAP);
+  const streakCount = Math.min(4, Math.max(run.winStreak, run.loseStreak));
+  const streak = streakCount >= 2 ? (STREAK_BONUSES[streakCount] ?? 0) : 0;
+  const combatGold = run.combatResult?.goldEarned ?? 0;
+  return BASE_INCOME + interest + streak + combatGold;
+}
 
 type Dispatch = (action: GameAction) => Promise<unknown>;
 
@@ -124,40 +152,16 @@ export function CombatView({
       </div>
 
       {/* Battlefield: enemies on top, players on bottom */}
-      <div className="flex-1 flex flex-col justify-center gap-4">
-        <div className="h-8 flex items-center justify-center">
-          {finished ? (
-            <span className={cn(
-              "text-2xl font-bold tracking-wide",
-              result?.winner === "player" && "text-emerald-400",
-              result?.winner === "enemy" && "text-red-400",
-              result?.winner !== "player" && result?.winner !== "enemy" && "text-zinc-300",
-            )}>
-              {winnerLabel}
-              {result?.winner === "player" && result.goldEarned > 0 && (
-                <span className="ml-2 text-base font-semibold text-amber-400/80">
-                  +{result.goldEarned} 💰
-                </span>
-              )}
-              {result?.winner === "enemy" && result.damageToServer > 0 && (
-                <span className="ml-2 text-base font-semibold text-red-400/80">
-                  −{result.damageToServer} HP
-                </span>
-              )}
-            </span>
-          ) : (
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground/40">
-              Enemies
-            </span>
-          )}
-        </div>
-        <BattleRow combatants={enemies} unitMap={unitMap} side="enemy" />
-        <div className="border-t border-dashed border-white/8 mx-8" />
-        <BattleRow combatants={players} unitMap={unitMap} side="player" />
-        <div className="text-[10px] uppercase tracking-widest text-muted-foreground/40 text-center">
-          Your Stack
-        </div>
-      </div>
+      <Battlefield
+        enemies={enemies}
+        players={players}
+        unitMap={unitMap}
+        events={snapshot.events}
+        finished={finished}
+        winnerLabel={winnerLabel}
+        result={result}
+        roundGold={computeRoundGold(run)}
+      />
 
       {/* Event feed */}
       <EventFeed snapshots={snapshots} tick={tick} nameMap={nameMap} />
@@ -223,14 +227,131 @@ export function CombatView({
   );
 }
 
+type AttackLine = { sourceId: string; targetId: string };
+type CasterSet = Set<string>;
+
+function Battlefield({
+  enemies,
+  players,
+  unitMap,
+  events,
+  finished,
+  winnerLabel,
+  result,
+  roundGold,
+}: {
+  enemies: CombatantSnapshot[];
+  players: CombatantSnapshot[];
+  unitMap: Record<string, UnitDef>;
+  events: CombatEvent[];
+  finished: boolean;
+  winnerLabel: string;
+  result: import("../../../shared/auto-battler-types").CombatResult | null;
+  roundGold: number;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [lines, setLines] = useState<{ x1: number; y1: number; x2: number; y2: number }[]>([]);
+
+  // Extract attack lines and ability casters from current tick events
+  const attacks: AttackLine[] = [];
+  const casters: CasterSet = new Set();
+  for (const e of events) {
+    if (e.type === "attack") attacks.push({ sourceId: e.sourceId, targetId: e.targetId });
+    if (e.type === "ability") casters.add(e.sourceId);
+  }
+
+  // Compute SVG line positions after render
+  useLayoutEffect(() => {
+    if (!containerRef.current || attacks.length === 0) {
+      setLines([]);
+      return;
+    }
+    const rect = containerRef.current.getBoundingClientRect();
+    const newLines: { x1: number; y1: number; x2: number; y2: number }[] = [];
+    for (const atk of attacks) {
+      const srcEl = containerRef.current.querySelector(`[data-unit-id="${atk.sourceId}"]`);
+      const tgtEl = containerRef.current.querySelector(`[data-unit-id="${atk.targetId}"]`);
+      if (srcEl && tgtEl) {
+        const sr = srcEl.getBoundingClientRect();
+        const tr = tgtEl.getBoundingClientRect();
+        newLines.push({
+          x1: sr.left + sr.width / 2 - rect.left,
+          y1: sr.top + sr.height / 2 - rect.top,
+          x2: tr.left + tr.width / 2 - rect.left,
+          y2: tr.top + tr.height / 2 - rect.top,
+        });
+      }
+    }
+    setLines(newLines);
+  }, [events]);
+
+  return (
+    <div className="flex-1 flex flex-col justify-center gap-4 relative" ref={containerRef}>
+      {/* SVG targeting lines overlay */}
+      {lines.length > 0 && (
+        <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
+          {lines.map((l, i) => (
+            <line
+              key={i}
+              x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+              stroke="rgba(239, 68, 68, 0.35)"
+              strokeWidth="1.5"
+              strokeDasharray="4 3"
+            />
+          ))}
+        </svg>
+      )}
+
+      <div className="h-8 flex items-center justify-center">
+        {finished ? (
+          <span
+            className={cn(
+              "text-2xl font-bold tracking-wide",
+              result?.winner === "player" && "text-emerald-400",
+              result?.winner === "enemy" && "text-red-400",
+              result?.winner !== "player" &&
+                result?.winner !== "enemy" &&
+                "text-zinc-300",
+            )}
+          >
+            {winnerLabel}
+            {result?.winner === "player" && roundGold > 0 && (
+              <span className="ml-2 text-base font-semibold text-amber-400/80">
+                +{roundGold} 💰
+              </span>
+            )}
+            {result?.winner === "enemy" && result.damageToServer > 0 && (
+              <span className="ml-2 text-base font-semibold text-red-400/80">
+                −{result.damageToServer} HP
+              </span>
+            )}
+          </span>
+        ) : (
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground/40">
+            Enemies
+          </span>
+        )}
+      </div>
+      <BattleRow combatants={enemies} unitMap={unitMap} side="enemy" casters={casters} />
+      <div className="border-t border-dashed border-white/8 mx-8" />
+      <BattleRow combatants={players} unitMap={unitMap} side="player" casters={casters} />
+      <div className="text-[10px] uppercase tracking-widest text-muted-foreground/40 text-center">
+        Your Stack
+      </div>
+    </div>
+  );
+}
+
 function BattleRow({
   combatants,
   unitMap,
   side,
+  casters,
 }: {
   combatants: CombatantSnapshot[];
   unitMap: Record<string, UnitDef>;
   side: "player" | "enemy";
+  casters: CasterSet;
 }) {
   const sorted = [...combatants].sort(
     (a, b) => a.row * 10 + a.col - (b.row * 10 + b.col),
@@ -241,17 +362,20 @@ function BattleRow({
         const def = unitMap[c.unitDefId];
         const tier = def?.tier ?? 1;
         const hpPct = c.maxHp > 0 ? Math.round((c.hp / c.maxHp) * 100) : 0;
+        const isCasting = casters.has(c.instanceId);
         return (
           <div
             key={c.instanceId}
+            data-unit-id={c.instanceId}
             className={cn(
-              "relative w-20 rounded-lg border-2 flex flex-col items-center p-1.5 gap-0.5 transition-all",
+              "relative w-20 rounded-lg border-2 flex flex-col items-center p-1.5 gap-0.5 transition-all duration-500",
               TIER_COLORS[tier],
               TIER_GLOW[tier],
               "shadow-md",
-              !c.alive && "opacity-20 grayscale",
+              !c.alive && "opacity-15 grayscale scale-90",
               side === "enemy" && "border-red-500/40",
               c.stunned && "ring-2 ring-yellow-400",
+              isCasting && "ring-2 ring-fuchsia-400 shadow-fuchsia-400/40 shadow-lg",
             )}
           >
             {/* Star badge */}
@@ -277,15 +401,29 @@ function BattleRow({
 
             {/* HP bar + number */}
             <div className="w-full flex items-center gap-1">
-              <StatBar current={c.hp} max={c.maxHp} color={hpPct > 30 ? "bg-emerald-500" : "bg-red-500"} height="h-1.5" />
-              <span className="text-[8px] tabular-nums text-red-300/80 min-w-5 text-right">{c.hp}</span>
+              <StatBar
+                current={c.hp}
+                max={c.maxHp}
+                color={hpPct > 30 ? "bg-emerald-500" : "bg-red-500"}
+                height="h-1.5"
+              />
+              <span className="text-[8px] tabular-nums text-red-300/80 min-w-5 text-right">
+                {c.hp}
+              </span>
             </div>
 
             {/* Mana bar + number */}
             {c.maxMana > 0 && (
               <div className="w-full flex items-center gap-1">
-                <StatBar current={c.mana} max={c.maxMana} color="bg-blue-400" height="h-1" />
-                <span className="text-[8px] tabular-nums text-blue-300/80 min-w-5 text-right">{c.mana}</span>
+                <StatBar
+                  current={c.mana}
+                  max={c.maxMana}
+                  color="bg-blue-400"
+                  height="h-1"
+                />
+                <span className="text-[8px] tabular-nums text-blue-300/80 min-w-5 text-right">
+                  {c.mana}
+                </span>
               </div>
             )}
           </div>
@@ -322,7 +460,10 @@ function EventFeed({
       {tail.length === 0 && (
         <div
           className="text-muted-foreground/50 italic"
-          style={{ height: `${LINE_HEIGHT_PX}px`, lineHeight: `${LINE_HEIGHT_PX}px` }}
+          style={{
+            height: `${LINE_HEIGHT_PX}px`,
+            lineHeight: `${LINE_HEIGHT_PX}px`,
+          }}
         >
           Waiting for combat…
         </div>
@@ -334,7 +475,10 @@ function EventFeed({
           <div
             key={`${tick}-${i}`}
             className="truncate text-muted-foreground"
-            style={{ height: `${LINE_HEIGHT_PX}px`, lineHeight: `${LINE_HEIGHT_PX}px` }}
+            style={{
+              height: `${LINE_HEIGHT_PX}px`,
+              lineHeight: `${LINE_HEIGHT_PX}px`,
+            }}
           >
             {l}
           </div>

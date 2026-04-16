@@ -115,9 +115,7 @@ function StatRow({
   return (
     <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/3 border border-white/6">
       {icon}
-      <div className="flex-1 text-[11px] text-muted-foreground/70">
-        {label}
-      </div>
+      <div className="flex-1 text-[11px] text-muted-foreground/70">{label}</div>
       <div
         className={`text-sm font-semibold tabular-nums ${
           accent ? "text-amber-400" : "text-foreground"

@@ -31,11 +31,7 @@ export function findMerge(
 
   // Check board first so board units are preferred as the "keep" target
   for (const unit of board) {
-    if (
-      unit &&
-      unit.unitDefId === unitDefId &&
-      unit.starLevel === starLevel
-    ) {
+    if (unit && unit.unitDefId === unitDefId && unit.starLevel === starLevel) {
       matches.push({ kind: "board", instanceId: unit.instanceId });
       if (keptRelicId === null && unit.equippedRelicId) {
         keptRelicId = unit.equippedRelicId;
