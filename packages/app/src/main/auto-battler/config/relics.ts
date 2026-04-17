@@ -100,6 +100,73 @@ export const RELICS: RelicDef[] = [
       effect: { type: "damage", value: 10 },
     },
   },
+  // ─── New relics ───
+  {
+    id: "rubber_duck_debugger",
+    name: "Rubber Duck Debugger",
+    emoji: "🐤",
+    description: "When an ally dies, all other allies gain +10 mana.",
+    rarity: "legendary",
+    type: "global",
+    effect: {
+      type: "on_combat_start",
+      effect: { type: "buff", stat: "manaPerAttack", value: 3, duration: 99 },
+    },
+  },
+  {
+    id: "keyboard_of_typing",
+    name: "Keyboard of +5 Typing",
+    emoji: "⌨️",
+    description: "All allies attack 1 tick faster.",
+    rarity: "legendary",
+    type: "global",
+    effect: {
+      type: "on_combat_start",
+      effect: { type: "buff", stat: "attackSpeed", value: -1, duration: 99 },
+    },
+  },
+  {
+    id: "energy_drink",
+    name: "Energy Drink",
+    emoji: "🥤",
+    description: "Equipped unit starts combat with 50% mana.",
+    rarity: "uncommon",
+    type: "unit",
+    effect: { type: "stat_boost", stat: "mana", value: 25 },
+  },
+  {
+    id: "dark_theme",
+    name: "Dark Theme",
+    emoji: "🌙",
+    description: "Equipped unit gains +15 HP and +2 defense.",
+    rarity: "common",
+    type: "unit",
+    effect: { type: "stat_boost", stat: "hp", value: 15 },
+  },
+  {
+    id: "load_balancer",
+    name: "Load Balancer",
+    emoji: "⚖️",
+    description: "All allies gain +15 HP at combat start.",
+    rarity: "rare",
+    type: "global",
+    effect: {
+      type: "on_combat_start",
+      effect: { type: "heal", value: 15 },
+    },
+  },
+  {
+    id: "hotfix_patch",
+    name: "Hotfix Patch",
+    emoji: "🩹",
+    description: "Equipped unit heals 8 HP per attack.",
+    rarity: "rare",
+    type: "unit",
+    effect: {
+      type: "on_ability_cast",
+      effect: { type: "heal", value: 8 },
+    },
+  },
 ];
 
 export const RELIC_MAP: Record<string, RelicDef> = Object.fromEntries(
@@ -112,4 +179,6 @@ export const DEFAULT_UNLOCKED_RELICS: string[] = [
   "mechanical_keyboard",
   "ci_pipeline",
   "venture_capital",
+  "dark_theme",
+  "energy_drink",
 ];

@@ -29,7 +29,7 @@ import {
   soulsFromRun,
 } from "./config/balance";
 import { DEFAULT_UNLOCKED_UNITS, UNIT_MAP } from "./config/units";
-import { DEFAULT_UNLOCKED_RELICS, RELIC_MAP } from "./config/relics";
+import { DEFAULT_UNLOCKED_RELICS, RELICS, RELIC_MAP } from "./config/relics";
 import {
   DEFAULT_UNLOCKED_SYNERGIES,
   PROGRESSION_MAP,
@@ -782,6 +782,31 @@ export function gameReducer(
           return sum;
         }, 0);
 
+      // Relic reward: after a win, ~33% chance (guaranteed every 3rd win streak)
+      let newActiveRelics = [...run.activeRelics];
+      if (didWin) {
+        const equippedRelicIds = new Set<string>();
+        for (const u of run.board.slots)
+          if (u?.equippedRelicId) equippedRelicIds.add(u.equippedRelicId);
+        for (const u of run.bench.units)
+          if (u.equippedRelicId) equippedRelicIds.add(u.equippedRelicId);
+        const ownedRelicIds = new Set([
+          ...run.activeRelics,
+          ...equippedRelicIds,
+        ]);
+        const eligible = RELICS.filter(
+          (r) =>
+            state.meta.unlockedRelics.includes(r.id) &&
+            !ownedRelicIds.has(r.id),
+        );
+        const shouldOffer =
+          eligible.length > 0 && (run.winStreak % 3 === 0 || rng.next() < 0.33);
+        if (shouldOffer) {
+          const pick = eligible[Math.floor(rng.next() * eligible.length)];
+          newActiveRelics.push(pick.id);
+        }
+      }
+
       const newShop = run.shop.frozen
         ? run.shop
         : createInitialShop(
@@ -812,6 +837,7 @@ export function gameReducer(
           combatResult: null,
           lastCombatResolved: false,
           board: { ...run.board, slots: healedSlots },
+          activeRelics: newActiveRelics,
           freeRerollsAvailable: freeRerolls,
           rngState: rng.getState(),
         },

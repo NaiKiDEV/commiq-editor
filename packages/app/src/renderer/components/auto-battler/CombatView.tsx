@@ -250,13 +250,16 @@ function Battlefield({
   roundGold: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [lines, setLines] = useState<{ x1: number; y1: number; x2: number; y2: number }[]>([]);
+  const [lines, setLines] = useState<
+    { x1: number; y1: number; x2: number; y2: number }[]
+  >([]);
 
   // Extract attack lines and ability casters from current tick events
   const attacks: AttackLine[] = [];
   const casters: CasterSet = new Set();
   for (const e of events) {
-    if (e.type === "attack") attacks.push({ sourceId: e.sourceId, targetId: e.targetId });
+    if (e.type === "attack")
+      attacks.push({ sourceId: e.sourceId, targetId: e.targetId });
     if (e.type === "ability") casters.add(e.sourceId);
   }
 
@@ -269,8 +272,12 @@ function Battlefield({
     const rect = containerRef.current.getBoundingClientRect();
     const newLines: { x1: number; y1: number; x2: number; y2: number }[] = [];
     for (const atk of attacks) {
-      const srcEl = containerRef.current.querySelector(`[data-unit-id="${atk.sourceId}"]`);
-      const tgtEl = containerRef.current.querySelector(`[data-unit-id="${atk.targetId}"]`);
+      const srcEl = containerRef.current.querySelector(
+        `[data-unit-id="${atk.sourceId}"]`,
+      );
+      const tgtEl = containerRef.current.querySelector(
+        `[data-unit-id="${atk.targetId}"]`,
+      );
       if (srcEl && tgtEl) {
         const sr = srcEl.getBoundingClientRect();
         const tr = tgtEl.getBoundingClientRect();
@@ -286,14 +293,20 @@ function Battlefield({
   }, [events]);
 
   return (
-    <div className="flex-1 flex flex-col justify-center gap-4 relative" ref={containerRef}>
+    <div
+      className="flex-1 flex flex-col justify-center gap-4 relative"
+      ref={containerRef}
+    >
       {/* SVG targeting lines overlay */}
       {lines.length > 0 && (
         <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
           {lines.map((l, i) => (
             <line
               key={i}
-              x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+              x1={l.x1}
+              y1={l.y1}
+              x2={l.x2}
+              y2={l.y2}
               stroke="rgba(239, 68, 68, 0.35)"
               strokeWidth="1.5"
               strokeDasharray="4 3"
@@ -332,9 +345,19 @@ function Battlefield({
           </span>
         )}
       </div>
-      <BattleRow combatants={enemies} unitMap={unitMap} side="enemy" casters={casters} />
+      <BattleRow
+        combatants={enemies}
+        unitMap={unitMap}
+        side="enemy"
+        casters={casters}
+      />
       <div className="border-t border-dashed border-white/8 mx-8" />
-      <BattleRow combatants={players} unitMap={unitMap} side="player" casters={casters} />
+      <BattleRow
+        combatants={players}
+        unitMap={unitMap}
+        side="player"
+        casters={casters}
+      />
       <div className="text-[10px] uppercase tracking-widest text-muted-foreground/40 text-center">
         Your Stack
       </div>
@@ -375,7 +398,8 @@ function BattleRow({
               !c.alive && "opacity-15 grayscale scale-90",
               side === "enemy" && "border-red-500/40",
               c.stunned && "ring-2 ring-yellow-400",
-              isCasting && "ring-2 ring-fuchsia-400 shadow-fuchsia-400/40 shadow-lg",
+              isCasting &&
+                "ring-2 ring-fuchsia-400 shadow-fuchsia-400/40 shadow-lg",
             )}
           >
             {/* Star badge */}

@@ -65,6 +65,7 @@ export function DraftView({
 }) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [mergedIds, setMergedIds] = useState<Set<string>>(new Set());
+  const [equippingRelicId, setEquippingRelicId] = useState<string | null>(null);
   const prevStarsRef = useRef<Map<string, number>>(new Map());
 
   const canStart = run.board.slots.some((s) => s !== null);
@@ -227,6 +228,8 @@ export function DraftView({
           setDraggingId={setDraggingId}
           dispatch={dispatch}
           mergedIds={mergedIds}
+          equippingRelicId={equippingRelicId}
+          onRelicEquipped={() => setEquippingRelicId(null)}
         />
         <div className="absolute right-0 top-0 bottom-0 flex flex-col gap-2 w-55 shrink-0 grow-0 py-1 overflow-y-auto overflow-x-hidden">
           <SpeedSelector
@@ -260,6 +263,16 @@ export function DraftView({
               );
             })}
           </div>
+          {/* Relics */}
+          <RelicPanel
+            run={run}
+            relicMap={relicMap}
+            equippingRelicId={equippingRelicId}
+            onSelectRelic={(id) =>
+              setEquippingRelicId((prev) => (prev === id ? null : id))
+            }
+            dispatch={dispatch}
+          />
         </div>
       </div>
 
@@ -272,6 +285,8 @@ export function DraftView({
         setDraggingId={setDraggingId}
         dispatch={dispatch}
         mergedIds={mergedIds}
+        equippingRelicId={equippingRelicId}
+        onRelicEquipped={() => setEquippingRelicId(null)}
       />
 
       {/* Shop */}
@@ -379,6 +394,8 @@ function BoardGridView({
   setDraggingId,
   dispatch,
   mergedIds,
+  equippingRelicId,
+  onRelicEquipped,
 }: {
   run: AutoBattlerRun;
   unitMap: Record<string, UnitDef>;
@@ -387,6 +404,8 @@ function BoardGridView({
   setDraggingId: (id: string | null) => void;
   dispatch: Dispatch;
   mergedIds: Set<string>;
+  equippingRelicId: string | null;
+  onRelicEquipped: () => void;
 }) {
   const { rows, cols, slots } = run.board;
   const grid: (PlacedUnit | null)[][] = [];
@@ -409,6 +428,8 @@ function BoardGridView({
               setDraggingId={setDraggingId}
               dispatch={dispatch}
               merged={cell ? mergedIds.has(cell.instanceId) : false}
+              equippingRelicId={equippingRelicId}
+              onRelicEquipped={onRelicEquipped}
             />
           ))}
         </div>
@@ -427,6 +448,8 @@ function BoardSlot({
   setDraggingId,
   dispatch,
   merged,
+  equippingRelicId,
+  onRelicEquipped,
 }: {
   row: number;
   col: number;
@@ -437,6 +460,8 @@ function BoardSlot({
   setDraggingId: (id: string | null) => void;
   dispatch: Dispatch;
   merged: boolean;
+  equippingRelicId: string | null;
+  onRelicEquipped: () => void;
 }) {
   const def = unit ? unitMap[unit.unitDefId] : undefined;
   const relic = unit?.equippedRelicId ? relicMap[unit.equippedRelicId] : null;
@@ -458,14 +483,40 @@ function BoardSlot({
     <div
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleDrop}
+      onClick={() => {
+        if (equippingRelicId && unit) {
+          dispatch({
+            type: "EQUIP_RELIC",
+            relicId: equippingRelicId,
+            unitInstanceId: unit.instanceId,
+          });
+          onRelicEquipped();
+        } else if (!equippingRelicId && unit?.equippedRelicId) {
+          dispatch({
+            type: "UNEQUIP_RELIC",
+            unitInstanceId: unit.instanceId,
+          });
+        }
+      }}
       onDoubleClick={() => {
         if (unit) dispatch({ type: "BENCH_UNIT", instanceId: unit.instanceId });
       }}
       className={cn(
         "size-20 rounded-md border-2 border-dashed border-muted/30 flex items-center justify-center transition-colors",
         draggingId && "border-accent/50 bg-accent/5",
+        equippingRelicId &&
+          unit &&
+          "border-amber-400/60 bg-amber-500/10 cursor-pointer",
       )}
-      title={unit ? "Double-click to send to bench" : `Row ${row}, Col ${col}`}
+      title={
+        equippingRelicId && unit
+          ? "Click to equip relic"
+          : unit?.equippedRelicId
+            ? "Click relic to unequip · Double-click to bench"
+            : unit
+              ? "Double-click to send to bench"
+              : `Row ${row}, Col ${col}`
+      }
     >
       {unit && def && (
         <div
@@ -501,6 +552,8 @@ function BenchRow({
   setDraggingId,
   dispatch,
   mergedIds,
+  equippingRelicId,
+  onRelicEquipped,
 }: {
   run: AutoBattlerRun;
   unitMap: Record<string, UnitDef>;
@@ -509,6 +562,8 @@ function BenchRow({
   setDraggingId: (id: string | null) => void;
   dispatch: Dispatch;
   mergedIds: Set<string>;
+  equippingRelicId: string | null;
+  onRelicEquipped: () => void;
 }) {
   const slots: (BenchUnit | null)[] = Array.from({
     length: run.bench.maxSize,
@@ -559,10 +614,31 @@ function BenchRow({
               setDraggingId(unit.instanceId);
             }}
             onDragEnd={() => setDraggingId(null)}
+            onClick={() => {
+              if (equippingRelicId) {
+                dispatch({
+                  type: "EQUIP_RELIC",
+                  relicId: equippingRelicId,
+                  unitInstanceId: unit.instanceId,
+                });
+                onRelicEquipped();
+              } else if (unit.equippedRelicId) {
+                dispatch({
+                  type: "UNEQUIP_RELIC",
+                  unitInstanceId: unit.instanceId,
+                });
+              }
+            }}
             onDoubleClick={() =>
               dispatch({ type: "SELL_UNIT", instanceId: unit.instanceId })
             }
-            title="Drag onto board, double-click to sell"
+            title={
+              equippingRelicId
+                ? "Click to equip relic"
+                : unit.equippedRelicId
+                  ? "Click to unequip relic · Double-click to sell"
+                  : "Drag onto board, double-click to sell"
+            }
           >
             <UnitCard
               unit={def}
@@ -570,11 +646,121 @@ function BenchRow({
               relic={relic}
               compact
               sellPrice={SELL_REFUND[unit.starLevel] * def.tier}
-              className={mergedIds.has(unit.instanceId) ? "animate-merge-flash" : undefined}
+              className={
+                mergedIds.has(unit.instanceId)
+                  ? "animate-merge-flash"
+                  : undefined
+              }
             />
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function RelicPanel({
+  run,
+  relicMap,
+  equippingRelicId,
+  onSelectRelic,
+  dispatch,
+}: {
+  run: AutoBattlerRun;
+  relicMap: Record<string, RelicDef>;
+  equippingRelicId: string | null;
+  onSelectRelic: (id: string) => void;
+  dispatch: Dispatch;
+}) {
+  // Separate unequipped relics into unit and global
+  const unitRelics: RelicDef[] = [];
+  const globalRelics: RelicDef[] = [];
+  for (const rid of run.activeRelics) {
+    const r = relicMap[rid];
+    if (!r) continue;
+    if (r.type === "unit") unitRelics.push(r);
+    else globalRelics.push(r);
+  }
+
+  // Also gather equipped relics for display
+  const equippedCount =
+    run.board.slots.filter((u) => u?.equippedRelicId).length +
+    run.bench.units.filter((u) => u.equippedRelicId).length;
+
+  const totalRelics = run.activeRelics.length + equippedCount;
+
+  if (totalRelics === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-1">
+        Relics ({totalRelics})
+      </div>
+      {equippingRelicId && (
+        <div className="text-[10px] text-amber-400 px-1 animate-pulse">
+          Click a unit to equip
+        </div>
+      )}
+      {globalRelics.map((r) => (
+        <Tooltip key={r.id}>
+          <TooltipTrigger render={<div />}>
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-emerald-500/40 bg-emerald-900/20 text-xs">
+              <span className="text-sm">{r.emoji}</span>
+              <span className="font-medium flex-1 truncate text-emerald-200">
+                {r.name}
+              </span>
+              <span className="text-[9px] text-emerald-400/70 uppercase">
+                global
+              </span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-none">
+            <div className="w-48 text-[11px] space-y-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-lg">{r.emoji}</span>
+                <span className="font-semibold text-sm">{r.name}</span>
+              </div>
+              <div className="text-popover-foreground/80">{r.description}</div>
+              <div className="text-[9px] text-emerald-400 uppercase">
+                Always active
+              </div>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      ))}
+      {unitRelics.map((r) => (
+        <Tooltip key={r.id}>
+          <TooltipTrigger render={<div />}>
+            <button
+              onClick={() => onSelectRelic(r.id)}
+              className={cn(
+                "w-full flex items-center gap-2 px-2 py-1.5 rounded-md border text-xs transition-all text-left",
+                equippingRelicId === r.id
+                  ? "border-amber-400 bg-amber-500/20 text-amber-100 ring-1 ring-amber-400/60"
+                  : "border-amber-500/30 bg-amber-900/15 text-amber-200/80 hover:bg-amber-900/30 cursor-pointer",
+              )}
+            >
+              <span className="text-sm">{r.emoji}</span>
+              <span className="font-medium flex-1 truncate">{r.name}</span>
+              <span className="text-[9px] text-amber-400/60 uppercase">
+                equip
+              </span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-none">
+            <div className="w-48 text-[11px] space-y-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-lg">{r.emoji}</span>
+                <span className="font-semibold text-sm">{r.name}</span>
+              </div>
+              <div className="text-popover-foreground/80">{r.description}</div>
+              <div className="text-[9px] text-amber-400 uppercase">
+                Click to select, then click a unit
+              </div>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      ))}
     </div>
   );
 }

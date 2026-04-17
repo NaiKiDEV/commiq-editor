@@ -12,8 +12,6 @@ import { TOOLTIP_CLASS } from "./shared";
 type Dispatch = (action: GameAction) => Promise<unknown>;
 
 const NODE_SIZE = 80;
-const COL_WIDTH = 140;
-const ROW_HEIGHT = 120;
 const PAD = 80;
 const EDGE_GAP = 8;
 
@@ -37,15 +35,13 @@ export function ProgressionView({
 
   const xs = nodes.map((n) => n.position.x);
   const ys = nodes.map((n) => n.position.y);
-  const minX = Math.min(...xs, 0);
-  const maxX = Math.max(...xs, 1);
-  const minY = Math.min(...ys, 0);
-  const maxY = Math.max(...ys, 1);
+  const maxX = Math.max(...xs, 0);
+  const maxY = Math.max(...ys, 0);
 
-  const toX = (x: number) => (x - minX) * COL_WIDTH + PAD;
-  const toY = (y: number) => (y - minY) * ROW_HEIGHT + PAD;
-  const width = (maxX - minX) * COL_WIDTH + PAD * 2 + NODE_SIZE;
-  const height = (maxY - minY) * ROW_HEIGHT + PAD * 2 + NODE_SIZE;
+  const toX = (x: number) => x + PAD;
+  const toY = (y: number) => y + PAD;
+  const width = maxX + PAD * 2 + NODE_SIZE;
+  const height = maxY + PAD * 2 + NODE_SIZE;
 
   return (
     <div className="h-full flex flex-col">

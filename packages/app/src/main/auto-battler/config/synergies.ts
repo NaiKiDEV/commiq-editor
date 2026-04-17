@@ -149,6 +149,119 @@ export const SYNERGIES: SynergyDef[] = [
       },
     ],
   },
+  {
+    id: "ci",
+    name: "CI/CD",
+    emoji: "🔄",
+    description: "CI/CD units accelerate the pipeline.",
+    trait: "ci",
+    thresholds: [
+      {
+        count: 2,
+        bonus: {
+          type: "stat_boost",
+          stat: "speed",
+          value: 10,
+          target: "trait_units",
+        },
+        description: "CI/CD units gain +10 speed",
+      },
+      {
+        count: 3,
+        bonus: {
+          type: "stat_boost",
+          stat: "speed",
+          value: 15,
+          target: "all_units",
+        },
+        description: "All units gain +15 speed",
+      },
+    ],
+  },
+  {
+    id: "observability",
+    name: "Observability",
+    emoji: "🔍",
+    description: "Observability units expose weaknesses.",
+    trait: "observability",
+    thresholds: [
+      {
+        count: 2,
+        bonus: {
+          type: "stat_boost",
+          stat: "critChance",
+          value: 15,
+          target: "trait_units",
+        },
+        description: "Observability units gain +15% crit",
+      },
+      {
+        count: 3,
+        bonus: {
+          type: "stat_boost",
+          stat: "critChance",
+          value: 10,
+          target: "all_units",
+        },
+        description: "All units gain +10% crit",
+      },
+    ],
+  },
+  {
+    id: "testing",
+    name: "Testing",
+    emoji: "🧪",
+    description: "Testing units find and exploit bugs.",
+    trait: "testing",
+    thresholds: [
+      {
+        count: 2,
+        bonus: {
+          type: "on_combat_start",
+          effect: { type: "damage", value: 10 },
+          target: "trait_units",
+        },
+        description: "Testing units deal 10 dmg to a random enemy at start",
+      },
+      {
+        count: 3,
+        bonus: {
+          type: "stat_boost",
+          stat: "attack",
+          value: 4,
+          target: "all_units",
+        },
+        description: "All units gain +4 attack",
+      },
+    ],
+  },
+  {
+    id: "security",
+    name: "Security",
+    emoji: "🛡️",
+    description: "Security units harden defenses.",
+    trait: "security",
+    thresholds: [
+      {
+        count: 2,
+        bonus: {
+          type: "on_combat_start",
+          effect: { type: "shield", value: 15, duration: 999 },
+          target: "trait_units",
+        },
+        description: "Security units gain 15 shield at start",
+      },
+      {
+        count: 3,
+        bonus: {
+          type: "on_combat_start",
+          effect: { type: "shield", value: 10, duration: 999 },
+          target: "all_units",
+        },
+        description: "All units gain 10 shield at start",
+      },
+    ],
+  },
 ];
 
 export const SYNERGY_MAP: Record<string, SynergyDef> = Object.fromEntries(
