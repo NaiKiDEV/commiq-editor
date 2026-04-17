@@ -17,6 +17,7 @@ import type {
   UnitDef,
   UnitStats,
   WaveDef,
+  WaveModifier,
 } from "../../shared/auto-battler-types";
 import { UNIT_MAP } from "./config/units";
 import { ENEMY_MAP } from "./config/enemies";
@@ -166,7 +167,7 @@ function applyRelicStat(combatant: Combatant, relic: RelicDef): void {
 
 function applySynergyBonus(
   combatants: Combatant[],
-  def: ReturnType<typeof SYNERGY_MAP>[string],
+  def: (typeof SYNERGY_MAP)[string],
   bonus: SynergyBonus,
   events: CombatEvent[],
 ): void {
@@ -175,7 +176,10 @@ function applySynergyBonus(
       if (c.side !== "player") continue;
       const unitDef = UNIT_MAP[c.unitDefId];
       if (!unitDef) continue;
-      if (bonus.target === "trait_units" && !unitDef.traits.includes(def.trait)) {
+      if (
+        bonus.target === "trait_units" &&
+        !unitDef.traits.includes(def.trait)
+      ) {
         continue;
       }
       switch (bonus.stat) {
@@ -214,7 +218,10 @@ function applySynergyBonus(
       if (c.side !== "player") continue;
       const unitDef = UNIT_MAP[c.unitDefId];
       if (!unitDef) continue;
-      if (bonus.target === "trait_units" && !unitDef.traits.includes(def.trait)) {
+      if (
+        bonus.target === "trait_units" &&
+        !unitDef.traits.includes(def.trait)
+      ) {
         continue;
       }
       // Apply the effect to all enemies if damage, to self if heal
@@ -253,11 +260,18 @@ function applyDamage(
   target.hp -= remaining;
   if (target.hp <= 0) {
     target.hp = 0;
-    events.push({ type: "death", unitId: target.instanceId, killerSourceId: sourceId });
+    events.push({
+      type: "death",
+      unitId: target.instanceId,
+      killerSourceId: sourceId,
+    });
   }
 }
 
-function anyAlive(combatants: readonly Combatant[], side: CombatantSide): boolean {
+function anyAlive(
+  combatants: readonly Combatant[],
+  side: CombatantSide,
+): boolean {
   for (const c of combatants) {
     if (c.side === side && c.hp > 0) return true;
   }
@@ -301,7 +315,9 @@ function selectTarget(
     case "random":
       return rng.pick(enemies);
     case "backline_first": {
-      const back = enemies.filter((e) => e.row === (attacker.side === "player" ? 0 : 1));
+      const back = enemies.filter(
+        (e) => e.row === (attacker.side === "player" ? 0 : 1),
+      );
       const pool = back.length > 0 ? back : enemies;
       let best = pool[0];
       let bestDist = distance(attacker, best);
@@ -323,7 +339,8 @@ function resolveAbilityTargets(
   combatants: Combatant[],
   rng: Rng,
 ): Combatant[] {
-  const enemySide: CombatantSide = caster.side === "player" ? "enemy" : "player";
+  const enemySide: CombatantSide =
+    caster.side === "player" ? "enemy" : "player";
   const allies = aliveOnSide(combatants, caster.side);
   const enemies = aliveOnSide(combatants, enemySide);
   switch (targetType) {
@@ -345,7 +362,10 @@ function resolveAbilityTargets(
     case "nearest":
     case "lowest_hp":
     case "highest_attack": {
-      const faux: Combatant = { ...caster, targeting: targetType as TargetingAI };
+      const faux: Combatant = {
+        ...caster,
+        targeting: targetType as TargetingAI,
+      };
       const t = selectTarget(faux, enemies, rng);
       return t ? [t] : [];
     }
@@ -369,12 +389,24 @@ function castAbility(
   if (targets.length === 0) return;
   const starMultiplier =
     caster.side === "player"
-      ? Math.pow(UNIT_MAP[caster.unitDefId]?.starScaling.abilityMult ?? 1, caster.starLevel - 1)
+      ? Math.pow(
+          UNIT_MAP[caster.unitDefId]?.starScaling.abilityMult ?? 1,
+          caster.starLevel - 1,
+        )
       : 1;
 
   const resolvedEffects: { description: string; value: number }[] = [];
   for (const effect of ability.effects) {
-    applyEffect(caster, targets, effect, starMultiplier, events, resolvedEffects, rng);
+    applyEffect(
+      caster,
+      targets,
+      effect,
+      starMultiplier,
+      events,
+      resolvedEffects,
+      rng,
+      combatants,
+    );
   }
 
   events.push({
@@ -391,7 +423,16 @@ function castAbility(
   if (caster.equippedRelicId) {
     const relic = RELIC_MAP[caster.equippedRelicId];
     if (relic && relic.effect.type === "on_ability_cast") {
-      applyEffect(caster, [caster], relic.effect.effect, 1, events, [], rng);
+      applyEffect(
+        caster,
+        [caster],
+        relic.effect.effect,
+        1,
+        events,
+        [],
+        rng,
+        combatants,
+      );
       events.push({
         type: "relic_proc",
         relicId: relic.id,
@@ -409,6 +450,7 @@ function applyEffect(
   events: CombatEvent[],
   resolved: { description: string; value: number }[],
   rng: Rng,
+  allCombatants?: Combatant[],
 ): void {
   switch (effect.type) {
     case "damage": {
@@ -421,7 +463,9 @@ function applyEffect(
       break;
     }
     case "heal": {
-      const amt = Math.round(effect.value * (effect.scaling ?? 1) * starMultiplier);
+      const amt = Math.round(
+        effect.value * (effect.scaling ?? 1) * starMultiplier,
+      );
       for (const t of targets) {
         t.hp = Math.min(t.maxHp, t.hp + amt);
         events.push({
@@ -464,7 +508,10 @@ function applyEffect(
           duration: effect.duration,
         });
       }
-      resolved.push({ description: `buff ${effect.stat}`, value: effect.value });
+      resolved.push({
+        description: `buff ${effect.stat}`,
+        value: effect.value,
+      });
       break;
     }
     case "debuff": {
@@ -474,7 +521,8 @@ function applyEffect(
           value: -effect.value,
           ticksLeft: effect.duration,
         });
-        if (effect.stat === "attack") t.attack = Math.max(0, t.attack - effect.value);
+        if (effect.stat === "attack")
+          t.attack = Math.max(0, t.attack - effect.value);
         else if (effect.stat === "defense")
           t.defense = Math.max(0, t.defense - effect.value);
         events.push({
@@ -511,7 +559,21 @@ function applyEffect(
       break;
     }
     case "summon": {
-      // MVP: log but don't actually spawn. Could be expanded later.
+      // Actually spawn enemy combatants into the fight
+      const enemyDef = ENEMY_MAP[effect.unitDefId];
+      if (enemyDef && allCombatants) {
+        for (let i = 0; i < effect.count; i++) {
+          const id = `summon-${caster.instanceId}-${Date.now()}-${i}`;
+          const spawned = buildEnemyCombatant(
+            enemyDef,
+            id,
+            caster.row,
+            Math.min(3, caster.col + i + 1),
+          );
+          spawned.side = caster.side;
+          allCombatants.push(spawned);
+        }
+      }
       events.push({
         type: "summon",
         sourceId: caster.instanceId,
@@ -679,6 +741,28 @@ export function simulateCombat(
     }
   }
 
+  // ── Apply wave modifiers at combat start ──
+  const modifiers = wave.modifiers ?? [];
+  for (const mod of modifiers) {
+    for (const c of combatants) {
+      if (c.side !== "enemy" || c.hp <= 0) continue;
+      if (mod.type === "shielded") {
+        c.shield += mod.shieldAmount;
+        c.shieldTicksLeft = 999;
+      } else if (mod.type === "berserk") {
+        c.attackSpeed = Math.max(1, c.attackSpeed - mod.attackSpeedReduction);
+        c.attackCooldown = c.attackSpeed;
+      }
+    }
+  }
+
+  // Track boss phase abilities that have already fired
+  const firedPhases = new Set<string>();
+  // Track which bosses have already enraged
+  const enraged = new Set<string>();
+  // Track enrage_on_low_hp per enemy (modifier)
+  const enragedOnLowHp = new Set<string>();
+
   // Tick 0 snapshot
   snapshots.push({
     tick: 0,
@@ -695,6 +779,71 @@ export function simulateCombat(
   ) {
     tick++;
     const events: CombatEvent[] = [];
+
+    // ── Boss phase abilities ──
+    for (const c of combatants) {
+      if (c.hp <= 0 || c.side !== "enemy") continue;
+      const enemyDef = ENEMY_MAP[c.unitDefId];
+      if (!enemyDef?.phaseAbilities) continue;
+      for (const phase of enemyDef.phaseAbilities) {
+        const key = `${c.instanceId}:${phase.tick}`;
+        if (tick === phase.tick && !firedPhases.has(key)) {
+          firedPhases.add(key);
+          if (phase.announcement) {
+            events.push({
+              type: "announcement",
+              text: phase.announcement,
+            } as CombatEvent);
+          }
+          // Resolve phase ability
+          const targets = resolveAbilityTargets(
+            c,
+            phase.ability.targetType,
+            combatants,
+            rng,
+          );
+          const resolved: { description: string; value: number }[] = [];
+          for (const eff of phase.ability.effects) {
+            applyEffect(c, targets, eff, 1, events, resolved, rng, combatants);
+          }
+          events.push({
+            type: "ability",
+            sourceId: c.instanceId,
+            abilityId: phase.ability.id,
+            targets: targets.map((t) => t.instanceId),
+            effects: resolved,
+          });
+        }
+      }
+      // ── Boss enrage timer ──
+      if (
+        enemyDef.enrageTick &&
+        tick === enemyDef.enrageTick &&
+        !enraged.has(c.instanceId)
+      ) {
+        enraged.add(c.instanceId);
+        c.attack = Math.round(c.attack * 1.5);
+        c.attackSpeed = Math.max(1, c.attackSpeed - 1);
+        c.attackCooldown = Math.min(c.attackCooldown, c.attackSpeed);
+        events.push({
+          type: "announcement",
+          text: `${c.name} is ENRAGED!`,
+        } as CombatEvent);
+      }
+    }
+
+    // ── Wave modifier: regen (heal each enemy each tick) ──
+    for (const mod of modifiers) {
+      if (mod.type === "regen") {
+        for (const c of combatants) {
+          if (c.side !== "enemy" || c.hp <= 0) continue;
+          const heal = Math.min(mod.healPerTick, c.maxHp - c.hp);
+          if (heal > 0) {
+            c.hp += heal;
+          }
+        }
+      }
+    }
 
     // Status effects (shield/stun/dots/buff decay)
     for (const c of combatants) {
@@ -731,6 +880,37 @@ export function simulateCombat(
         targetId: target.instanceId,
         damage: dmg,
       });
+
+      // ── Wave modifier: thorns (reflect damage to attacker) ──
+      if (target.side === "enemy" && c.side === "player") {
+        // thorns only applies when player attacks enemy
+      } else if (target.side === "player") {
+        for (const mod of modifiers) {
+          if (mod.type === "thorns" && c.hp > 0) {
+            const thornsDmg = Math.max(1, mod.damage);
+            applyDamage(c, thornsDmg, events, "thorns");
+          }
+        }
+      }
+
+      // ── Wave modifier: enrage_on_low_hp ──
+      for (const mod of modifiers) {
+        if (
+          mod.type === "enrage_on_low_hp" &&
+          target.side === "enemy" &&
+          target.hp > 0 &&
+          target.hp < target.maxHp * (mod.hpPercent / 100) &&
+          !enragedOnLowHp.has(target.instanceId)
+        ) {
+          enragedOnLowHp.add(target.instanceId);
+          target.attack += mod.attackBonus;
+          events.push({
+            type: "announcement",
+            text: `${target.name} is enraged!`,
+          } as CombatEvent);
+        }
+      }
+
       c.mana = Math.min(c.maxMana, c.mana + c.manaPerAttack);
 
       // On-kill synergies
@@ -774,20 +954,21 @@ export function simulateCombat(
     playerAlive && !enemyAlive
       ? "player"
       : enemyAlive && !playerAlive
-      ? "enemy"
-      : "draw";
+        ? "enemy"
+        : "draw";
 
   const rawSouls =
     winner === "player"
       ? combatants
           .filter((c) => c.side === "enemy")
-          .reduce((sum, c) => sum + (ENEMY_MAP[c.unitDefId]?.soulValue ?? 0), 0) +
-        wave.bonusSouls
+          .reduce(
+            (sum, c) => sum + (ENEMY_MAP[c.unitDefId]?.soulValue ?? 0),
+            0,
+          ) + wave.bonusSouls
       : Math.floor(wave.bonusSouls / 2);
   const soulsEarned = Math.floor(rawSouls * WAVE_SOUL_MULTIPLIER);
 
-  const goldEarned =
-    winner === "player" ? wave.bonusGold : 0;
+  const goldEarned = winner === "player" ? wave.bonusGold : 0;
 
   const damageToServer =
     winner === "player" ? 0 : damageFromLostCombat(wave.wave);

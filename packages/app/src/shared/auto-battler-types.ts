@@ -104,7 +104,22 @@ export type EnemyDef = {
   targeting: TargetingAI;
   isBoss: boolean;
   soulValue: number;
+  /** Boss phase abilities: fire once when tick reaches the threshold */
+  phaseAbilities?: Array<{
+    tick: number;
+    ability: UnitAbilityDef;
+    announcement?: string;
+  }>;
+  /** Tick at which boss enrages (permanent +ATK, +speed) */
+  enrageTick?: number;
 };
+
+export type WaveModifier =
+  | { type: "enrage_on_low_hp"; hpPercent: number; attackBonus: number }
+  | { type: "thorns"; damage: number }
+  | { type: "regen"; healPerTick: number }
+  | { type: "shielded"; shieldAmount: number }
+  | { type: "berserk"; attackSpeedReduction: number };
 
 export type WaveEnemy = {
   enemyDefId: string;
@@ -119,6 +134,8 @@ export type WaveDef = {
   isBoss: boolean;
   bonusGold: number;
   bonusSouls: number;
+  /** Modifiers applied to all enemies in this wave */
+  modifiers?: WaveModifier[];
 };
 
 export type RelicRarity = "common" | "uncommon" | "rare" | "legendary";
@@ -265,7 +282,8 @@ export type CombatEvent =
   | { type: "shield"; targetId: string; value: number }
   | { type: "summon"; sourceId: string; unitDefId: string }
   | { type: "synergy_proc"; synergyId: string; description: string }
-  | { type: "relic_proc"; relicId: string; description: string };
+  | { type: "relic_proc"; relicId: string; description: string }
+  | { type: "announcement"; text: string };
 
 export type CombatTick = {
   tick: number;

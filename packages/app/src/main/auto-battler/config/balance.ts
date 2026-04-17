@@ -42,7 +42,8 @@ export const SHOP_TIER_ODDS: Array<[number, number, number, number, number]> = [
   [0.55, 0.35, 0.1, 0.0, 0.0],      // waves 4-6
   [0.4, 0.35, 0.2, 0.05, 0.0],      // waves 7-9
   [0.25, 0.3, 0.3, 0.1, 0.05],      // waves 10-14
-  [0.15, 0.25, 0.3, 0.2, 0.1],      // waves 15+
+  [0.15, 0.25, 0.3, 0.2, 0.1],      // waves 15-19
+  [0.1, 0.15, 0.3, 0.25, 0.2],       // waves 20+
 ];
 
 export function getShopOddsForWave(
@@ -52,7 +53,8 @@ export function getShopOddsForWave(
   if (wave <= 6) return SHOP_TIER_ODDS[1];
   if (wave <= 9) return SHOP_TIER_ODDS[2];
   if (wave <= 14) return SHOP_TIER_ODDS[3];
-  return SHOP_TIER_ODDS[4];
+  if (wave <= 19) return SHOP_TIER_ODDS[4];
+  return SHOP_TIER_ODDS[5];
 }
 
 // Combat simulation safety
@@ -60,14 +62,14 @@ export const MAX_COMBAT_TICKS = 200;
 
 // Damage from lost combat = 2 + wave (capped at 10)
 export function damageFromLostCombat(wave: number): number {
-  return Math.min(2 + Math.floor(wave / 2), 10);
+  return Math.min(2 + Math.floor(wave / 2), 15);
 }
 
 // Souls earned from a completed run (meta-currency)
 // Tuned so that even a perfect clear awards ~15-20 souls, enough for one
 // mid-tier upgrade; stacking progression requires multiple successful runs.
 export function soulsFromRun(wavesCleared: number, bossesKilled: number): number {
-  return Math.floor(wavesCleared / 3) + bossesKilled * 2;
+  return Math.floor(wavesCleared / 3) + bossesKilled * 3;
 }
 
 // Multiplier applied to per-wave soul rewards (kills + bonusSouls).
