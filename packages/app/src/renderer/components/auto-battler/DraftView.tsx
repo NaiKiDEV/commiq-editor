@@ -130,7 +130,14 @@ export function DraftView({
   }, [run, canStart, dispatch]);
 
   return (
-    <div className="h-full flex flex-col gap-3 p-3">
+    <div className="h-full flex flex-col gap-3 p-3 relative">
+      {run.pendingRelicOffer && (
+        <RelicOfferModal
+          run={run}
+          relicMap={relicMap}
+          dispatch={dispatch}
+        />
+      )}
       {/* Top bar: gold, hp, wave, end run */}
       <div className="flex items-center gap-3">
         <Tooltip>
@@ -464,7 +471,8 @@ function BoardSlot({
   onRelicEquipped: () => void;
 }) {
   const def = unit ? unitMap[unit.unitDefId] : undefined;
-  const relic = unit?.equippedRelicId ? relicMap[unit.equippedRelicId] : null;
+  const relics = unit ? unit.equippedRelicIds.map((rid) => relicMap[rid]).filter(Boolean) : [];
+  const firstRelic = relics[0] ?? null;
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -491,7 +499,7 @@ function BoardSlot({
             unitInstanceId: unit.instanceId,
           });
           onRelicEquipped();
-        } else if (!equippingRelicId && unit?.equippedRelicId) {
+        } else if (!equippingRelicId && unit && unit.equippedRelicIds.length > 0) {
           dispatch({
             type: "UNEQUIP_RELIC",
             unitInstanceId: unit.instanceId,
@@ -511,7 +519,7 @@ function BoardSlot({
       title={
         equippingRelicId && unit
           ? "Click to equip relic"
-          : unit?.equippedRelicId
+          : unit?.equippedRelicIds.length
             ? "Click relic to unequip · Double-click to bench"
             : unit
               ? "Double-click to send to bench"
@@ -534,7 +542,7 @@ function BoardSlot({
             starLevel={unit.starLevel}
             hp={unit.currentHp}
             maxHp={unit.maxHp}
-            relic={relic}
+            relic={firstRelic}
             sellPrice={SELL_REFUND[unit.starLevel] * def.tier}
             className={merged ? "animate-merge-flash" : undefined}
           />
@@ -600,9 +608,8 @@ function BenchRow({
         }
         const def = unitMap[unit.unitDefId];
         if (!def) return null;
-        const relic = unit.equippedRelicId
-          ? relicMap[unit.equippedRelicId]
-          : null;
+        const relics = unit.equippedRelicIds.map((rid) => relicMap[rid]).filter(Boolean);
+        const firstRelic = relics[0] ?? null;
         return (
           <div
             key={unit.instanceId}
@@ -622,7 +629,7 @@ function BenchRow({
                   unitInstanceId: unit.instanceId,
                 });
                 onRelicEquipped();
-              } else if (unit.equippedRelicId) {
+              } else if (unit.equippedRelicIds.length > 0) {
                 dispatch({
                   type: "UNEQUIP_RELIC",
                   unitInstanceId: unit.instanceId,
@@ -635,7 +642,7 @@ function BenchRow({
             title={
               equippingRelicId
                 ? "Click to equip relic"
-                : unit.equippedRelicId
+                : unit.equippedRelicIds.length > 0
                   ? "Click to unequip relic · Double-click to sell"
                   : "Drag onto board, double-click to sell"
             }
@@ -643,7 +650,7 @@ function BenchRow({
             <UnitCard
               unit={def}
               starLevel={unit.starLevel}
-              relic={relic}
+              relic={firstRelic}
               compact
               sellPrice={SELL_REFUND[unit.starLevel] * def.tier}
               className={
@@ -684,8 +691,8 @@ function RelicPanel({
 
   // Also gather equipped relics for display
   const equippedCount =
-    run.board.slots.filter((u) => u?.equippedRelicId).length +
-    run.bench.units.filter((u) => u.equippedRelicId).length;
+    run.board.slots.reduce((n, u) => n + (u?.equippedRelicIds.length ?? 0), 0) +
+    run.bench.units.reduce((n, u) => n + u.equippedRelicIds.length, 0);
 
   const totalRelics = run.activeRelics.length + equippedCount;
 
@@ -761,6 +768,200 @@ function RelicPanel({
           </TooltipContent>
         </Tooltip>
       ))}
+    </div>
+  );
+}
+
+const RARITY_BORDER: Record<string, string> = {
+  common: "border-zinc-400/60 bg-zinc-700/30",
+  uncommon: "border-emerald-400/60 bg-emerald-900/30",
+  rare: "border-blue-400/60 bg-blue-900/30",
+  legendary: "border-amber-400/70 bg-amber-900/30 shadow-amber-500/40 shadow-lg",
+};
+
+const RARITY_TEXT: Record<string, string> = {
+  common: "text-zinc-300",
+  uncommon: "text-emerald-300",
+  rare: "text-blue-300",
+  legendary: "text-amber-300",
+};
+
+function RelicOfferModal({
+  run,
+  relicMap,
+  dispatch,
+}: {
+  run: AutoBattlerRun;
+  relicMap: Record<string, RelicDef>;
+  dispatch: Dispatch;
+}) {
+  const offer = run.pendingRelicOffer;
+  const [pendingChoiceIdx, setPendingChoiceIdx] = useState<number | null>(null);
+
+  if (!offer) return null;
+
+  // Collect every relic the player owns (active + equipped) for swap picker.
+  const ownedRelicEntries: Array<{
+    id: string;
+    relic: RelicDef;
+    location: string;
+  }> = [];
+  for (const rid of run.activeRelics) {
+    const r = relicMap[rid];
+    if (r) ownedRelicEntries.push({ id: rid, relic: r, location: "Active" });
+  }
+  for (const u of run.board.slots) {
+    if (!u) continue;
+    for (const rid of u.equippedRelicIds) {
+      const r = relicMap[rid];
+      if (r)
+        ownedRelicEntries.push({
+          id: rid,
+          relic: r,
+          location: "Board",
+        });
+    }
+  }
+  for (const u of run.bench.units) {
+    for (const rid of u.equippedRelicIds) {
+      const r = relicMap[rid];
+      if (r)
+        ownedRelicEntries.push({
+          id: rid,
+          relic: r,
+          location: "Bench",
+        });
+    }
+  }
+
+  const handleAccept = (idx: number) => {
+    if (offer.forcesSwap) {
+      setPendingChoiceIdx(idx);
+      return;
+    }
+    dispatch({ type: "RESOLVE_RELIC_OFFER", choiceIndex: idx });
+  };
+
+  const handleReplace = (replaceRelicId: string) => {
+    if (pendingChoiceIdx === null) return;
+    dispatch({
+      type: "RESOLVE_RELIC_OFFER",
+      choiceIndex: pendingChoiceIdx,
+      replaceRelicId,
+    });
+    setPendingChoiceIdx(null);
+  };
+
+  const handleSkip = () => {
+    dispatch({ type: "RESOLVE_RELIC_OFFER", choiceIndex: null });
+  };
+
+  return (
+    <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-6">
+      <div className="max-w-3xl w-full bg-popover text-popover-foreground border border-border rounded-lg p-6 space-y-5 shadow-2xl">
+        <div className="text-center space-y-1">
+          <div className="text-xl font-bold text-foreground">
+            🏺 Relic Offering
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {offer.forcesSwap
+              ? "You're at the relic cap — accepting will replace one you own."
+              : "Pick one to add to your collection, or skip for gold."}
+          </div>
+        </div>
+
+        {pendingChoiceIdx === null ? (
+          <>
+            <div className="grid grid-cols-3 gap-3">
+              {offer.choices.map((relicId, idx) => {
+                const relic = relicMap[relicId];
+                if (!relic) return null;
+                return (
+                  <button
+                    key={relicId}
+                    onClick={() => handleAccept(idx)}
+                    className={cn(
+                      "rounded-md border-2 p-3 flex flex-col gap-2 text-left transition-all hover:scale-[1.02] hover:border-accent hover:bg-accent/10 cursor-pointer",
+                      RARITY_BORDER[relic.rarity],
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl leading-none">
+                        {relic.emoji}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm truncate text-foreground">
+                          {relic.name}
+                        </div>
+                        <div
+                          className={cn(
+                            "text-[10px] uppercase tracking-wider",
+                            RARITY_TEXT[relic.rarity],
+                          )}
+                        >
+                          {relic.rarity} ·{" "}
+                          {relic.type === "global" ? "global" : "unit-equip"}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-popover-foreground/80">
+                      {relic.description}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex justify-center pt-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSkip}
+                className="gap-2"
+              >
+                <Coins className="size-3.5" />
+                Skip for +{offer.skipGold}g
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="text-sm text-center text-foreground">
+              Pick a relic to replace
+            </div>
+            <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto">
+              {ownedRelicEntries.map((entry, i) => (
+                <button
+                  key={`${entry.id}-${i}`}
+                  onClick={() => handleReplace(entry.id)}
+                  className={cn(
+                    "rounded border p-2 flex items-center gap-2 text-left transition-all hover:bg-destructive/15 hover:border-destructive cursor-pointer",
+                    RARITY_BORDER[entry.relic.rarity],
+                  )}
+                >
+                  <span className="text-xl">{entry.relic.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold truncate text-foreground">
+                      {entry.relic.name}
+                    </div>
+                    <div className="text-[9px] text-muted-foreground uppercase tracking-wider">
+                      {entry.location}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="flex justify-center pt-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setPendingChoiceIdx(null)}
+              >
+                ← Back
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

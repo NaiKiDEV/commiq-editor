@@ -77,6 +77,29 @@ export function soulsFromRun(wavesCleared: number, bossesKilled: number): number
 export const WAVE_SOUL_MULTIPLIER = 0.35;
 
 // Save file format version
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export const INITIAL_STARTING_GOLD = 4;
+
+// ── Relic economy ──────────────────────────────────────────────
+export const MAX_ACTIVE_RELICS = 6;
+export const RELIC_OFFER_CHOICES = 3;
+export const RELIC_NONBOSS_OFFER_CHANCE = 0.33;
+export const RELIC_SKIP_GOLD = 5;
+
+// [common, uncommon, rare, legendary]
+export const RELIC_RARITY_ODDS_BY_WAVE: Array<[number, number, number, number]> = [
+  [0.70, 0.25, 0.05, 0.00],  // waves 1-5
+  [0.40, 0.35, 0.20, 0.05],  // waves 6-10
+  [0.20, 0.30, 0.35, 0.15],  // waves 11-15
+  [0.10, 0.20, 0.40, 0.30],  // waves 16+
+];
+
+export function getRelicRarityOddsForWave(
+  wave: number,
+): [number, number, number, number] {
+  if (wave <= 5) return RELIC_RARITY_ODDS_BY_WAVE[0];
+  if (wave <= 10) return RELIC_RARITY_ODDS_BY_WAVE[1];
+  if (wave <= 15) return RELIC_RARITY_ODDS_BY_WAVE[2];
+  return RELIC_RARITY_ODDS_BY_WAVE[3];
+}

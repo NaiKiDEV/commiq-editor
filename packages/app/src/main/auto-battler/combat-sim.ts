@@ -29,6 +29,7 @@ import {
   damageFromLostCombat,
 } from "./config/balance";
 import { Rng } from "./rng";
+import type { PermanentStatBonuses } from "./engine";
 
 // ─────────── Internal combatant state ───────────
 
@@ -58,7 +59,7 @@ type Combatant = {
   ability: UnitAbilityDef | null;
   buffs: Array<{ stat: string; value: number; ticksLeft: number }>;
   dots: Array<{ damagePerTick: number; ticksLeft: number }>;
-  equippedRelicId: string | null;
+  equippedRelicIds: string[];
 };
 
 function starMult(base: number, mult: number, starLevel: StarLevel): number {
@@ -101,7 +102,7 @@ function buildFromPlaced(unit: PlacedUnit): Combatant {
     ability: def.ability,
     buffs: [],
     dots: [],
-    equippedRelicId: unit.equippedRelicId,
+    equippedRelicIds: unit.equippedRelicIds,
   };
 }
 
@@ -137,7 +138,7 @@ function buildEnemyCombatant(
     ability: enemy.ability,
     buffs: [],
     dots: [],
-    equippedRelicId: null,
+    equippedRelicIds: [],
   };
 }
 
@@ -420,8 +421,8 @@ function castAbility(
   caster.mana = 0;
 
   // Relic on_ability_cast
-  if (caster.equippedRelicId) {
-    const relic = RELIC_MAP[caster.equippedRelicId];
+  for (const relicId of caster.equippedRelicIds) {
+    const relic = RELIC_MAP[relicId];
     if (relic && relic.effect.type === "on_ability_cast") {
       applyEffect(
         caster,
@@ -678,6 +679,7 @@ export function simulateCombat(
   synergies: ActiveSynergy[],
   globalRelicIds: string[],
   rng: Rng,
+  permanentBonuses?: PermanentStatBonuses,
 ): CombatResult {
   const combatants: Combatant[] = [];
 
@@ -686,9 +688,20 @@ export function simulateCombat(
     const def = UNIT_MAP[pu.unitDefId];
     if (!def) continue;
     const c = buildFromPlaced(pu);
-    // Apply equipped relic (unit-scoped stat only)
-    if (pu.equippedRelicId) {
-      const relic = RELIC_MAP[pu.equippedRelicId];
+    // Apply permanent stat bonuses from progression
+    if (permanentBonuses) {
+      c.attack += permanentBonuses.attack;
+      c.hp += permanentBonuses.hp;
+      c.maxHp += permanentBonuses.hp;
+      c.defense += permanentBonuses.defense;
+      c.attackSpeed = Math.max(1, c.attackSpeed + permanentBonuses.attackSpeed);
+      if (permanentBonuses.manaStartPct > 0 && c.maxMana > 0) {
+        c.mana = Math.min(c.maxMana, Math.floor(c.maxMana * permanentBonuses.manaStartPct / 100));
+      }
+    }
+    // Apply equipped relics (unit-scoped stat only)
+    for (const relicId of pu.equippedRelicIds) {
+      const relic = RELIC_MAP[relicId];
       if (relic && relic.type === "unit") applyRelicStat(c, relic);
     }
     combatants.push(c);

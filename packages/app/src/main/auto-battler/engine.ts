@@ -7,14 +7,16 @@ import type {
   BoardGrid,
   GameAction,
   GameSettings,
+  PendingRelicOffer,
   PlacedUnit,
   ProgressionNode,
+  RelicDef,
+  RelicRarity,
 } from "../../shared/auto-battler-types";
 import {
   BASE_INCOME_PER_ROUND,
   BOARD_COLS,
   BOARD_ROWS,
-  BOARD_SLOTS,
   DEFAULT_BENCH_SIZE,
   DEFAULT_MAX_SERVER_HP,
   DEFAULT_REROLL_COST,
@@ -22,10 +24,15 @@ import {
   INITIAL_STARTING_GOLD,
   INTEREST_MAX,
   INTEREST_RATE,
+  MAX_ACTIVE_RELICS,
+  RELIC_NONBOSS_OFFER_CHANCE,
+  RELIC_OFFER_CHOICES,
+  RELIC_SKIP_GOLD,
   SAVE_VERSION,
   SELL_REFUND_BY_STAR,
   STREAK_BONUSES,
   UNIT_TIER_COST,
+  getRelicRarityOddsForWave,
   soulsFromRun,
 } from "./config/balance";
 import { DEFAULT_UNLOCKED_UNITS, UNIT_MAP } from "./config/units";
@@ -43,11 +50,11 @@ import { simulateCombat } from "./combat-sim";
 
 // ─────────── Initial state ───────────
 
-function emptyBoard(): BoardGrid {
+function emptyBoard(rows = BOARD_ROWS, cols = BOARD_COLS): BoardGrid {
   return {
-    rows: BOARD_ROWS,
-    cols: BOARD_COLS,
-    slots: Array(BOARD_SLOTS).fill(null),
+    rows,
+    cols,
+    slots: Array(rows * cols).fill(null),
   };
 }
 
@@ -65,6 +72,7 @@ export function createInitialMeta(): AutoBattlerMeta {
     unlockedRelics: [...DEFAULT_UNLOCKED_RELICS],
     unlockedSynergies: [...DEFAULT_UNLOCKED_SYNERGIES],
     progressionNodes: [],
+    unlockedMechanics: [],
     statistics: {},
   };
 }
@@ -92,8 +100,8 @@ function makeId(prefix: string, rng: Rng): string {
   return `${prefix}-${(rng.next() * 1e9).toFixed(0)}`;
 }
 
-function slotIndex(row: number, col: number): number {
-  return row * BOARD_COLS + col;
+function slotIndex(row: number, col: number, cols = BOARD_COLS): number {
+  return row * cols + col;
 }
 
 function boardUnits(board: BoardGrid): PlacedUnit[] {
@@ -167,6 +175,35 @@ function computeMetaBonuses(meta: AutoBattlerMeta): MetaBonuses {
   return bonuses;
 }
 
+export type PermanentStatBonuses = {
+  attack: number;
+  hp: number;
+  defense: number;
+  attackSpeed: number;
+  manaStartPct: number;
+};
+
+function computePermanentStatBonuses(meta: AutoBattlerMeta): PermanentStatBonuses {
+  const bonuses: PermanentStatBonuses = { attack: 0, hp: 0, defense: 0, attackSpeed: 0, manaStartPct: 0 };
+  for (const nodeId of meta.progressionNodes) {
+    const node = PROGRESSION_MAP[nodeId];
+    if (!node || node.effect.type !== "permanent_stat") continue;
+    const { stat, value } = node.effect;
+    switch (stat) {
+      case "attack": bonuses.attack += value; break;
+      case "hp": bonuses.hp += value; break;
+      case "defense": bonuses.defense += value; break;
+      case "attackSpeed": bonuses.attackSpeed += value; break;
+      case "mana_start_pct": bonuses.manaStartPct += value; break;
+    }
+  }
+  return bonuses;
+}
+
+function hasMechanic(meta: AutoBattlerMeta, mechanicId: string): boolean {
+  return meta.unlockedMechanics.includes(mechanicId);
+}
+
 function startNewRun(meta: AutoBattlerMeta, seed: number): AutoBattlerRun {
   const rng = new Rng(seed);
   const b = computeMetaBonuses(meta);
@@ -174,14 +211,18 @@ function startNewRun(meta: AutoBattlerMeta, seed: number): AutoBattlerRun {
   const benchSize = DEFAULT_BENCH_SIZE + b.benchSize;
   const serverHp = DEFAULT_MAX_SERVER_HP + b.hp;
   const gold = INITIAL_STARTING_GOLD + b.gold;
-  const shop = createInitialShop(rng, meta.unlockedUnits, 1, shopSize);
+  // Apply early_t5 mechanic: shift shop tier odds by +5 waves
+  const shopWaveShift = hasMechanic(meta, "early_t5") ? 5 : 0;
+  const shop = createInitialShop(rng, meta.unlockedUnits, 1 + shopWaveShift, shopSize);
+  // Apply extra_board_row mechanic: 3x4 instead of 2x4
+  const boardRows = hasMechanic(meta, "extra_board_row") ? 3 : BOARD_ROWS;
   return {
     id: makeId("run", rng),
     seed,
     rngState: rng.getState(),
     wave: 1,
     phase: "draft",
-    board: emptyBoard(),
+    board: emptyBoard(boardRows),
     bench: emptyBench(benchSize),
     shop: {
       ...shop,
@@ -197,6 +238,93 @@ function startNewRun(meta: AutoBattlerMeta, seed: number): AutoBattlerRun {
     winStreak: 0,
     loseStreak: 0,
     freeRerollsAvailable: b.freeReroll,
+    pendingRelicOffer: null,
+  };
+}
+
+// ─────────── Relic offer helpers ───────────
+
+function ownedRelicIds(run: AutoBattlerRun): Set<string> {
+  const owned = new Set<string>(run.activeRelics);
+  for (const u of run.board.slots) if (u) for (const rid of u.equippedRelicIds) owned.add(rid);
+  for (const u of run.bench.units) for (const rid of u.equippedRelicIds) owned.add(rid);
+  return owned;
+}
+
+function ownedRelicCount(run: AutoBattlerRun): number {
+  return ownedRelicIds(run).size;
+}
+
+const RARITY_ORDER: RelicRarity[] = [
+  "common",
+  "uncommon",
+  "rare",
+  "legendary",
+];
+
+function pickRarity(odds: [number, number, number, number], rng: Rng): RelicRarity {
+  const roll = rng.next();
+  let acc = 0;
+  for (let i = 0; i < odds.length; i++) {
+    acc += odds[i];
+    if (roll < acc) return RARITY_ORDER[i];
+  }
+  return RARITY_ORDER[RARITY_ORDER.length - 1];
+}
+
+/**
+ * Build a relic offer from the unlocked, non-owned pool. Picks up to
+ * RELIC_OFFER_CHOICES distinct relics, weighted by rarity for the current wave.
+ * Returns null when no eligible relics exist.
+ */
+function buildRelicOffer(
+  state: AutoBattlerSave,
+  run: AutoBattlerRun,
+  rng: Rng,
+): PendingRelicOffer | null {
+  const owned = ownedRelicIds(run);
+  const eligible = RELICS.filter(
+    (r) => state.meta.unlockedRelics.includes(r.id) && !owned.has(r.id),
+  );
+  if (eligible.length === 0) return null;
+
+  const odds = getRelicRarityOddsForWave(run.wave);
+  const byRarity: Record<RelicRarity, RelicDef[]> = {
+    common: [],
+    uncommon: [],
+    rare: [],
+    legendary: [],
+  };
+  for (const r of eligible) byRarity[r.rarity].push(r);
+
+  const choices: string[] = [];
+  const target = Math.min(RELIC_OFFER_CHOICES, eligible.length);
+  let safety = 50;
+  while (choices.length < target && safety-- > 0) {
+    let rarity = pickRarity(odds, rng);
+    // Fall back to any rarity bucket that still has unpicked relics.
+    if (
+      byRarity[rarity].every((r) => choices.includes(r.id)) ||
+      byRarity[rarity].length === 0
+    ) {
+      const anyAvailable = RARITY_ORDER.find(
+        (rr) => byRarity[rr].some((r) => !choices.includes(r.id)),
+      );
+      if (!anyAvailable) break;
+      rarity = anyAvailable;
+    }
+    const pool = byRarity[rarity].filter((r) => !choices.includes(r.id));
+    if (pool.length === 0) continue;
+    const pick = pool[Math.floor(rng.next() * pool.length)];
+    choices.push(pick.id);
+  }
+
+  if (choices.length === 0) return null;
+  return {
+    choices,
+    canSkip: true,
+    skipGold: RELIC_SKIP_GOLD,
+    forcesSwap: ownedRelicCount(run) >= MAX_ACTIVE_RELICS,
   };
 }
 
@@ -245,7 +373,7 @@ function resolveMerges(
             ? {
                 ...u,
                 starLevel: merge.newStarLevel,
-                equippedRelicId: merge.keptRelicId,
+                equippedRelicIds: merge.keptRelicIds,
               }
             : u,
         ),
@@ -272,7 +400,7 @@ function resolveMerges(
                       merge.newStarLevel - 1,
                     ),
                 ),
-                equippedRelicId: merge.keptRelicId,
+                equippedRelicIds: merge.keptRelicIds,
               }
             : u,
         ),
@@ -344,7 +472,7 @@ export function gameReducer(
         instanceId,
         unitDefId: slot.unitDefId,
         starLevel: 1,
-        equippedRelicId: null,
+        equippedRelicIds: [],
       };
 
       const updatedShop = {
@@ -432,8 +560,9 @@ export function gameReducer(
       const run = state.activeRun;
       if (!run || run.phase !== "draft") return state;
       const { row, col } = action;
-      const idx = slotIndex(row, col);
-      if (idx < 0 || idx >= BOARD_SLOTS) return state;
+      const idx = slotIndex(row, col, run.board.cols);
+      const totalSlots = run.board.rows * run.board.cols;
+      if (idx < 0 || idx >= totalSlots) return state;
       if (run.board.slots[idx] !== null) return state;
 
       const benchIdx = run.bench.units.findIndex(
@@ -455,7 +584,7 @@ export function gameReducer(
         starLevel: benchUnit.starLevel,
         currentHp: maxHp,
         maxHp,
-        equippedRelicId: benchUnit.equippedRelicId,
+        equippedRelicIds: benchUnit.equippedRelicIds,
         position: { row, col },
       };
 
@@ -485,8 +614,9 @@ export function gameReducer(
     case "MOVE_UNIT": {
       const run = state.activeRun;
       if (!run || run.phase !== "draft") return state;
-      const newIdx = slotIndex(action.row, action.col);
-      if (newIdx < 0 || newIdx >= BOARD_SLOTS) return state;
+      const newIdx = slotIndex(action.row, action.col, run.board.cols);
+      const totalSlots = run.board.rows * run.board.cols;
+      if (newIdx < 0 || newIdx >= totalSlots) return state;
 
       const oldIdx = run.board.slots.findIndex(
         (u) => u?.instanceId === action.instanceId,
@@ -506,8 +636,8 @@ export function gameReducer(
         ? {
             ...other,
             position: {
-              row: Math.floor(oldIdx / BOARD_COLS),
-              col: oldIdx % BOARD_COLS,
+              row: Math.floor(oldIdx / run.board.cols),
+              col: oldIdx % run.board.cols,
             },
           }
         : null;
@@ -544,7 +674,7 @@ export function gameReducer(
         instanceId: unit.instanceId,
         unitDefId: unit.unitDefId,
         starLevel: unit.starLevel,
-        equippedRelicId: unit.equippedRelicId,
+        equippedRelicIds: unit.equippedRelicIds,
       };
 
       return {
@@ -568,14 +698,16 @@ export function gameReducer(
       if (!relic || relic.type !== "unit") return state;
       if (!run.activeRelics.includes(action.relicId)) return state;
 
+      const maxSlots = hasMechanic(state.meta, "relic_socket_2") ? 2 : 1;
+
       const bench = run.bench.units.map((u) =>
-        u.instanceId === action.unitInstanceId
-          ? { ...u, equippedRelicId: action.relicId }
+        u.instanceId === action.unitInstanceId && u.equippedRelicIds.length < maxSlots
+          ? { ...u, equippedRelicIds: [...u.equippedRelicIds, action.relicId] }
           : u,
       );
       const board = run.board.slots.map((u) =>
-        u && u.instanceId === action.unitInstanceId
-          ? { ...u, equippedRelicId: action.relicId }
+        u && u.instanceId === action.unitInstanceId && u.equippedRelicIds.length < maxSlots
+          ? { ...u, equippedRelicIds: [...u.equippedRelicIds, action.relicId] }
           : u,
       );
 
@@ -593,29 +725,29 @@ export function gameReducer(
     case "UNEQUIP_RELIC": {
       const run = state.activeRun;
       if (!run) return state;
-      let unequippedId: string | null = null;
+      const unequippedIds: string[] = [];
       const bench = run.bench.units.map((u) => {
-        if (u.instanceId === action.unitInstanceId && u.equippedRelicId) {
-          unequippedId = u.equippedRelicId;
-          return { ...u, equippedRelicId: null };
+        if (u.instanceId === action.unitInstanceId && u.equippedRelicIds.length > 0) {
+          unequippedIds.push(...u.equippedRelicIds);
+          return { ...u, equippedRelicIds: [] };
         }
         return u;
       });
       const board = run.board.slots.map((u) => {
-        if (u && u.instanceId === action.unitInstanceId && u.equippedRelicId) {
-          unequippedId = u.equippedRelicId;
-          return { ...u, equippedRelicId: null };
+        if (u && u.instanceId === action.unitInstanceId && u.equippedRelicIds.length > 0) {
+          unequippedIds.push(...u.equippedRelicIds);
+          return { ...u, equippedRelicIds: [] };
         }
         return u;
       });
-      if (!unequippedId) return state;
+      if (unequippedIds.length === 0) return state;
       return {
         ...state,
         activeRun: {
           ...run,
           bench: { ...run.bench, units: bench },
           board: { ...run.board, slots: board },
-          activeRelics: [...run.activeRelics, unequippedId],
+          activeRelics: [...run.activeRelics, ...unequippedIds],
         },
       };
     }
@@ -626,11 +758,12 @@ export function gameReducer(
       const rng = new Rng(run.rngState);
       const isFree = run.freeRerollsAvailable > 0;
       if (!isFree && run.gold < run.shop.rerollCost) return state;
+      const rerollWaveShift = hasMechanic(state.meta, "early_t5") ? 5 : 0;
       const newShop = rerollShop(
         run.shop,
         rng,
         state.meta.unlockedUnits,
-        run.wave,
+        run.wave + rerollWaveShift,
         run.shop.available.length,
       );
       return {
@@ -662,6 +795,8 @@ export function gameReducer(
     case "START_COMBAT": {
       const run = state.activeRun;
       if (!run || run.phase !== "draft") return state;
+      // Block combat until any pending relic offer is resolved.
+      if (run.pendingRelicOffer) return state;
       const wave = WAVE_MAP[run.wave];
       if (!wave) return state;
 
@@ -676,6 +811,7 @@ export function gameReducer(
         synergies,
         run.activeRelics,
         rng,
+        computePermanentStatBonuses(state.meta),
       );
 
       const winStreak = result.winner === "player" ? run.winStreak + 1 : 0;
@@ -754,7 +890,11 @@ export function gameReducer(
         return sum;
       }, 0);
       const combatGold = run.combatResult?.goldEarned ?? 0;
-      const lossGold = didWin ? 0 : b.lossGold;
+      // Production Outage disables loss-streak gold while active.
+      const productionOutageActive = run.activeRelics.some(
+        (rid) => RELIC_MAP[rid]?.effect.type === "production_outage",
+      );
+      const lossGold = didWin || productionOutageActive ? 0 : b.lossGold;
       const roundGold =
         BASE_INCOME_PER_ROUND +
         b.income +
@@ -782,37 +922,27 @@ export function gameReducer(
           return sum;
         }, 0);
 
-      // Relic reward: after a win, ~33% chance (guaranteed every 3rd win streak)
-      let newActiveRelics = [...run.activeRelics];
-      if (didWin) {
-        const equippedRelicIds = new Set<string>();
-        for (const u of run.board.slots)
-          if (u?.equippedRelicId) equippedRelicIds.add(u.equippedRelicId);
-        for (const u of run.bench.units)
-          if (u.equippedRelicId) equippedRelicIds.add(u.equippedRelicId);
-        const ownedRelicIds = new Set([
-          ...run.activeRelics,
-          ...equippedRelicIds,
-        ]);
-        const eligible = RELICS.filter(
-          (r) =>
-            state.meta.unlockedRelics.includes(r.id) &&
-            !ownedRelicIds.has(r.id),
-        );
-        const shouldOffer =
-          eligible.length > 0 && (run.winStreak % 3 === 0 || rng.next() < 0.33);
-        if (shouldOffer) {
-          const pick = eligible[Math.floor(rng.next() * eligible.length)];
-          newActiveRelics.push(pick.id);
+      // Relic offer: boss wins always offer; non-boss wins on a hot streak
+      // (>=3) get a small chance. Offers go through a player-facing modal
+      // resolved via RESOLVE_RELIC_OFFER instead of being silently appended.
+      let pendingRelicOffer = run.pendingRelicOffer;
+      if (didWin && !pendingRelicOffer) {
+        const wonWave = WAVE_MAP[run.wave];
+        const isBossWin = wonWave?.isBoss === true;
+        const eligibleNonBoss =
+          run.winStreak >= 3 && rng.next() < RELIC_NONBOSS_OFFER_CHANCE;
+        if (isBossWin || eligibleNonBoss) {
+          pendingRelicOffer = buildRelicOffer(state, run, rng);
         }
       }
 
+      const shopWaveShift = hasMechanic(state.meta, "early_t5") ? 5 : 0;
       const newShop = run.shop.frozen
         ? run.shop
         : createInitialShop(
             rng,
             state.meta.unlockedUnits,
-            nextWaveNum,
+            nextWaveNum + shopWaveShift,
             shopSize,
           );
 
@@ -837,9 +967,71 @@ export function gameReducer(
           combatResult: null,
           lastCombatResolved: false,
           board: { ...run.board, slots: healedSlots },
-          activeRelics: newActiveRelics,
           freeRerollsAvailable: freeRerolls,
+          pendingRelicOffer,
           rngState: rng.getState(),
+        },
+      };
+    }
+
+    case "RESOLVE_RELIC_OFFER": {
+      const run = state.activeRun;
+      if (!run || !run.pendingRelicOffer) return state;
+      const offer = run.pendingRelicOffer;
+
+      // Skip → award skip gold and clear offer.
+      if (action.choiceIndex === null) {
+        return {
+          ...state,
+          activeRun: {
+            ...run,
+            gold: run.gold + offer.skipGold,
+            pendingRelicOffer: null,
+          },
+        };
+      }
+
+      const pickedId = offer.choices[action.choiceIndex];
+      if (!pickedId || !RELIC_MAP[pickedId]) return state;
+
+      // At cap → must replace an existing relic (active or equipped).
+      if (offer.forcesSwap) {
+        const replaceId = action.replaceRelicId;
+        if (!replaceId) return state;
+        const owned = ownedRelicIds(run);
+        if (!owned.has(replaceId)) return state;
+
+        const nextActiveRelics = run.activeRelics.includes(replaceId)
+          ? run.activeRelics.filter((r) => r !== replaceId)
+          : [...run.activeRelics];
+        const nextBoardSlots = run.board.slots.map((u) =>
+          u && u.equippedRelicIds.includes(replaceId)
+            ? { ...u, equippedRelicIds: u.equippedRelicIds.filter((r) => r !== replaceId) }
+            : u,
+        );
+        const nextBenchUnits = run.bench.units.map((u) =>
+          u.equippedRelicIds.includes(replaceId) ? { ...u, equippedRelicIds: u.equippedRelicIds.filter((r) => r !== replaceId) } : u,
+        );
+
+        return {
+          ...state,
+          activeRun: {
+            ...run,
+            activeRelics: [...nextActiveRelics, pickedId],
+            board: { ...run.board, slots: nextBoardSlots },
+            bench: { ...run.bench, units: nextBenchUnits },
+            pendingRelicOffer: null,
+          },
+        };
+      }
+
+      // Below cap → just append.
+      return {
+        ...state,
+        activeRun: {
+          ...run,
+          activeRelics: [...run.activeRelics, pickedId],
+          pendingRelicOffer: null,
         },
       };
     }
@@ -881,6 +1073,19 @@ export function gameReducer(
             ...meta,
             unlockedSynergies: Array.from(
               new Set([...meta.unlockedSynergies, node.effect.synergyId]),
+            ),
+          };
+          break;
+        case "permanent_stat":
+          // permanent_stat effects are computed on-the-fly from
+          // progressionNodes in computePermanentStatBonuses(); just
+          // recording the node ID (already done above) is sufficient.
+          break;
+        case "unlock_mechanic":
+          meta = {
+            ...meta,
+            unlockedMechanics: Array.from(
+              new Set([...meta.unlockedMechanics, node.effect.mechanicId]),
             ),
           };
           break;

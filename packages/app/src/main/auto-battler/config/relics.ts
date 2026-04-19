@@ -167,6 +167,76 @@ export const RELICS: RelicDef[] = [
       effect: { type: "heal", value: 8 },
     },
   },
+
+  // ─── Iteration 1: Build-shaping relics ───
+  {
+    id: "tech_debt",
+    name: "Tech Debt",
+    emoji: "📉",
+    description: "Equipped unit deals +50% attack but takes +30% damage.",
+    rarity: "rare",
+    type: "unit",
+    effect: { type: "tech_debt", attackPct: 50, damageTakenPct: 30 },
+  },
+  {
+    id: "microservices",
+    name: "Microservices",
+    emoji: "🧩",
+    description:
+      "Each ally on the board grants every other ally +2 attack at combat start.",
+    rarity: "legendary",
+    type: "global",
+    effect: { type: "microservices", attackPerAlly: 2 },
+  },
+  {
+    id: "monolith",
+    name: "Monolith",
+    emoji: "🗿",
+    description:
+      "If you have 3 or fewer units on the board, each gains +50 HP and +10 attack.",
+    rarity: "legendary",
+    type: "global",
+    effect: { type: "monolith", maxUnits: 3, attackBonus: 10, hpBonus: 50 },
+  },
+  {
+    id: "code_review",
+    name: "Code Review",
+    emoji: "🔍",
+    description:
+      "When any ally casts an ability, the lowest-HP ally heals 15 HP.",
+    rarity: "rare",
+    type: "global",
+    effect: { type: "code_review", healAmount: 15 },
+  },
+  {
+    id: "force_push",
+    name: "Force Push",
+    emoji: "💥",
+    description: "Equipped unit's first attack each combat deals double damage.",
+    rarity: "uncommon",
+    type: "unit",
+    effect: { type: "force_push", multiplier: 2 },
+  },
+  {
+    id: "stale_cache",
+    name: "Stale Cache",
+    emoji: "🧊",
+    description:
+      "Equipped unit starts combat with full mana but mana-per-attack is halved.",
+    rarity: "uncommon",
+    type: "unit",
+    effect: { type: "stale_cache" },
+  },
+  {
+    id: "production_outage",
+    name: "Production Outage",
+    emoji: "🔥",
+    description:
+      "Every 4 waves, all enemies take 50% of their max HP at combat start. Disables loss streak gold.",
+    rarity: "legendary",
+    type: "global",
+    effect: { type: "production_outage", waveInterval: 4, pctMaxHp: 50 },
+  },
 ];
 
 export const RELIC_MAP: Record<string, RelicDef> = Object.fromEntries(

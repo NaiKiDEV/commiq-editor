@@ -36,17 +36,54 @@ export class AutoBattlerStateManager extends EventEmitter {
       const raw = fs.readFileSync(this.savePath, "utf8");
       const parsed = JSON.parse(raw) as AutoBattlerSave;
       if (parsed.version !== SAVE_VERSION) {
-        // simple migration strategy: keep meta, wipe activeRun
+        // Migration v1→v2: equippedRelicId→equippedRelicIds, add unlockedMechanics
+        const migratedMeta = {
+          ...(parsed.meta ?? createInitialSave().meta),
+          unlockedMechanics: (parsed.meta as any)?.unlockedMechanics ?? [],
+        };
+        const migratedRun = parsed.activeRun ? this.migrateRun(parsed.activeRun) : null;
         return {
-          ...createInitialSave(),
-          meta: parsed.meta ?? createInitialSave().meta,
+          version: SAVE_VERSION,
+          meta: migratedMeta,
+          activeRun: migratedRun,
           settings: parsed.settings ?? createInitialSave().settings,
         };
+      }
+      // Forward-compat normalization: ensure newly-added run fields exist on
+      // saves written before they were introduced.
+      if (parsed.activeRun && parsed.activeRun.pendingRelicOffer === undefined) {
+        parsed.activeRun = { ...parsed.activeRun, pendingRelicOffer: null };
       }
       return parsed;
     } catch {
       return createInitialSave();
     }
+  }
+
+  /** Migrate a v1 run's equippedRelicId→equippedRelicIds */
+  private migrateRun(run: any): AutoBattlerSave["activeRun"] {
+    const migrateUnit = (u: any) => {
+      if (u && u.equippedRelicId !== undefined) {
+        const { equippedRelicId, ...rest } = u;
+        return { ...rest, equippedRelicIds: equippedRelicId ? [equippedRelicId] : [] };
+      }
+      if (u && !u.equippedRelicIds) {
+        return { ...u, equippedRelicIds: [] };
+      }
+      return u;
+    };
+    return {
+      ...run,
+      pendingRelicOffer: run.pendingRelicOffer ?? null,
+      board: {
+        ...run.board,
+        slots: (run.board.slots ?? []).map((u: any) => u ? migrateUnit(u) : null),
+      },
+      bench: {
+        ...run.bench,
+        units: (run.bench.units ?? []).map(migrateUnit),
+      },
+    };
   }
 
   private scheduleSave(): void {

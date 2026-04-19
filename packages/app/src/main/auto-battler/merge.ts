@@ -14,7 +14,7 @@ export type MergeResult = {
   consumed: MergeCandidate[];
   newStarLevel: StarLevel;
   unitDefId: string;
-  keptRelicId: string | null;
+  keptRelicIds: string[];
 };
 
 // Returns a merge if 3 units with the same unitDefId + starLevel exist on bench+board
@@ -27,22 +27,22 @@ export function findMerge(
   if (starLevel === 3) return null;
 
   const matches: MergeCandidate[] = [];
-  let keptRelicId: string | null = null;
+  const keptRelicIds: string[] = [];
 
   // Check board first so board units are preferred as the "keep" target
   for (const unit of board) {
     if (unit && unit.unitDefId === unitDefId && unit.starLevel === starLevel) {
       matches.push({ kind: "board", instanceId: unit.instanceId });
-      if (keptRelicId === null && unit.equippedRelicId) {
-        keptRelicId = unit.equippedRelicId;
+      for (const rid of unit.equippedRelicIds) {
+        if (!keptRelicIds.includes(rid)) keptRelicIds.push(rid);
       }
     }
   }
   for (const unit of bench) {
     if (unit.unitDefId === unitDefId && unit.starLevel === starLevel) {
       matches.push({ kind: "bench", instanceId: unit.instanceId });
-      if (keptRelicId === null && unit.equippedRelicId) {
-        keptRelicId = unit.equippedRelicId;
+      for (const rid of unit.equippedRelicIds) {
+        if (!keptRelicIds.includes(rid)) keptRelicIds.push(rid);
       }
     }
   }
@@ -53,7 +53,7 @@ export function findMerge(
     consumed: matches.slice(0, 3),
     newStarLevel: (starLevel + 1) as StarLevel,
     unitDefId,
-    keptRelicId,
+    keptRelicIds,
   };
 }
 

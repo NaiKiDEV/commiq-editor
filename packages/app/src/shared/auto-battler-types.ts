@@ -204,7 +204,7 @@ export type PlacedUnit = {
   starLevel: StarLevel;
   currentHp: number;
   maxHp: number;
-  equippedRelicId: string | null;
+  equippedRelicIds: string[];
   position: { row: number; col: number };
 };
 
@@ -212,7 +212,7 @@ export type BenchUnit = {
   instanceId: string;
   unitDefId: string;
   starLevel: StarLevel;
-  equippedRelicId: string | null;
+  equippedRelicIds: string[];
 };
 
 export type BoardGrid = {
@@ -355,6 +355,7 @@ export type AutoBattlerMeta = {
   unlockedRelics: string[];
   unlockedSynergies: string[];
   progressionNodes: string[];
+  unlockedMechanics: string[];
   statistics: Record<string, number>;
 };
 
