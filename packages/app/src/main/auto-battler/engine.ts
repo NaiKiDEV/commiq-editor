@@ -5,6 +5,7 @@ import type {
   Bench,
   BenchUnit,
   BoardGrid,
+  EventChoice,
   GameAction,
   GameSettings,
   PendingRelicOffer,
@@ -17,6 +18,7 @@ import {
   BASE_INCOME_PER_ROUND,
   BOARD_COLS,
   BOARD_ROWS,
+  COMEBACK_LOSS_STREAK_THRESHOLD,
   DEFAULT_BENCH_SIZE,
   DEFAULT_MAX_SERVER_HP,
   DEFAULT_REROLL_COST,
@@ -239,6 +241,10 @@ function startNewRun(meta: AutoBattlerMeta, seed: number): AutoBattlerRun {
     loseStreak: 0,
     freeRerollsAvailable: b.freeReroll,
     pendingRelicOffer: null,
+    pendingEventChoice: null,
+    comebackShopAvailable: false,
+    incomePenalty: 0,
+    shopSizePenalty: 0,
   };
 }
 
@@ -800,6 +806,19 @@ export function gameReducer(
       const wave = WAVE_MAP[run.wave];
       if (!wave) return state;
 
+      // Event/sacrifice waves skip combat entirely — enter event phase
+      const waveType = wave.type ?? "combat";
+      if ((waveType === "event" || waveType === "sacrifice") && wave.eventChoices) {
+        return {
+          ...state,
+          activeRun: {
+            ...run,
+            phase: "event",
+            pendingEventChoice: wave.eventChoices,
+          },
+        };
+      }
+
       const rng = new Rng(run.rngState);
       const synergies = computeActiveSynergies(
         run.board.slots,
@@ -895,16 +914,17 @@ export function gameReducer(
         (rid) => RELIC_MAP[rid]?.effect.type === "production_outage",
       );
       const lossGold = didWin || productionOutageActive ? 0 : b.lossGold;
-      const roundGold =
+      const roundGold = Math.max(0,
         BASE_INCOME_PER_ROUND +
         b.income +
         interest +
         streakBonus +
         globalReward +
         combatGold +
-        lossGold;
+        lossGold -
+        run.incomePenalty);
 
-      const shopSize =
+      const shopSize = Math.max(1,
         DEFAULT_SHOP_SIZE +
         b.shopSize +
         run.activeRelics.reduce((sum, rid) => {
@@ -912,7 +932,8 @@ export function gameReducer(
           if (r?.effect.type === "shop_size_increase")
             return sum + r.effect.value;
           return sum;
-        }, 0);
+        }, 0) -
+        run.shopSizePenalty);
       const freeRerolls =
         b.freeReroll +
         run.activeRelics.reduce((sum, rid) => {
@@ -969,6 +990,8 @@ export function gameReducer(
           board: { ...run.board, slots: healedSlots },
           freeRerollsAvailable: freeRerolls,
           pendingRelicOffer,
+          pendingEventChoice: null,
+          comebackShopAvailable: !didWin && run.loseStreak >= COMEBACK_LOSS_STREAK_THRESHOLD,
           rngState: rng.getState(),
         },
       };
@@ -1033,6 +1056,197 @@ export function gameReducer(
           activeRelics: [...run.activeRelics, pickedId],
           pendingRelicOffer: null,
         },
+      };
+    }
+
+    case "RESOLVE_EVENT_CHOICE": {
+      const run = state.activeRun;
+      if (!run || run.phase !== "event" || !run.pendingEventChoice) return state;
+      const choice = run.pendingEventChoice[action.choiceIndex];
+      if (!choice) return state;
+
+      const rng = new Rng(run.rngState);
+      let newRun: AutoBattlerRun = { ...run };
+      let meta = { ...state.meta };
+
+      switch (choice.effect.type) {
+        case "gold":
+          newRun.gold += choice.effect.value;
+          break;
+        case "free_reroll_permanent":
+          newRun.freeRerollsAvailable += choice.effect.value;
+          break;
+        case "server_damage_for_gold":
+          newRun.serverHp = Math.max(0, newRun.serverHp - choice.effect.damage);
+          newRun.gold += choice.effect.gold;
+          break;
+        case "server_damage_for_rerolls":
+          newRun.serverHp = Math.max(0, newRun.serverHp - choice.effect.damage);
+          newRun.freeRerollsAvailable += choice.effect.rerolls;
+          break;
+        case "heal":
+          newRun.serverHp = Math.min(newRun.maxServerHp, newRun.serverHp + choice.effect.value);
+          break;
+        case "upgrade_random_unit": {
+          const boardUnitsArr = boardUnits(newRun.board).filter((u) => u.starLevel < 3);
+          if (boardUnitsArr.length > 0) {
+            const target = boardUnitsArr[Math.floor(rng.next() * boardUnitsArr.length)];
+            const newStar = (target.starLevel + 1) as 1 | 2 | 3;
+            const def = UNIT_MAP[target.unitDefId];
+            const newMaxHp = def
+              ? Math.round(def.baseStats.hp * Math.pow(def.starScaling.hpMult, newStar - 1))
+              : target.maxHp;
+            newRun.board = {
+              ...newRun.board,
+              slots: newRun.board.slots.map((u) =>
+                u && u.instanceId === target.instanceId
+                  ? { ...u, starLevel: newStar, maxHp: newMaxHp, currentHp: newMaxHp }
+                  : u,
+              ),
+            };
+          }
+          break;
+        }
+        case "sacrifice_unit_for_relic": {
+          // Remove weakest (lowest tier, then lowest star) board unit
+          const candidates = boardUnits(newRun.board);
+          if (candidates.length > 0) {
+            candidates.sort((a, b) => {
+              const ta = UNIT_MAP[a.unitDefId]?.tier ?? 1;
+              const tb = UNIT_MAP[b.unitDefId]?.tier ?? 1;
+              return ta - tb || a.starLevel - b.starLevel;
+            });
+            const victim = candidates[0];
+            newRun.board = {
+              ...newRun.board,
+              slots: newRun.board.slots.map((u) =>
+                u && u.instanceId === victim.instanceId ? null : u,
+              ),
+            };
+            // Offer a relic
+            const offer = buildRelicOffer(state, newRun, rng);
+            if (offer) {
+              newRun.pendingRelicOffer = offer;
+            }
+          }
+          newRun.synergies = computeActiveSynergies(
+            newRun.board.slots,
+            state.meta.unlockedSynergies,
+          );
+          break;
+        }
+        case "shop_discount_permanent":
+          // Reduce shop unit cost (encoded as reroll cost reduction) but also increase reroll cost as tradeoff
+          newRun.shop = {
+            ...newRun.shop,
+            rerollCost: newRun.shop.rerollCost + choice.effect.value,
+          };
+          break;
+        case "reduce_income_permanent":
+          newRun.incomePenalty += choice.effect.value;
+          newRun.gold += choice.effect.value <= 1 ? 15 : 25;
+          break;
+        case "lose_shop_slot_permanent": {
+          newRun.shopSizePenalty += choice.effect.value;
+          // Also upgrade a random unit as reward
+          const upgradeTargets = boardUnits(newRun.board).filter((u) => u.starLevel < 3);
+          if (upgradeTargets.length > 0) {
+            const target = upgradeTargets[Math.floor(rng.next() * upgradeTargets.length)];
+            const newStar = (target.starLevel + 1) as 1 | 2 | 3;
+            const def = UNIT_MAP[target.unitDefId];
+            const newMaxHp = def
+              ? Math.round(def.baseStats.hp * Math.pow(def.starScaling.hpMult, newStar - 1))
+              : target.maxHp;
+            newRun.board = {
+              ...newRun.board,
+              slots: newRun.board.slots.map((u) =>
+                u && u.instanceId === target.instanceId
+                  ? { ...u, starLevel: newStar, maxHp: newMaxHp, currentHp: newMaxHp }
+                  : u,
+              ),
+            };
+          }
+          break;
+        }
+        case "increase_reroll_cost_permanent":
+          newRun.shop = {
+            ...newRun.shop,
+            rerollCost: newRun.shop.rerollCost + choice.effect.value,
+          };
+          break;
+        case "downgrade_random_unit": {
+          const downCandidates = boardUnits(newRun.board).filter((u) => u.starLevel > 1);
+          if (downCandidates.length > 0) {
+            const victim = downCandidates[Math.floor(rng.next() * downCandidates.length)];
+            const newStar = (victim.starLevel - 1) as 1 | 2 | 3;
+            const def = UNIT_MAP[victim.unitDefId];
+            const newMaxHp = def
+              ? Math.round(def.baseStats.hp * Math.pow(def.starScaling.hpMult, newStar - 1))
+              : Math.round(victim.maxHp * 0.65);
+            newRun.board = {
+              ...newRun.board,
+              slots: newRun.board.slots.map((u) =>
+                u && u.instanceId === victim.instanceId
+                  ? { ...u, starLevel: newStar, maxHp: newMaxHp, currentHp: newMaxHp }
+                  : u,
+              ),
+            };
+          }
+          // Also offer a relic as reward
+          const relicOffer = buildRelicOffer(state, newRun, rng);
+          if (relicOffer) {
+            newRun.pendingRelicOffer = relicOffer;
+          }
+          newRun.synergies = computeActiveSynergies(
+            newRun.board.slots,
+            state.meta.unlockedSynergies,
+          );
+          break;
+        }
+      }
+
+      // Check game over from self-damage
+      if (newRun.serverHp <= 0) {
+        return {
+          ...state,
+          meta,
+          activeRun: { ...newRun, phase: "game_over", pendingEventChoice: null, rngState: rng.getState() },
+        };
+      }
+
+      // Advance to next wave (events always "win")
+      const nextWaveNum = newRun.wave + 1;
+      const b = computeMetaBonuses(state.meta);
+      const shopSize = DEFAULT_SHOP_SIZE + b.shopSize;
+      const shopWaveShift = hasMechanic(state.meta, "early_t5") ? 5 : 0;
+      const newShop = newRun.shop.frozen
+        ? newRun.shop
+        : createInitialShop(rng, state.meta.unlockedUnits, nextWaveNum + shopWaveShift, shopSize);
+      const discountedRerollCost = Math.max(0, DEFAULT_REROLL_COST - b.rerollCost);
+
+      // Heal placed units between rounds
+      const healedSlots = newRun.board.slots.map((u) =>
+        u ? { ...u, currentHp: u.maxHp } : u,
+      );
+
+      const isVictory = newRun.wave >= MAX_WAVE;
+      return {
+        ...state,
+        meta: {
+          ...meta,
+          bestWave: Math.max(meta.bestWave, newRun.wave),
+        },
+        activeRun: isVictory
+          ? { ...newRun, phase: "victory", pendingEventChoice: null, rngState: rng.getState() }
+          : {
+              ...newRun,
+              wave: nextWaveNum,
+              phase: "draft",
+              shop: { ...newShop, rerollCost: discountedRerollCost },
+              board: { ...newRun.board, slots: healedSlots },
+              pendingEventChoice: null,
+              rngState: rng.getState(),
+            },
       };
     }
 

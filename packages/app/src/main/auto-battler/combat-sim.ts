@@ -24,9 +24,11 @@ import { ENEMY_MAP } from "./config/enemies";
 import { RELIC_MAP } from "./config/relics";
 import { SYNERGY_MAP } from "./config/synergies";
 import {
+  ENEMY_COUNT_VARIANCE,
   MAX_COMBAT_TICKS,
   WAVE_SOUL_MULTIPLIER,
   damageFromLostCombat,
+  enemyWaveScaling,
 } from "./config/balance";
 import { Rng } from "./rng";
 import type { PermanentStatBonuses } from "./engine";
@@ -111,7 +113,10 @@ function buildEnemyCombatant(
   instanceId: string,
   row: number,
   col: number,
+  statScale = 1,
 ): Combatant {
+  const hp = Math.round(enemy.stats.hp * statScale);
+  const attack = Math.round(enemy.stats.attack * statScale);
   return {
     instanceId,
     side: "enemy",
@@ -121,12 +126,12 @@ function buildEnemyCombatant(
     starLevel: 1,
     row,
     col,
-    hp: enemy.stats.hp,
-    maxHp: enemy.stats.hp,
+    hp,
+    maxHp: hp,
     mana: 0,
     maxMana: enemy.stats.mana,
     manaPerAttack: enemy.stats.manaPerAttack,
-    attack: enemy.stats.attack,
+    attack,
     attackSpeed: enemy.stats.attackSpeed,
     range: enemy.stats.range,
     defense: enemy.stats.defense,
@@ -648,19 +653,30 @@ function snapshotCombatants(
 // Place enemies on a virtual grid (back row = row 0 for enemy, front row = row 1)
 function placeEnemies(wave: WaveDef, rng: Rng): Combatant[] {
   const enemies: Combatant[] = [];
+  const minionScale = enemyWaveScaling(wave.wave, false);
+  const bossScale = enemyWaveScaling(wave.wave, true);
   let instance = 0;
   let col = 0;
   let row = 1; // enemies deploy front row first
   for (const group of wave.enemies) {
     const enemy = ENEMY_MAP[group.enemyDefId];
     if (!enemy) continue;
-    for (let i = 0; i < group.count; i++) {
+    // Apply ±ENEMY_COUNT_VARIANCE to non-boss groups so the exact wave
+    // composition can’t be memorised. Boss groups stay deterministic.
+    let count = group.count;
+    if (!enemy.isBoss && ENEMY_COUNT_VARIANCE > 0) {
+      const delta =
+        Math.floor(rng.next() * (ENEMY_COUNT_VARIANCE * 2 + 1)) -
+        ENEMY_COUNT_VARIANCE;
+      count = Math.max(1, group.count + delta);
+    }
+    for (let i = 0; i < count; i++) {
       const id = `enemy-${wave.wave}-${instance++}`;
       if (enemy.isBoss) {
-        enemies.push(buildEnemyCombatant(enemy, id, 1, 1));
+        enemies.push(buildEnemyCombatant(enemy, id, 1, 1, bossScale));
         continue;
       }
-      enemies.push(buildEnemyCombatant(enemy, id, row, col));
+      enemies.push(buildEnemyCombatant(enemy, id, row, col, minionScale));
       col++;
       if (col >= 4) {
         col = 0;
@@ -983,8 +999,13 @@ export function simulateCombat(
 
   const goldEarned = winner === "player" ? wave.bonusGold : 0;
 
+  // Tank-role units on the player board reduce incoming loss damage
+  const tankCount = playerUnits.reduce((n, pu) => {
+    const def = UNIT_MAP[pu.unitDefId];
+    return def?.role === "tank" ? n + 1 : n;
+  }, 0);
   const damageToServer =
-    winner === "player" ? 0 : damageFromLostCombat(wave.wave);
+    winner === "player" ? 0 : damageFromLostCombat(wave.wave, tankCount);
 
   return {
     snapshots,

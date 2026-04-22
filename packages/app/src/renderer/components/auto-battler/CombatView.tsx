@@ -35,9 +35,16 @@ const SPEED_MS: Record<GameSettings["combatSpeed"], number> = {
   slow: 500,
 };
 
+const SPEED_CLASS: Record<GameSettings["combatSpeed"], string> = {
+  instant: "ab-speed-instant",
+  fast: "ab-speed-fast",
+  normal: "ab-speed-normal",
+  slow: "ab-speed-slow",
+};
+
 const BASE_INCOME = 5;
 const INTEREST_RATE = 0.1;
-const INTEREST_CAP = 5;
+const INTEREST_CAP = 7;
 const STREAK_BONUSES: Record<number, number> = { 2: 1, 3: 2, 4: 3 };
 
 function computeRoundGold(run: AutoBattlerRun): number {
@@ -55,11 +62,13 @@ export function CombatView({
   dispatch,
   unitMap,
   combatSpeed,
+  showDamageNumbers,
 }: {
   run: AutoBattlerRun;
   dispatch: Dispatch;
   unitMap: Record<string, UnitDef>;
   combatSpeed: GameSettings["combatSpeed"];
+  showDamageNumbers: boolean;
 }) {
   const result = run.combatResult;
   const [tick, setTick] = useState(0);
@@ -157,10 +166,13 @@ export function CombatView({
         players={players}
         unitMap={unitMap}
         events={snapshot.events}
+        tick={snapshot.tick}
         finished={finished}
         winnerLabel={winnerLabel}
         result={result}
         roundGold={computeRoundGold(run)}
+        combatSpeed={combatSpeed}
+        showDamageNumbers={showDamageNumbers}
       />
 
       {/* Event feed */}
@@ -228,39 +240,137 @@ export function CombatView({
 }
 
 type AttackLine = { sourceId: string; targetId: string };
-type CasterSet = Set<string>;
+
+type FloatingNumber = {
+  key: string;
+  kind: "damage" | "heal" | "shield";
+  value: number;
+};
+
+type UnitFx = {
+  lungeDir?: "up" | "down";
+  hitFlash: boolean;
+  casting: boolean;
+  dying: boolean;
+  manaPulse: boolean;
+  numbers: FloatingNumber[];
+};
+
+type UnitFxMap = Record<string, UnitFx>;
+
+function emptyFx(): UnitFx {
+  return {
+    hitFlash: false,
+    casting: false,
+    dying: false,
+    manaPulse: false,
+    numbers: [],
+  };
+}
+
+function computeUnitFx(
+  events: CombatEvent[],
+  tick: number,
+  combatants: CombatantSnapshot[],
+): UnitFxMap {
+  const sideOf: Record<string, "player" | "enemy"> = {};
+  for (const c of combatants) sideOf[c.instanceId] = c.side;
+  const fx: UnitFxMap = {};
+  const ensure = (id: string): UnitFx => {
+    if (!fx[id]) fx[id] = emptyFx();
+    return fx[id];
+  };
+  events.forEach((e, i) => {
+    switch (e.type) {
+      case "attack": {
+        ensure(e.sourceId).lungeDir =
+          sideOf[e.sourceId] === "player" ? "up" : "down";
+        const target = ensure(e.targetId);
+        target.hitFlash = true;
+        target.numbers.push({
+          key: `${tick}-${i}-dmg`,
+          kind: "damage",
+          value: e.damage,
+        });
+        break;
+      }
+      case "heal": {
+        ensure(e.targetId).numbers.push({
+          key: `${tick}-${i}-heal`,
+          kind: "heal",
+          value: e.value,
+        });
+        break;
+      }
+      case "shield": {
+        ensure(e.targetId).numbers.push({
+          key: `${tick}-${i}-shield`,
+          kind: "shield",
+          value: e.value,
+        });
+        break;
+      }
+      case "ability": {
+        const src = ensure(e.sourceId);
+        src.casting = true;
+        src.manaPulse = true;
+        break;
+      }
+      case "death": {
+        ensure(e.unitId).dying = true;
+        break;
+      }
+      default:
+        break;
+    }
+  });
+  return fx;
+}
 
 function Battlefield({
   enemies,
   players,
   unitMap,
   events,
+  tick,
   finished,
   winnerLabel,
   result,
   roundGold,
+  combatSpeed,
+  showDamageNumbers,
 }: {
   enemies: CombatantSnapshot[];
   players: CombatantSnapshot[];
   unitMap: Record<string, UnitDef>;
   events: CombatEvent[];
+  tick: number;
   finished: boolean;
   winnerLabel: string;
   result: import("../../../shared/auto-battler-types").CombatResult | null;
   roundGold: number;
+  combatSpeed: GameSettings["combatSpeed"];
+  showDamageNumbers: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [lines, setLines] = useState<
     { x1: number; y1: number; x2: number; y2: number }[]
   >([]);
 
-  // Extract attack lines and ability casters from current tick events
+  const allCombatants = useMemo(
+    () => [...players, ...enemies],
+    [players, enemies],
+  );
+  const fxMap = useMemo(
+    () => computeUnitFx(events, tick, allCombatants),
+    [events, tick, allCombatants],
+  );
+
+  // Extract attack lines from current tick events
   const attacks: AttackLine[] = [];
-  const casters: CasterSet = new Set();
   for (const e of events) {
     if (e.type === "attack")
       attacks.push({ sourceId: e.sourceId, targetId: e.targetId });
-    if (e.type === "ability") casters.add(e.sourceId);
   }
 
   // Compute SVG line positions after render
@@ -294,7 +404,10 @@ function Battlefield({
 
   return (
     <div
-      className="flex-1 flex flex-col justify-center gap-4 relative"
+      className={cn(
+        "flex-1 flex flex-col justify-center gap-4 relative ab-battlefield",
+        SPEED_CLASS[combatSpeed],
+      )}
       ref={containerRef}
     >
       {/* SVG targeting lines overlay */}
@@ -349,14 +462,18 @@ function Battlefield({
         combatants={enemies}
         unitMap={unitMap}
         side="enemy"
-        casters={casters}
+        fxMap={fxMap}
+        showDamageNumbers={showDamageNumbers}
+        tick={tick}
       />
       <div className="border-t border-dashed border-white/8 mx-8" />
       <BattleRow
         combatants={players}
         unitMap={unitMap}
         side="player"
-        casters={casters}
+        fxMap={fxMap}
+        showDamageNumbers={showDamageNumbers}
+        tick={tick}
       />
       <div className="text-[10px] uppercase tracking-widest text-muted-foreground/40 text-center">
         Your Stack
@@ -369,12 +486,16 @@ function BattleRow({
   combatants,
   unitMap,
   side,
-  casters,
+  fxMap,
+  showDamageNumbers,
+  tick,
 }: {
   combatants: CombatantSnapshot[];
   unitMap: Record<string, UnitDef>;
   side: "player" | "enemy";
-  casters: CasterSet;
+  fxMap: UnitFxMap;
+  showDamageNumbers: boolean;
+  tick: number;
 }) {
   const sorted = [...combatants].sort(
     (a, b) => a.row * 10 + a.col - (b.row * 10 + b.col),
@@ -385,7 +506,8 @@ function BattleRow({
         const def = unitMap[c.unitDefId];
         const tier = def?.tier ?? 1;
         const hpPct = c.maxHp > 0 ? Math.round((c.hp / c.maxHp) * 100) : 0;
-        const isCasting = casters.has(c.instanceId);
+        const fx = fxMap[c.instanceId];
+        const isCasting = fx?.casting ?? false;
         return (
           <div
             key={c.instanceId}
@@ -400,8 +522,52 @@ function BattleRow({
               c.stunned && "ring-2 ring-yellow-400",
               isCasting &&
                 "ring-2 ring-fuchsia-400 shadow-fuchsia-400/40 shadow-lg",
+              fx?.lungeDir === "up" && "ab-anim-lunge-up",
+              fx?.lungeDir === "down" && "ab-anim-lunge-down",
+              fx?.hitFlash && "ab-anim-hit-flash",
+              fx?.dying && "ab-anim-death",
             )}
           >
+            {/* Ability cast ring overlay */}
+            {isCasting && (
+              <div
+                key={`ring-${tick}`}
+                aria-hidden
+                className="ab-anim-cast-ring pointer-events-none absolute left-1/2 top-1/2 size-16 rounded-full border-2 border-fuchsia-300/80"
+              />
+            )}
+
+            {/* Floating damage/heal/shield numbers */}
+            {showDamageNumbers && fx && fx.numbers.length > 0 && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 -top-1 z-20"
+              >
+                {fx.numbers.map((n, idx) => {
+                  const offsetX =
+                    (idx - (fx.numbers.length - 1) / 2) * 14;
+                  return (
+                    <span
+                      key={n.key}
+                      className={cn(
+                        "ab-anim-damage-float absolute text-[11px] font-bold tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]",
+                        n.kind === "damage" && "text-red-300",
+                        n.kind === "heal" && "text-emerald-300",
+                        n.kind === "shield" && "text-cyan-300",
+                      )}
+                      style={{
+                        left: `calc(50% + ${offsetX}px)`,
+                        animationDelay: `${idx * 40}ms`,
+                      }}
+                    >
+                      {n.kind === "damage" ? "-" : "+"}
+                      {n.value}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Star badge */}
             {c.starLevel > 1 && (
               <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-[9px] text-amber-400 bg-black/70 rounded-full px-1">
@@ -438,7 +604,12 @@ function BattleRow({
 
             {/* Mana bar + number */}
             {c.maxMana > 0 && (
-              <div className="w-full flex items-center gap-1">
+              <div
+                className={cn(
+                  "w-full flex items-center gap-1",
+                  fx?.manaPulse && "ab-anim-mana-pulse",
+                )}
+              >
                 <StatBar
                   current={c.mana}
                   max={c.maxMana}

@@ -121,21 +121,49 @@ export type WaveModifier =
   | { type: "shielded"; shieldAmount: number }
   | { type: "berserk"; attackSpeedReduction: number };
 
+export type EventChoiceEffect =
+  | { type: "gold"; value: number }
+  | { type: "free_reroll_permanent"; value: number }
+  | { type: "sacrifice_unit_for_relic" }
+  | { type: "server_damage_for_gold"; damage: number; gold: number }
+  | { type: "heal"; value: number }
+  | { type: "upgrade_random_unit" }
+  | { type: "shop_discount_permanent"; value: number }
+  | { type: "reduce_income_permanent"; value: number }
+  | { type: "lose_shop_slot_permanent"; value: number }
+  | { type: "increase_reroll_cost_permanent"; value: number }
+  | { type: "server_damage_for_rerolls"; damage: number; rerolls: number }
+  | { type: "downgrade_random_unit" };
+
+export type EventChoice = {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  effect: EventChoiceEffect;
+};
+
 export type WaveEnemy = {
   enemyDefId: string;
   count: number;
   position?: { row: number; col: number };
 };
 
+export type WaveType = "combat" | "elite" | "event" | "sacrifice";
+
 export type WaveDef = {
   wave: number;
   name: string;
+  /** Defaults to "combat" if omitted */
+  type?: WaveType;
   enemies: WaveEnemy[];
   isBoss: boolean;
   bonusGold: number;
   bonusSouls: number;
   /** Modifiers applied to all enemies in this wave */
   modifiers?: WaveModifier[];
+  /** Choices for event/sacrifice waves */
+  eventChoices?: EventChoice[];
 };
 
 export type RelicRarity = "common" | "uncommon" | "rare" | "legendary";
@@ -147,7 +175,8 @@ export type RelicEffect =
   | { type: "gold_per_wave"; value: number }
   | { type: "interest_bonus"; value: number }
   | { type: "shop_size_increase"; value: number }
-  | { type: "free_reroll_per_round"; value: number };
+  | { type: "free_reroll_per_round"; value: number }
+  | { type: "production_outage" };
 
 export type RelicDef = {
   id: string;
@@ -249,6 +278,7 @@ export type RunPhase =
   | "draft"
   | "combat"
   | "combat_result"
+  | "event"
   | "game_over"
   | "victory";
 
@@ -325,6 +355,13 @@ export type CombatResult = {
   soulsEarned: number;
 };
 
+export type PendingRelicOffer = {
+  choices: string[];
+  canSkip: boolean;
+  skipGold: number;
+  forcesSwap: boolean;
+};
+
 export type AutoBattlerRun = {
   id: string;
   seed: number;
@@ -344,6 +381,16 @@ export type AutoBattlerRun = {
   winStreak: number;
   loseStreak: number;
   freeRerollsAvailable: number;
+  /** Permanent income reduction from sacrifice choices */
+  incomePenalty: number;
+  /** Permanent shop size reduction from sacrifice choices */
+  shopSizePenalty: number;
+  /** Event/sacrifice choices pending player decision */
+  pendingEventChoice: EventChoice[] | null;
+  /** Comeback shop unlocked after 3+ consecutive losses */
+  comebackShopAvailable: boolean;
+  /** Pending relic offer from boss/streak wins */
+  pendingRelicOffer: PendingRelicOffer | null;
 };
 
 export type AutoBattlerMeta = {
@@ -398,5 +445,7 @@ export type GameAction =
   | { type: "START_COMBAT" }
   | { type: "NEXT_ROUND" }
   | { type: "END_RUN" }
+  | { type: "RESOLVE_RELIC_OFFER"; choiceIndex: number | null; replaceRelicId?: string }
+  | { type: "RESOLVE_EVENT_CHOICE"; choiceIndex: number }
   | { type: "UNLOCK_NODE"; nodeId: string }
   | { type: "UPDATE_SETTINGS"; settings: Partial<GameSettings> };

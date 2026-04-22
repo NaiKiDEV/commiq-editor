@@ -11,6 +11,7 @@ import {
   Flame,
   Skull,
   DoorOpen,
+  Sparkles,
 } from "lucide-react";
 import type {
   AutoBattlerRun,
@@ -25,7 +26,7 @@ import type {
 } from "../../../shared/auto-battler-types";
 import { ShopCard, SpeedSelector, SynergyBadge, UnitCard } from "./shared";
 
-const SELL_REFUND: Record<1 | 2 | 3, number> = { 1: 1, 2: 3, 3: 9 };
+const SELL_REFUND: Record<1 | 2 | 3, number> = { 1: 0, 2: 2, 3: 6 };
 const BASE_INCOME = 5;
 const INTEREST_RATE = 0.1;
 const INTEREST_CAP = 5;
@@ -69,6 +70,8 @@ export function DraftView({
   const prevStarsRef = useRef<Map<string, number>>(new Map());
 
   const canStart = run.board.slots.some((s) => s !== null);
+  const isEventWave = wave?.type === "event" || wave?.type === "sacrifice";
+  const canStartOrEnter = canStart || isEventWave;
 
   // Detect merges by tracking star level changes
   useEffect(() => {
@@ -116,7 +119,7 @@ export function DraftView({
         dispatch({ type: "FREEZE_SHOP" });
       } else if (key === " ") {
         e.preventDefault();
-        if (canStart) dispatch({ type: "START_COMBAT" });
+        if (canStartOrEnter) dispatch({ type: "START_COMBAT" });
       } else if (key >= "1" && key <= "5") {
         const idx = parseInt(key) - 1;
         const slot = run.shop.available[idx];
@@ -127,7 +130,7 @@ export function DraftView({
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [run, canStart, dispatch]);
+  }, [run, canStartOrEnter, dispatch]);
 
   return (
     <div className="h-full flex flex-col gap-3 p-3 relative">
@@ -195,11 +198,15 @@ export function DraftView({
           icon={
             wave?.isBoss ? (
               <Skull className="size-4 text-fuchsia-400" />
+            ) : wave?.type === "elite" ? (
+              <Flame className="size-4 text-yellow-400" />
+            ) : wave?.type === "event" || wave?.type === "sacrifice" ? (
+              <Sparkles className="size-4 text-cyan-400" />
             ) : (
               <Flame className="size-4 text-orange-400" />
             )
           }
-          label={`Wave ${run.wave}`}
+          label={`Wave ${run.wave}${wave?.type === "elite" ? " ⚡" : wave?.type === "event" ? " 🎪" : wave?.type === "sacrifice" ? " 🔧" : ""}`}
           value={wave?.name ?? "—"}
         />
         {(run.winStreak > 0 || run.loseStreak > 0) && (
@@ -208,6 +215,11 @@ export function DraftView({
             label={run.winStreak > 0 ? "Win Streak" : "Lose Streak"}
             value={Math.max(run.winStreak, run.loseStreak)}
           />
+        )}
+        {run.comebackShopAvailable && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-900/30 border border-emerald-500/40 text-emerald-300 text-xs font-medium animate-pulse">
+            📉 Recovery Shop — guaranteed T4 unit available!
+          </div>
         )}
         <div className="flex-1" />
         <Button
@@ -333,12 +345,14 @@ export function DraftView({
 
           <Button
             onClick={() => dispatch({ type: "START_COMBAT" })}
-            disabled={!canStart}
+            disabled={!canStart && !(wave?.type === "event" || wave?.type === "sacrifice")}
             size="sm"
             className="gap-1.5"
           >
             <Play className="size-3.5" />
-            Start Combat
+            {wave?.type === "event" || wave?.type === "sacrifice"
+              ? "Enter Event"
+              : "Start Combat"}
           </Button>
         </div>
         <div className="flex items-center gap-2 justify-center">

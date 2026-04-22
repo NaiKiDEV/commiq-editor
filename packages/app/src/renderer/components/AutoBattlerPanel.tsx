@@ -12,6 +12,7 @@ import type {
 import { MainMenuView } from "./auto-battler/MainMenuView";
 import { DraftView } from "./auto-battler/DraftView";
 import { CombatView } from "./auto-battler/CombatView";
+import { EventView } from "./auto-battler/EventView";
 import { ProgressionView } from "./auto-battler/ProgressionView";
 import { TooltipProvider } from "./ui/tooltip";
 
@@ -131,12 +132,23 @@ export function AutoBattlerPanel({ panelId: _panelId }: { panelId: string }) {
       );
     }
 
+    if (run.phase === "event") {
+      return (
+        <EventView
+          run={run}
+          dispatch={dispatch}
+          wave={waveDef}
+        />
+      );
+    }
+
     return (
       <CombatView
         run={run}
         dispatch={dispatch}
         unitMap={config.unitMap}
         combatSpeed={save.settings.combatSpeed}
+        showDamageNumbers={save.settings.showDamageNumbers}
       />
     );
   })();

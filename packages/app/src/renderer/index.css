@@ -438,3 +438,129 @@
 .animate-merge-flash {
   animation: merge-flash 0.6s ease-out;
 }
+
+/* Deploy & Pray — combat visual feedback (Iteration 3) */
+.ab-battlefield {
+  --ab-anim-scale: 1;
+}
+.ab-battlefield.ab-speed-instant {
+  --ab-anim-scale: 0;
+}
+.ab-battlefield.ab-speed-fast {
+  --ab-anim-scale: 0.5;
+}
+.ab-battlefield.ab-speed-normal {
+  --ab-anim-scale: 1;
+}
+.ab-battlefield.ab-speed-slow {
+  --ab-anim-scale: 2;
+}
+.ab-battlefield.ab-speed-instant .ab-anim-damage-float,
+.ab-battlefield.ab-speed-instant .ab-anim-lunge-up,
+.ab-battlefield.ab-speed-instant .ab-anim-lunge-down,
+.ab-battlefield.ab-speed-instant .ab-anim-hit-flash,
+.ab-battlefield.ab-speed-instant .ab-anim-death,
+.ab-battlefield.ab-speed-instant .ab-anim-cast-ring,
+.ab-battlefield.ab-speed-instant .ab-anim-mana-pulse {
+  animation: none !important;
+}
+
+@keyframes ab-damage-float {
+  0% {
+    transform: translate(-50%, 0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -30px);
+    opacity: 0;
+  }
+}
+.ab-anim-damage-float {
+  opacity: 0;
+  animation: ab-damage-float calc(700ms * var(--ab-anim-scale, 1)) ease-out
+    forwards;
+}
+
+@keyframes ab-lunge-up {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes ab-lunge-down {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
+.ab-anim-lunge-up {
+  animation: ab-lunge-up calc(120ms * var(--ab-anim-scale, 1)) ease-out;
+}
+.ab-anim-lunge-down {
+  animation: ab-lunge-down calc(120ms * var(--ab-anim-scale, 1)) ease-out;
+}
+
+@keyframes ab-hit-flash {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 80, 80, 0);
+  }
+  40% {
+    box-shadow: 0 0 0 4px rgba(255, 80, 80, 0.6);
+  }
+}
+.ab-anim-hit-flash {
+  animation: ab-hit-flash calc(200ms * var(--ab-anim-scale, 1)) ease-out;
+}
+
+@keyframes ab-death {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.4);
+    opacity: 0.2;
+  }
+}
+.ab-anim-death {
+  animation: ab-death calc(250ms * var(--ab-anim-scale, 1)) ease-in forwards;
+}
+
+@keyframes ab-cast-ring {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 0;
+  }
+}
+.ab-anim-cast-ring {
+  opacity: 0;
+  animation: ab-cast-ring calc(500ms * var(--ab-anim-scale, 1)) ease-out
+    forwards;
+}
+
+@keyframes ab-mana-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(2.4) saturate(0);
+  }
+}
+.ab-anim-mana-pulse {
+  animation: ab-mana-pulse calc(160ms * var(--ab-anim-scale, 1)) ease-out;
+}

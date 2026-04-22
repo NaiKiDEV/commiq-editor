@@ -54,6 +54,18 @@ export class AutoBattlerStateManager extends EventEmitter {
       if (parsed.activeRun && parsed.activeRun.pendingRelicOffer === undefined) {
         parsed.activeRun = { ...parsed.activeRun, pendingRelicOffer: null };
       }
+      if (parsed.activeRun && (parsed.activeRun as any).pendingEventChoice === undefined) {
+        parsed.activeRun = { ...parsed.activeRun, pendingEventChoice: null };
+      }
+      if (parsed.activeRun && (parsed.activeRun as any).comebackShopAvailable === undefined) {
+        parsed.activeRun = { ...parsed.activeRun, comebackShopAvailable: false };
+      }
+      if (parsed.activeRun && (parsed.activeRun as any).incomePenalty === undefined) {
+        parsed.activeRun = { ...parsed.activeRun, incomePenalty: 0 } as any;
+      }
+      if (parsed.activeRun && (parsed.activeRun as any).shopSizePenalty === undefined) {
+        parsed.activeRun = { ...parsed.activeRun, shopSizePenalty: 0 } as any;
+      }
       return parsed;
     } catch {
       return createInitialSave();
@@ -75,6 +87,10 @@ export class AutoBattlerStateManager extends EventEmitter {
     return {
       ...run,
       pendingRelicOffer: run.pendingRelicOffer ?? null,
+      pendingEventChoice: run.pendingEventChoice ?? null,
+      comebackShopAvailable: run.comebackShopAvailable ?? false,
+      incomePenalty: run.incomePenalty ?? 0,
+      shopSizePenalty: run.shopSizePenalty ?? 0,
       board: {
         ...run.board,
         slots: (run.board.slots ?? []).map((u: any) => u ? migrateUnit(u) : null),
