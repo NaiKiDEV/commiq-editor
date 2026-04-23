@@ -35,6 +35,7 @@ import {
   Server,
   SquareTerminal,
   Swords,
+  GitBranch,
 } from "lucide-react";
 import {
   useTabs,
@@ -128,6 +129,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <SquareTerminal className="size-3" />;
     case "autobattler":
       return <Swords className="size-3" />;
+    case "repo-tycoon":
+      return <GitBranch className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -474,6 +477,12 @@ export function TabBar() {
               >
                 <Swords />
                 Deploy & Pray
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => createTab("repo-tycoon", "Repo Tycoon")}
+              >
+                <GitBranch />
+                Repo Tycoon
               </DropdownMenuItem>
             </DropdownMenuGroup>
 

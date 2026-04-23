@@ -564,3 +564,13 @@
 .ab-anim-mana-pulse {
   animation: ab-mana-pulse calc(160ms * var(--ab-anim-scale, 1)) ease-out;
 }
+
+/* Repo Tycoon — ambient contributor drift */
+@keyframes float-up {
+  0% {
+    transform: translate(-50%, -50%) translateY(0px);
+  }
+  100% {
+    transform: translate(-50%, -50%) translateY(-8px);
+  }
+}

@@ -44,6 +44,7 @@ import {
   Server,
   SquareTerminal,
   Swords,
+  GitBranch,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -96,6 +97,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "mockserver") return <Server />;
   if (type === "playground") return <SquareTerminal />;
   if (type === "autobattler") return <Swords />;
+  if (type === "repo-tycoon") return <GitBranch />;
   return <NotepadText />;
 }
 
@@ -412,6 +414,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <Swords />
               <span>New Deploy &amp; Pray Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() =>
+                runAction(() => createTab("repo-tycoon", "Repo Tycoon"))
+              }
+            >
+              <GitBranch />
+              <span>New Repo Tycoon Tab</span>
             </CommandItem>
           </CommandGroup>
 

@@ -50,7 +50,8 @@ export type PanelType =
   | "ssl"
   | "mockserver"
   | "playground"
-  | "autobattler";
+  | "autobattler"
+  | "repo-tycoon";
 
 export type Panel = {
   id: string;

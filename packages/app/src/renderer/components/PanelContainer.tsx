@@ -34,6 +34,7 @@ import { SslInspectorPanel } from "./SslInspectorPanel";
 import { MockServerPanel } from "./MockServerPanel";
 import { CodePlaygroundPanel } from "./CodePlaygroundPanel";
 import { AutoBattlerPanel } from "./AutoBattlerPanel";
+import { RepoTycoonPanel } from "./RepoTycoonPanel";
 import { getVisiblePanelIds } from "../lib/layout";
 import type { Panel } from "../stores/workspace";
 
@@ -104,6 +105,7 @@ function PanelContent({
       {panel.type === "mockserver" && <MockServerPanel panelId={panel.id} />}
       {panel.type === "playground" && <CodePlaygroundPanel panelId={panel.id} />}
       {panel.type === "autobattler" && <AutoBattlerPanel panelId={panel.id} />}
+      {panel.type === "repo-tycoon" && <RepoTycoonPanel panelId={panel.id} />}
     </div>
   );
 }

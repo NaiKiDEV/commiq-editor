@@ -1448,6 +1448,21 @@ const electronAPI = {
         ipcRenderer.removeListener("auto-battler:state-changed", listener);
     },
   },
+
+  repoTycoon: {
+    getState: () => ipcRenderer.invoke("repo-tycoon:get-state"),
+    dispatch: (action: unknown) =>
+      ipcRenderer.invoke("repo-tycoon:dispatch", action),
+    reset: () => ipcRenderer.invoke("repo-tycoon:reset"),
+    getConfig: () => ipcRenderer.invoke("repo-tycoon:get-config"),
+    onStateChanged: (callback: (state: unknown) => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, next: unknown) =>
+        callback(next);
+      ipcRenderer.on("repo-tycoon:state-changed", listener);
+      return () =>
+        ipcRenderer.removeListener("repo-tycoon:state-changed", listener);
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld("electronAPI", electronAPI);

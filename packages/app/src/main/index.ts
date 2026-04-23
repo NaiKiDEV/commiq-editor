@@ -31,6 +31,8 @@ import {
 import { registerCodePlaygroundIpc } from "./ipc/code-playground";
 import { registerAutoBattlerIpc } from "./ipc/auto-battler";
 import { getAutoBattlerState } from "./auto-battler/state";
+import { registerRepoTycoonIpc } from "./ipc/repo-tycoon";
+import { getRepoTycoonState } from "./repo-tycoon/state";
 
 if (started) {
   app.quit();
@@ -79,6 +81,7 @@ registerSslIpc();
 registerMockServerIpc();
 registerCodePlaygroundIpc();
 registerAutoBattlerIpc();
+registerRepoTycoonIpc();
 
 const createWindow = () => {
   const isMac = process.platform === "darwin";
@@ -123,6 +126,7 @@ app.on("ready", createWindow);
 app.on("before-quit", () => {
   whiteboardState.flushAll();
   getAutoBattlerState().shutdown();
+  getRepoTycoonState().shutdown();
 });
 
 app.on("window-all-closed", () => {
