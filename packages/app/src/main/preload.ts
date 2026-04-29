@@ -1,4 +1,12 @@
 import { contextBridge, ipcRenderer } from "electron";
+import type {
+  AgentStatus,
+  AddToAgentResult,
+  GenerateKeyOpts,
+  KeyListing,
+  SimpleResult,
+  SshOrgRule,
+} from "../shared/ssh-types";
 
 type Bounds = { x: number; y: number; width: number; height: number };
 type NavigationInfo = {
@@ -908,6 +916,69 @@ const electronAPI = {
       ipcRenderer.invoke("ssl:generate-self-signed", opts) as Promise<
         { cert: string; key: string } | { error: string }
       >,
+  },
+
+  ssh: {
+    status: () => ipcRenderer.invoke("ssh:status") as Promise<AgentStatus>,
+
+    listKeys: () => ipcRenderer.invoke("ssh:list-keys") as Promise<KeyListing>,
+
+    agentStart: () =>
+      ipcRenderer.invoke("ssh:agent:start") as Promise<SimpleResult>,
+
+    agentStop: () =>
+      ipcRenderer.invoke("ssh:agent:stop") as Promise<SimpleResult>,
+
+    agentAdd: (keyPath: string, passphrase?: string) =>
+      ipcRenderer.invoke(
+        "ssh:agent:add",
+        keyPath,
+        passphrase,
+      ) as Promise<AddToAgentResult>,
+
+    agentRemove: (keyPath: string) =>
+      ipcRenderer.invoke("ssh:agent:remove", keyPath) as Promise<SimpleResult>,
+
+    agentRemoveAll: () =>
+      ipcRenderer.invoke("ssh:agent:remove-all") as Promise<SimpleResult>,
+
+    agentLock: (passphrase: string) =>
+      ipcRenderer.invoke("ssh:agent:lock", passphrase) as Promise<SimpleResult>,
+
+    agentUnlock: (passphrase: string) =>
+      ipcRenderer.invoke(
+        "ssh:agent:unlock",
+        passphrase,
+      ) as Promise<SimpleResult>,
+
+    agentReorder: (
+      orderedPaths: string[],
+      passphrases: Record<string, string>,
+    ) =>
+      ipcRenderer.invoke(
+        "ssh:agent:reorder",
+        orderedPaths,
+        passphrases,
+      ) as Promise<SimpleResult>,
+
+    keysGenerate: (opts: GenerateKeyOpts) =>
+      ipcRenderer.invoke("ssh:keys:generate", opts) as Promise<
+        SimpleResult & { path?: string }
+      >,
+
+    keysDelete: (name: string) =>
+      ipcRenderer.invoke("ssh:keys:delete", name) as Promise<SimpleResult>,
+
+    keysReadPublic: (publicPath: string) =>
+      ipcRenderer.invoke("ssh:keys:read-public", publicPath) as Promise<
+        { content: string } | { error: string }
+      >,
+
+    rulesList: () =>
+      ipcRenderer.invoke("ssh:rules:list") as Promise<SshOrgRule[]>,
+
+    rulesSave: (rules: SshOrgRule[]) =>
+      ipcRenderer.invoke("ssh:rules:save", rules) as Promise<SimpleResult>,
   },
 
   k8s: {

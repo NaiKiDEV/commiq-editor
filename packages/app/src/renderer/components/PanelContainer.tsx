@@ -31,6 +31,7 @@ import { SecretSharingPanel } from "./secrets/SecretSharingPanel";
 import { DatabaseClientPanel } from "./DatabaseClientPanel";
 import { DockerPanel } from "./docker/DockerPanel";
 import { SslInspectorPanel } from "./SslInspectorPanel";
+import { SshPanel } from "./SshPanel";
 import { MockServerPanel } from "./MockServerPanel";
 import { CodePlaygroundPanel } from "./CodePlaygroundPanel";
 import { AutoBattlerPanel } from "./AutoBattlerPanel";
@@ -102,6 +103,7 @@ function PanelContent({
       {panel.type === "db" && <DatabaseClientPanel panelId={panel.id} />}
       {panel.type === "docker" && <DockerPanel panelId={panel.id} />}
       {panel.type === "ssl" && <SslInspectorPanel panelId={panel.id} />}
+      {panel.type === "ssh" && <SshPanel panelId={panel.id} />}
       {panel.type === "mockserver" && <MockServerPanel panelId={panel.id} />}
       {panel.type === "playground" && <CodePlaygroundPanel panelId={panel.id} />}
       {panel.type === "autobattler" && <AutoBattlerPanel panelId={panel.id} />}

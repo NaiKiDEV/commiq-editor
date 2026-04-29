@@ -48,6 +48,7 @@ export type PanelType =
   | "db"
   | "docker"
   | "ssl"
+  | "ssh"
   | "mockserver"
   | "playground"
   | "autobattler"

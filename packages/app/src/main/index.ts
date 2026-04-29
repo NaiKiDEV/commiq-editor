@@ -23,6 +23,7 @@ import { registerWsIpc, stopAllWsConnections } from "./ipc/ws";
 import { registerDbIpc, closeAllDbConnections } from "./ipc/db";
 import { registerDockerIpc, stopAllDockerStreams } from "./ipc/docker";
 import { registerSslIpc } from "./ipc/ssl";
+import { registerSshIpc } from "./ipc/ssh";
 import {
   registerMockServerIpc,
   registerMockServerPush,
@@ -78,6 +79,7 @@ registerWsIpc();
 registerDbIpc();
 registerDockerIpc();
 registerSslIpc();
+registerSshIpc();
 registerMockServerIpc();
 registerCodePlaygroundIpc();
 registerAutoBattlerIpc();

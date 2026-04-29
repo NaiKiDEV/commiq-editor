@@ -36,6 +36,7 @@ import {
   SquareTerminal,
   Swords,
   GitBranch,
+  Lock,
 } from "lucide-react";
 import {
   useTabs,
@@ -123,6 +124,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <Package className="size-3" />;
     case "ssl":
       return <ShieldAlert className="size-3" />;
+    case "ssh":
+      return <Lock className="size-3" />;
     case "mockserver":
       return <Server className="size-3" />;
     case "playground":
@@ -459,6 +462,10 @@ export function TabBar() {
               >
                 <ShieldAlert />
                 SSL Inspector
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => createTab("ssh", "SSH Keys")}>
+                <Lock />
+                SSH Keys
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => createTab("mockserver", "Mock Server")}

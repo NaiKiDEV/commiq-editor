@@ -45,6 +45,7 @@ import {
   SquareTerminal,
   Swords,
   GitBranch,
+  Lock,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -94,6 +95,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "db") return <Database />;
   if (type === "docker") return <Package />;
   if (type === "ssl") return <ShieldAlert />;
+  if (type === "ssh") return <Lock />;
   if (type === "mockserver") return <Server />;
   if (type === "playground") return <SquareTerminal />;
   if (type === "autobattler") return <Swords />;
@@ -390,6 +392,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <ShieldAlert />
               <span>New SSL Inspector Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() =>
+                runAction(() => createTab("ssh", "SSH Keys"))
+              }
+            >
+              <Lock />
+              <span>New SSH Keys Tab</span>
             </CommandItem>
             <CommandItem
               onSelect={() =>
