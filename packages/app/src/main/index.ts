@@ -34,6 +34,8 @@ import { registerAutoBattlerIpc } from "./ipc/auto-battler";
 import { getAutoBattlerState } from "./auto-battler/state";
 import { registerRepoTycoonIpc } from "./ipc/repo-tycoon";
 import { getRepoTycoonState } from "./repo-tycoon/state";
+import { registerBoardsIpc, registerBoardsPush } from "./ipc/boards";
+import { getBoardsState } from "./boards/state";
 
 if (started) {
   app.quit();
@@ -84,6 +86,7 @@ registerMockServerIpc();
 registerCodePlaygroundIpc();
 registerAutoBattlerIpc();
 registerRepoTycoonIpc();
+registerBoardsIpc();
 
 const createWindow = () => {
   const isMac = process.platform === "darwin";
@@ -113,6 +116,7 @@ const createWindow = () => {
   registerBrowserIpc(mainWindow);
   registerWhiteboardPush(mainWindow);
   registerMockServerPush(mainWindow);
+  registerBoardsPush(mainWindow);
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
@@ -129,6 +133,7 @@ app.on("before-quit", () => {
   whiteboardState.flushAll();
   getAutoBattlerState().shutdown();
   getRepoTycoonState().shutdown();
+  getBoardsState().flushAll();
 });
 
 app.on("window-all-closed", () => {

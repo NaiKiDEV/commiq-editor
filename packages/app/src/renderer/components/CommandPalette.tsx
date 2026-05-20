@@ -46,6 +46,7 @@ import {
   Swords,
   GitBranch,
   Lock,
+  SquareKanban,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -100,6 +101,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "playground") return <SquareTerminal />;
   if (type === "autobattler") return <Swords />;
   if (type === "repo-tycoon") return <GitBranch />;
+  if (type === "boards") return <SquareKanban />;
   return <NotepadText />;
 }
 
@@ -432,6 +434,12 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <GitBranch />
               <span>New Repo Tycoon Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runAction(() => createTab("boards", "Boards"))}
+            >
+              <SquareKanban />
+              <span>New Boards Tab</span>
             </CommandItem>
           </CommandGroup>
 

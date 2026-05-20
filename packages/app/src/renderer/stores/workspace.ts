@@ -52,7 +52,8 @@ export type PanelType =
   | "mockserver"
   | "playground"
   | "autobattler"
-  | "repo-tycoon";
+  | "repo-tycoon"
+  | "boards";
 
 export type Panel = {
   id: string;

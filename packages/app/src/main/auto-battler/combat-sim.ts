@@ -712,7 +712,10 @@ export function simulateCombat(
       c.defense += permanentBonuses.defense;
       c.attackSpeed = Math.max(1, c.attackSpeed + permanentBonuses.attackSpeed);
       if (permanentBonuses.manaStartPct > 0 && c.maxMana > 0) {
-        c.mana = Math.min(c.maxMana, Math.floor(c.maxMana * permanentBonuses.manaStartPct / 100));
+        c.mana = Math.min(
+          c.maxMana,
+          Math.floor((c.maxMana * permanentBonuses.manaStartPct) / 100),
+        );
       }
     }
     // Apply equipped relics (unit-scoped stat only)

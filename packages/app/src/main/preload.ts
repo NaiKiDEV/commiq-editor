@@ -7,6 +7,18 @@ import type {
   SimpleResult,
   SshOrgRule,
 } from "../shared/ssh-types";
+import type {
+  Board,
+  BoardSummary,
+  BoardsAction,
+  Epic,
+  Project,
+  ProjectBundle,
+  ProjectSummary,
+  Sprint,
+  Task,
+  TaskTypeConfig,
+} from "../shared/boards-types";
 
 type Bounds = { x: number; y: number; width: number; height: number };
 type NavigationInfo = {
@@ -1468,15 +1480,32 @@ const electronAPI = {
   codePlayground: {
     detectRuntimes: () =>
       ipcRenderer.invoke("code-playground:detect-runtimes") as Promise<
-        Array<{ id: string; name: string; cmd: string; args: string[]; ext: string }>
+        Array<{
+          id: string;
+          name: string;
+          cmd: string;
+          args: string[];
+          ext: string;
+        }>
       >,
 
     execute: (
       panelId: string,
-      runtime: { id: string; name: string; cmd: string; args: string[]; ext: string },
+      runtime: {
+        id: string;
+        name: string;
+        cmd: string;
+        args: string[];
+        ext: string;
+      },
       code: string,
     ) =>
-      ipcRenderer.invoke("code-playground:execute", panelId, runtime, code) as Promise<{
+      ipcRenderer.invoke(
+        "code-playground:execute",
+        panelId,
+        runtime,
+        code,
+      ) as Promise<{
         started: boolean;
       }>,
 
@@ -1532,6 +1561,108 @@ const electronAPI = {
       ipcRenderer.on("repo-tycoon:state-changed", listener);
       return () =>
         ipcRenderer.removeListener("repo-tycoon:state-changed", listener);
+    },
+  },
+
+  boards: {
+    // Queries
+    listProjects: () =>
+      ipcRenderer.invoke("boards:list-projects") as Promise<ProjectSummary[]>,
+    getProject: (projectId: string) =>
+      ipcRenderer.invoke(
+        "boards:get-project",
+        projectId,
+      ) as Promise<Project | null>,
+    getProjectBundle: (projectId: string) =>
+      ipcRenderer.invoke(
+        "boards:get-project-bundle",
+        projectId,
+      ) as Promise<ProjectBundle | null>,
+    listBoards: (projectId: string) =>
+      ipcRenderer.invoke("boards:list-boards", projectId) as Promise<
+        BoardSummary[]
+      >,
+    getBoard: (boardId: string) =>
+      ipcRenderer.invoke("boards:get-board", boardId) as Promise<Board | null>,
+    listTasks: (boardId: string) =>
+      ipcRenderer.invoke("boards:list-tasks", boardId) as Promise<Task[]>,
+    getTask: (taskId: string) =>
+      ipcRenderer.invoke("boards:get-task", taskId) as Promise<Task | null>,
+    listSprints: (projectId: string) =>
+      ipcRenderer.invoke("boards:list-sprints", projectId) as Promise<Sprint[]>,
+    listEpics: (projectId: string) =>
+      ipcRenderer.invoke("boards:list-epics", projectId) as Promise<Epic[]>,
+    taskTypeRegistry: () =>
+      ipcRenderer.invoke("boards:task-type-registry") as Promise<
+        TaskTypeConfig[]
+      >,
+
+    // Mutations
+    dispatch: (action: BoardsAction) =>
+      ipcRenderer.invoke("boards:dispatch", action) as Promise<void>,
+
+    // Undo / Redo
+    undo: (boardId: string) =>
+      ipcRenderer.invoke("boards:undo", boardId) as Promise<boolean>,
+    redo: (boardId: string) =>
+      ipcRenderer.invoke("boards:redo", boardId) as Promise<boolean>,
+    canUndo: (boardId: string) =>
+      ipcRenderer.invoke("boards:can-undo", boardId) as Promise<boolean>,
+    canRedo: (boardId: string) =>
+      ipcRenderer.invoke("boards:can-redo", boardId) as Promise<boolean>,
+
+    // Push events
+    onProjectChanged: (
+      callback: (payload: { project: Project } | { deleted: string }) => void,
+    ) => {
+      const listener = (
+        _e: Electron.IpcRendererEvent,
+        payload: { project: Project } | { deleted: string },
+      ) => callback(payload);
+      ipcRenderer.on("boards:project-changed", listener);
+      return () =>
+        ipcRenderer.removeListener("boards:project-changed", listener);
+    },
+    onBoardChanged: (
+      callback: (payload: { board: Board } | { deleted: string }) => void,
+    ) => {
+      const listener = (
+        _e: Electron.IpcRendererEvent,
+        payload: { board: Board } | { deleted: string },
+      ) => callback(payload);
+      ipcRenderer.on("boards:board-changed", listener);
+      return () => ipcRenderer.removeListener("boards:board-changed", listener);
+    },
+    onTasksChanged: (
+      callback: (payload: { boardId: string; tasks: Task[] }) => void,
+    ) => {
+      const listener = (
+        _e: Electron.IpcRendererEvent,
+        payload: { boardId: string; tasks: Task[] },
+      ) => callback(payload);
+      ipcRenderer.on("boards:tasks-changed", listener);
+      return () => ipcRenderer.removeListener("boards:tasks-changed", listener);
+    },
+    onSprintsChanged: (
+      callback: (payload: { projectId: string; sprints: Sprint[] }) => void,
+    ) => {
+      const listener = (
+        _e: Electron.IpcRendererEvent,
+        payload: { projectId: string; sprints: Sprint[] },
+      ) => callback(payload);
+      ipcRenderer.on("boards:sprints-changed", listener);
+      return () =>
+        ipcRenderer.removeListener("boards:sprints-changed", listener);
+    },
+    onEpicsChanged: (
+      callback: (payload: { projectId: string; epics: Epic[] }) => void,
+    ) => {
+      const listener = (
+        _e: Electron.IpcRendererEvent,
+        payload: { projectId: string; epics: Epic[] },
+      ) => callback(payload);
+      ipcRenderer.on("boards:epics-changed", listener);
+      return () => ipcRenderer.removeListener("boards:epics-changed", listener);
     },
   },
 };

@@ -37,6 +37,7 @@ import {
   Swords,
   GitBranch,
   Lock,
+  SquareKanban,
 } from "lucide-react";
 import {
   useTabs,
@@ -134,6 +135,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <Swords className="size-3" />;
     case "repo-tycoon":
       return <GitBranch className="size-3" />;
+    case "boards":
+      return <SquareKanban className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
@@ -517,6 +520,12 @@ export function TabBar() {
               >
                 <LayoutDashboard />
                 Whiteboard
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => createTab("boards", "Boards")}
+              >
+                <SquareKanban />
+                Boards
               </DropdownMenuItem>
             </DropdownMenuGroup>
 
