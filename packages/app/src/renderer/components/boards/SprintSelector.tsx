@@ -7,7 +7,6 @@ import {
   PopoverTrigger,
 } from "../ui/popover";
 import { useBoardsContext } from "./BoardsContext";
-import { SprintManageModal } from "./SprintManageModal";
 import { CompleteSprintDialog } from "./CompleteSprintDialog";
 import type { Sprint } from "../../../shared/boards-types";
 
@@ -17,10 +16,10 @@ export function SprintSelector() {
     activeSprint,
     showAllTasksInBoard,
     setShowAllTasksInBoard,
+    setActiveTab,
     dispatch,
   } = useBoardsContext();
 
-  const [manageOpen, setManageOpen] = useState(false);
   const [completeTarget, setCompleteTarget] = useState<Sprint | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
 
@@ -118,7 +117,7 @@ export function SprintSelector() {
           <MenuButton
             onClick={() => {
               close();
-              setManageOpen(true);
+              setActiveTab("sprints");
             }}
           >
             <Settings2 className="size-3.5" />
@@ -126,15 +125,6 @@ export function SprintSelector() {
           </MenuButton>
         </PopoverContent>
       </Popover>
-
-      <SprintManageModal
-        open={manageOpen}
-        onClose={() => setManageOpen(false)}
-        onCompleteSprint={(s) => {
-          setManageOpen(false);
-          setCompleteTarget(s);
-        }}
-      />
 
       {completeTarget && (
         <CompleteSprintDialog

@@ -14,8 +14,8 @@ export type SprintStatus = "planning" | "active" | "completed";
 
 export type CardDisplayDensity = "compact" | "normal" | "detailed";
 
-/** Which view the user is on inside a project: kanban or backlog. */
-export type ProjectViewTab = "board" | "backlog";
+/** Which view the user is on inside a project: kanban, backlog, epic management, or sprint management. */
+export type ProjectViewTab = "board" | "backlog" | "epics" | "sprints";
 
 /**
  * Config-as-data registry entry. Adding a new task type = appending one entry.
@@ -91,6 +91,8 @@ export type TaskComment = {
 
 export type Task = {
   id: string;
+  /** Sequential per-project identifier starting at 1. */
+  number?: number;
   boardId: string;
   projectId: string;
   columnId: string;
@@ -99,6 +101,7 @@ export type Task = {
   type: TaskType;
   title: string;
   description: string;
+  /** Kept in sync with the column name (lowercase) whenever a task is moved. */
   status: string;
   priority: TaskPriority;
   /** Fractional index for ordering within a column on the kanban view. */
@@ -109,6 +112,7 @@ export type Task = {
   labels: string[];
   storyPoints?: number;
   dueDate?: string;
+  comments?: TaskComment[];
   createdAt: string;
   updatedAt: string;
 };
@@ -256,6 +260,16 @@ export type BoardsAction =
       targetColumnId: string;
       newOrder: number;
     }
+  | {
+      type: "MOVE_TASK_TO_BOARD";
+      taskId: string;
+      targetBoardId: string;
+      /** Defaults to the first column of the target board. */
+      targetColumnId?: string;
+    }
+  | { type: "ADD_COMMENT"; taskId: string; author: string; body: string }
+  | { type: "DELETE_COMMENT"; taskId: string; commentId: string }
+  | { type: "UPDATE_COMMENT"; taskId: string; commentId: string; body: string }
   // Sprints
   | {
       type: "CREATE_SPRINT";

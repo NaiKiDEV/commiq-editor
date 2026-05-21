@@ -18,6 +18,8 @@ import { TaskCardView } from "./TaskCard";
 import { TaskDetailPanel } from "./TaskDetailPanel";
 import { BoardSettingsModal } from "./BoardSettingsModal";
 import { BacklogList } from "./BacklogList";
+import { EpicsView } from "./EpicsView";
+import { SprintsView } from "./SprintsView";
 import { SprintSelector } from "./SprintSelector";
 import {
   fractionalOrder,
@@ -243,18 +245,74 @@ export function BoardView() {
         >
           Backlog
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("epics")}
+          className={`px-2.5 py-1 text-xs rounded-sm transition-colors ${
+            activeTab === "epics"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Epics
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("sprints")}
+          className={`px-2.5 py-1 text-xs rounded-sm transition-colors ${
+            activeTab === "sprints"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Sprints
+        </button>
       </div>
-      <div className="ml-auto">
-        <SprintSelector />
-      </div>
+      {(activeTab === "board" || activeTab === "backlog") && (
+        <div className="ml-auto">
+          <SprintSelector />
+        </div>
+      )}
     </div>
   );
 
   if (activeTab === "backlog") {
     return (
-      <main className="flex-1 flex flex-col min-w-0 relative">
+      <main className="flex-1 min-h-0 flex flex-col min-w-0 relative">
         {viewSwitcher}
         <BacklogList />
+        {selectedTaskId && (
+          <TaskDetailPanel
+            open={isTaskDetailOpen}
+            onClose={closeTaskDetail}
+            taskId={selectedTaskId}
+          />
+        )}
+      </main>
+    );
+  }
+
+  if (activeTab === "epics") {
+    return (
+      <main className="flex-1 min-h-0 flex flex-col min-w-0 relative">
+        {viewSwitcher}
+        <EpicsView />
+        {selectedTaskId && (
+          <TaskDetailPanel
+            open={isTaskDetailOpen}
+            onClose={closeTaskDetail}
+            taskId={selectedTaskId}
+          />
+        )}
+      </main>
+    );
+  }
+
+  if (activeTab === "sprints") {
+    return (
+      <main className="flex-1 min-h-0 flex flex-col min-w-0 relative">
+        {viewSwitcher}
+        <SprintsView />
         {selectedTaskId && (
           <TaskDetailPanel
             open={isTaskDetailOpen}
@@ -307,12 +365,12 @@ export function BoardView() {
   }
 
   return (
-    <main className="flex-1 flex flex-col min-w-0 relative">
+    <main className="flex-1 min-h-0 flex flex-col min-w-0 relative">
       {viewSwitcher}
 
       {/* Active-sprint filter banner */}
       {activeSprint && (
-        <div className="flex items-center gap-2 px-3 py-1 text-[11px] bg-muted/40 border-b border-border">
+        <div className="shrink-0 flex items-center gap-2 px-3 py-1 text-[11px] bg-muted/40 border-b border-border">
           <span className="text-muted-foreground">
             {showAllTasksInBoard
               ? `Showing all tasks · active sprint: ${activeSprint.name}`
@@ -322,7 +380,7 @@ export function BoardView() {
       )}
 
       {/* Board tab bar */}
-      <div className="flex items-center gap-1 px-3 py-2 border-b border-border overflow-x-auto">
+      <div className="shrink-0 flex items-center gap-1 px-3 py-2 border-b border-border overflow-x-auto">
         {boards.map((b) => {
           const active = b.id === activeBoardId;
           return (
@@ -394,7 +452,7 @@ export function BoardView() {
           onDragEnd={handleDragEnd}
           onDragCancel={() => setActiveTask(null)}
         >
-          <div className="flex-1 overflow-x-auto overflow-y-hidden">
+          <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden">
             <div className="flex gap-3 p-3 h-full">
               {sortByOrder(board.columns).map((col, i, arr) => (
                 <BoardColumn

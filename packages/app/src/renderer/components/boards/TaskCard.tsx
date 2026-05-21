@@ -106,6 +106,11 @@ export function TaskCardView({
         <span className="text-xs font-medium leading-snug flex-1 min-w-0 break-words">
           {task.title}
         </span>
+        {task.number !== undefined && (
+          <span className="shrink-0 text-[9px] font-mono text-muted-foreground/50 mt-0.5">
+            #{task.number}
+          </span>
+        )}
       </div>
 
       {(showField("priority") ||

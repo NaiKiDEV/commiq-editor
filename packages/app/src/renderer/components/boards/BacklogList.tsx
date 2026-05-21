@@ -286,14 +286,14 @@ export function BacklogList() {
   // ─── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="flex-1 min-h-0 flex flex-col">
       <BacklogRowHeader
         sortKey={sortKey}
         sortDir={sortDir}
         onSort={handleSort}
       />
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}

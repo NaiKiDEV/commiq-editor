@@ -120,7 +120,7 @@ export function BoardColumn({
   };
 
   return (
-    <div className="flex flex-col w-72 shrink-0 rounded-lg bg-muted/30 border border-border">
+    <div className="flex flex-col w-72 shrink-0 h-full rounded-lg bg-muted/30 border border-border">
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
         <span
@@ -273,7 +273,7 @@ export function BoardColumn({
       {/* Tasks list (droppable) */}
       <div
         ref={setNodeRef}
-        className={`flex-1 min-h-12 p-2 flex flex-col gap-1.5 overflow-y-auto transition-colors ${
+        className={`flex-1 min-h-0 p-2 flex flex-col gap-1.5 overflow-y-auto transition-colors ${
           isOver ? "bg-muted/60" : ""
         }`}
       >

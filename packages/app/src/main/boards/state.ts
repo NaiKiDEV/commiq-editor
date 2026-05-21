@@ -17,6 +17,7 @@ import {
   type ProjectSummary,
   type Sprint,
   type Task,
+  type TaskComment,
   type TaskPriority,
   type TaskType,
 } from "../../shared/boards-types";
@@ -32,6 +33,7 @@ type ProjectIndexFile = {
   project: Project;
   sprints: Sprint[];
   epics: Epic[];
+  taskCounter?: number;
 };
 
 /**
@@ -49,6 +51,8 @@ type ProjectBucket = {
   tasks: Map<string, Task[]>;
   sprints: Sprint[];
   epics: Epic[];
+  /** Monotonically increasing counter used to assign task.number. */
+  taskCounter: number;
 };
 
 export class BoardsStateManager extends EventEmitter {
@@ -200,6 +204,18 @@ export class BoardsStateManager extends EventEmitter {
       case "MOVE_TASK":
         this.moveTask(action.taskId, action.targetColumnId, action.newOrder);
         return;
+      case "MOVE_TASK_TO_BOARD":
+        this.moveTaskToBoard(action.taskId, action.targetBoardId, action.targetColumnId);
+        return;
+      case "ADD_COMMENT":
+        this.addComment(action.taskId, action.author, action.body);
+        return;
+      case "DELETE_COMMENT":
+        this.deleteComment(action.taskId, action.commentId);
+        return;
+      case "UPDATE_COMMENT":
+        this.updateComment(action.taskId, action.commentId, action.body);
+        return;
       case "CREATE_SPRINT":
         this.createSprint(action);
         return;
@@ -256,6 +272,7 @@ export class BoardsStateManager extends EventEmitter {
       tasks: new Map(),
       sprints: [],
       epics: [],
+      taskCounter: 0,
     });
     this.ensureProjectDir(project.id);
     this.scheduleProjectSave(project.id);
@@ -472,15 +489,17 @@ export class BoardsStateManager extends EventEmitter {
       ? Math.max(...allProjectTasks.map((t) => t.backlogOrder ?? 0)) + 1
       : 0;
     const now = new Date().toISOString();
+    const startingColumn = board.columns.find((c) => c.id === opts.columnId);
     const task: Task = {
       id: randomUUID(),
+      number: ++bucket.taskCounter,
       boardId: opts.boardId,
       projectId: bucket.project.id,
       columnId: opts.columnId,
       type: opts.taskType ?? "task",
       title: opts.title,
       description: opts.description ?? "",
-      status: "open",
+      status: startingColumn?.name.toLowerCase() ?? "open",
       priority: opts.priority ?? bucket.project.settings.defaultPriority,
       order: nextOrder,
       backlogOrder: nextBacklogOrder,
@@ -493,6 +512,7 @@ export class BoardsStateManager extends EventEmitter {
     bucket.tasks.set(opts.boardId, tasks);
     board.updatedAt = now;
     this.scheduleBoardSave(opts.boardId);
+    this.scheduleProjectSave(bucket.project.id);
     this.emit("tasks-changed", { boardId: opts.boardId, tasks });
     return task;
   }
@@ -538,16 +558,131 @@ export class BoardsStateManager extends EventEmitter {
     const located = this.locateTask(taskId);
     if (!located) return null;
     const { bucket, boardId, task } = located;
+    const board = bucket.boards.get(boardId);
     this.pushUndo(boardId);
     task.columnId = targetColumnId;
     task.order = newOrder;
+    // Keep status in sync with the column name so sprint velocity counts correctly.
+    if (board) {
+      const col = board.columns.find((c) => c.id === targetColumnId);
+      if (col) task.status = col.name.toLowerCase();
+      board.updatedAt = new Date().toISOString();
+    }
     task.updatedAt = new Date().toISOString();
-    const board = bucket.boards.get(boardId);
-    if (board) board.updatedAt = task.updatedAt;
     this.scheduleBoardSave(boardId);
     const tasks = bucket.tasks.get(boardId) ?? [];
     this.emit("tasks-changed", { boardId, tasks });
     return task;
+  }
+
+  private moveTaskToBoard(
+    taskId: string,
+    targetBoardId: string,
+    targetColumnId?: string,
+  ): Task | null {
+    const located = this.locateTask(taskId);
+    if (!located) return null;
+    const { bucket: sourceBucket, boardId: sourceBoardId, task } = located;
+
+    const targetBucket = this.findBucketByBoard(targetBoardId);
+    const targetBoard = targetBucket?.boards.get(targetBoardId);
+    if (!targetBucket || !targetBoard) return null;
+
+    // Determine target column (first sorted column if not specified).
+    const sortedCols = [...targetBoard.columns].sort(
+      (a, b) => a.order - b.order,
+    );
+    const targetCol = targetColumnId
+      ? targetBoard.columns.find((c) => c.id === targetColumnId)
+      : sortedCols[0];
+    if (!targetCol) return null;
+
+    // Remove from source board.
+    this.pushUndo(sourceBoardId);
+    const sourceTasks = (sourceBucket.tasks.get(sourceBoardId) ?? []).filter(
+      (t) => t.id !== taskId,
+    );
+    sourceBucket.tasks.set(sourceBoardId, sourceTasks);
+
+    // Compute order in target column.
+    const targetTasks = targetBucket.tasks.get(targetBoardId) ?? [];
+    const colTasks = targetTasks.filter((t) => t.columnId === targetCol.id);
+    const nextOrder = colTasks.length
+      ? Math.max(...colTasks.map((t) => t.order)) + 1
+      : 0;
+
+    // Update task properties.
+    task.boardId = targetBoardId;
+    task.projectId = targetBucket.project.id;
+    task.columnId = targetCol.id;
+    task.order = nextOrder;
+    task.status = targetCol.name.toLowerCase();
+    task.updatedAt = new Date().toISOString();
+
+    targetTasks.push(task);
+    targetBucket.tasks.set(targetBoardId, targetTasks);
+
+    this.scheduleBoardSave(sourceBoardId);
+    this.scheduleBoardSave(targetBoardId);
+    this.emit("tasks-changed", { boardId: sourceBoardId, tasks: sourceTasks });
+    this.emit("tasks-changed", { boardId: targetBoardId, tasks: targetTasks });
+    return task;
+  }
+
+  private addComment(
+    taskId: string,
+    author: string,
+    body: string,
+  ): Task | null {
+    const located = this.locateTask(taskId);
+    if (!located) return null;
+    const { bucket, boardId, task } = located;
+    const now = new Date().toISOString();
+    const comment: TaskComment = {
+      id: randomUUID(),
+      taskId,
+      author: author.trim() || "Anonymous",
+      body,
+      createdAt: now,
+      updatedAt: now,
+    };
+    task.comments = [...(task.comments ?? []), comment];
+    task.updatedAt = now;
+    this.scheduleBoardSave(boardId);
+    const tasks = bucket.tasks.get(boardId) ?? [];
+    this.emit("tasks-changed", { boardId, tasks });
+    return task;
+  }
+
+  private deleteComment(taskId: string, commentId: string): boolean {
+    const located = this.locateTask(taskId);
+    if (!located) return false;
+    const { bucket, boardId, task } = located;
+    task.comments = (task.comments ?? []).filter((c) => c.id !== commentId);
+    task.updatedAt = new Date().toISOString();
+    this.scheduleBoardSave(boardId);
+    const tasks = bucket.tasks.get(boardId) ?? [];
+    this.emit("tasks-changed", { boardId, tasks });
+    return true;
+  }
+
+  private updateComment(
+    taskId: string,
+    commentId: string,
+    body: string,
+  ): boolean {
+    const located = this.locateTask(taskId);
+    if (!located) return false;
+    const { bucket, boardId, task } = located;
+    const comment = (task.comments ?? []).find((c) => c.id === commentId);
+    if (!comment) return false;
+    comment.body = body;
+    comment.updatedAt = new Date().toISOString();
+    task.updatedAt = comment.updatedAt;
+    this.scheduleBoardSave(boardId);
+    const tasks = bucket.tasks.get(boardId) ?? [];
+    this.emit("tasks-changed", { boardId, tasks });
+    return true;
   }
 
   // ─── Sprints ───────────────────────────────────────────────────────────────
@@ -909,6 +1044,7 @@ export class BoardsStateManager extends EventEmitter {
       project: bucket.project,
       sprints: bucket.sprints,
       epics: bucket.epics,
+      taskCounter: bucket.taskCounter,
     };
     fs.writeFileSync(
       this.projectIndexPath(projectId),
@@ -951,6 +1087,7 @@ export class BoardsStateManager extends EventEmitter {
           tasks: new Map(),
           sprints: index.sprints ?? [],
           epics: index.epics ?? [],
+          taskCounter: index.taskCounter ?? 0,
         };
         const dir = this.projectDir(projectId);
         for (const fileEntry of fs.readdirSync(dir)) {
@@ -962,7 +1099,6 @@ export class BoardsStateManager extends EventEmitter {
             bucket.boards.set(data.board.id, data.board);
             const tasks = (data.tasks ?? []).map((t, i) => ({
               ...t,
-              // Backfill backlogOrder for tasks saved before Step 3.
               backlogOrder: t.backlogOrder ?? i,
               labels: t.labels ?? [],
             }));
@@ -972,6 +1108,28 @@ export class BoardsStateManager extends EventEmitter {
           }
         }
         this.projects.set(projectId, bucket);
+
+        // Backfill sequential task numbers for any tasks saved without one.
+        const allBucketTasks: Task[] = [];
+        for (const list of bucket.tasks.values()) allBucketTasks.push(...list);
+        const existingMax = allBucketTasks.reduce(
+          (m, t) => Math.max(m, t.number ?? 0),
+          0,
+        );
+        let taskCounter = Math.max(bucket.taskCounter, existingMax);
+        const unnumbered = allBucketTasks
+          .filter((t) => !t.number)
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+        for (const task of unnumbered) {
+          task.number = ++taskCounter;
+        }
+        bucket.taskCounter = taskCounter;
+        if (unnumbered.length > 0) {
+          this.scheduleProjectSave(projectId);
+          for (const boardId of bucket.boards.keys()) {
+            this.scheduleBoardSave(boardId);
+          }
+        }
       } catch {
         /* corrupted project index — skip */
       }

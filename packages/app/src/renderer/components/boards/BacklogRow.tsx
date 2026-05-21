@@ -97,7 +97,7 @@ export function BacklogRow({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className={`grid grid-cols-[auto_auto_minmax(0,2.5fr)_auto_5rem_5rem_minmax(0,1fr)] gap-2 items-center px-2 py-1.5 rounded-md text-xs hover:bg-muted/40 ${
+      className={`grid grid-cols-[auto_auto_minmax(0,1fr)_7rem_5rem_3.5rem_7rem] gap-2 items-center px-2 py-1.5 rounded-md text-xs hover:bg-muted/40 ${
         selected ? "bg-muted/60" : ""
       }`}
     >
@@ -121,9 +121,14 @@ export function BacklogRow({
       <button
         type="button"
         onClick={() => openTaskDetail(task.id)}
-        className="text-left truncate text-foreground hover:underline"
+        className="text-left truncate text-foreground hover:underline flex items-center gap-1.5 min-w-0"
       >
-        {task.title}
+        {task.number !== undefined && (
+          <span className="shrink-0 font-mono text-[9px] text-muted-foreground/50">
+            #{task.number}
+          </span>
+        )}
+        <span className="truncate">{task.title}</span>
       </button>
 
       {/* Type (popover) */}
@@ -141,9 +146,7 @@ export function BacklogRow({
             className="size-3"
             style={{ color: typeConfig?.color }}
           />
-          <span className="hidden sm:inline text-[10px]">
-            {typeConfig?.label ?? task.type}
-          </span>
+          <span className="text-[10px] truncate">{typeConfig?.label ?? task.type}</span>
         </PopoverTrigger>
         <PopoverContent className="w-44 p-1.5" sideOffset={4}>
           <div className="flex flex-col gap-0.5">
@@ -208,13 +211,13 @@ export function BacklogRow({
           if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
         }}
         placeholder="—"
-        className="h-6 w-14 text-xs px-1.5"
+        className="h-6 w-full text-xs px-1.5"
       />
 
       {/* Epic */}
       {epic ? (
         <span
-          className="px-1.5 py-0.5 rounded-full text-[10px] truncate"
+          className="px-1.5 py-0.5 rounded-full text-[10px] truncate block max-w-full"
           style={{
             backgroundColor: `${epic.color}33`,
             color: epic.color,
@@ -240,7 +243,7 @@ export function BacklogRowHeader({
   onSort: (key: SortKey) => void;
 }) {
   return (
-    <div className="grid grid-cols-[auto_auto_minmax(0,2.5fr)_auto_5rem_5rem_minmax(0,1fr)] gap-2 items-center px-2 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground border-b border-border">
+    <div className="grid grid-cols-[auto_auto_minmax(0,1fr)_7rem_5rem_3.5rem_7rem] gap-2 items-center px-2 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground border-b border-border">
       <span />
       <span />
       <SortHeader
