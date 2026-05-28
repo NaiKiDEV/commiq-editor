@@ -26,6 +26,7 @@ export type PanelType =
   | "ports"
   | "process"
   | "env"
+  | "disk-usage"
   | "http"
   | "whiteboard"
   | "regex"

@@ -38,6 +38,7 @@ import {
   GitBranch,
   Lock,
   SquareKanban,
+  HardDrive,
 } from "lucide-react";
 import {
   useTabs,
@@ -81,6 +82,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <Cpu className="size-3" />;
     case "env":
       return <KeyRound className="size-3" />;
+    case "disk-usage":
+      return <HardDrive className="size-3" />;
     case "http":
       return <Globe2 className="size-3" />;
     case "whiteboard":
@@ -447,6 +450,12 @@ export function TabBar() {
               <DropdownMenuItem onClick={() => createTab("env", "Environment")}>
                 <KeyRound />
                 Environment
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => createTab("disk-usage", "Disk Usage")}
+              >
+                <HardDrive />
+                Disk Usage
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => createTab("k8s", "Kubernetes")}>
                 <Container />

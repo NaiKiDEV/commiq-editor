@@ -9,6 +9,7 @@ import { TimerPanel } from "./TimerPanel";
 import { PortMonitorPanel } from "./PortMonitorPanel";
 import { ProcessMonitorPanel } from "./ProcessMonitorPanel";
 import { EnvVarsPanel } from "./EnvVarsPanel";
+import { DiskUsagePanel } from "./DiskUsagePanel";
 import { HttpClientPanel } from "./HttpClientPanel";
 import { WhiteboardPanel } from "./WhiteboardPanel";
 import { RegexPlaygroundPanel } from "./RegexPlaygroundPanel";
@@ -82,6 +83,7 @@ function PanelContent({
       {panel.type === "ports" && <PortMonitorPanel panelId={panel.id} />}
       {panel.type === "process" && <ProcessMonitorPanel panelId={panel.id} />}
       {panel.type === "env" && <EnvVarsPanel panelId={panel.id} />}
+      {panel.type === "disk-usage" && <DiskUsagePanel panelId={panel.id} />}
       {panel.type === "http" && <HttpClientPanel panelId={panel.id} />}
       {panel.type === "whiteboard" && <WhiteboardPanel panelId={panel.id} />}
       {panel.type === "regex" && <RegexPlaygroundPanel panelId={panel.id} />}

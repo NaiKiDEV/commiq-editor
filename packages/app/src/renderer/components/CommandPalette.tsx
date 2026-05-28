@@ -47,6 +47,7 @@ import {
   GitBranch,
   Lock,
   SquareKanban,
+  HardDrive,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -76,6 +77,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "ports") return <Network />;
   if (type === "process") return <Cpu />;
   if (type === "env") return <KeyRound />;
+  if (type === "disk-usage") return <HardDrive />;
   if (type === "http") return <Globe2 />;
   if (type === "whiteboard") return <LayoutDashboard />;
   if (type === "regex") return <Regex />;
@@ -234,6 +236,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             >
               <KeyRound />
               <span>New Environment Tab</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() =>
+                runAction(() => createTab("disk-usage", "Disk Usage"))
+              }
+            >
+              <HardDrive />
+              <span>New Disk Usage Tab</span>
             </CommandItem>
             <CommandItem
               onSelect={() => runAction(() => createTab("http", "HTTP Client"))}

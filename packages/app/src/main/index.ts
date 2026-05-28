@@ -10,6 +10,7 @@ import { registerTimerIpc } from "./ipc/timer";
 import { registerPortsIpc } from "./ipc/ports";
 import { registerProcessesIpc } from "./ipc/processes";
 import { registerEnvIpc } from "./ipc/env";
+import { registerDiskUsageIpc } from "./ipc/disk-usage";
 import { registerSettingsIpc } from "./ipc/settings";
 import { registerHttpIpc } from "./ipc/http";
 import {
@@ -72,6 +73,7 @@ registerTimerIpc();
 registerPortsIpc();
 registerProcessesIpc();
 registerEnvIpc();
+registerDiskUsageIpc();
 registerSettingsIpc();
 registerHttpIpc();
 registerWhiteboardIpc();

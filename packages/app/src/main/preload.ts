@@ -19,6 +19,12 @@ import type {
   Task,
   TaskTypeConfig,
 } from "../shared/boards-types";
+import type {
+  PickResult,
+  ScanProgress,
+  ScanResult,
+  TrashResult,
+} from "../shared/disk-usage-types";
 
 type Bounds = { x: number; y: number; width: number; height: number };
 type NavigationInfo = {
@@ -201,6 +207,32 @@ const electronAPI = {
       ipcRenderer.invoke("env:list") as Promise<
         Array<{ name: string; value: string }>
       >,
+  },
+
+  diskUsage: {
+    pick: () => ipcRenderer.invoke("disk-usage:pick") as Promise<PickResult>,
+
+    scan: (rootPath: string, scanId: string, maxDepth?: number) =>
+      ipcRenderer.invoke(
+        "disk-usage:scan",
+        rootPath,
+        scanId,
+        maxDepth,
+      ) as Promise<ScanResult>,
+
+    reveal: (targetPath: string) =>
+      ipcRenderer.invoke("disk-usage:reveal", targetPath) as Promise<void>,
+
+    trash: (targetPath: string) =>
+      ipcRenderer.invoke("disk-usage:trash", targetPath) as Promise<TrashResult>,
+
+    onProgress: (scanId: string, callback: (progress: ScanProgress) => void) => {
+      const channel = `disk-usage:progress:${scanId}`;
+      const listener = (_e: Electron.IpcRendererEvent, progress: ScanProgress) =>
+        callback(progress);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
   },
 
   settings: {
