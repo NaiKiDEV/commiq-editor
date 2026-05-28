@@ -36,6 +36,24 @@ export type AppSettings = {
   mockServer: {
     mcpPort: number;
   };
+  editor: {
+    fontFamily: string;
+    fontSize: number;
+    tabSize: number;
+    wordWrap: boolean;
+  };
+  monitors: {
+    refreshInterval: number;
+  };
+  notes: {
+    fontSize: number;
+    wordWrap: boolean;
+    spellcheck: boolean;
+  };
+  httpClient: {
+    timeout: number;
+    followRedirects: boolean;
+  };
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -56,6 +74,25 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   mockServer: {
     mcpPort: 3200,
+  },
+  editor: {
+    fontFamily:
+      "'CommitMono NF', 'CommitMono NF Mono', ui-monospace, Menlo, monospace",
+    fontSize: 13,
+    tabSize: 2,
+    wordWrap: true,
+  },
+  monitors: {
+    refreshInterval: 3,
+  },
+  notes: {
+    fontSize: 13,
+    wordWrap: true,
+    spellcheck: false,
+  },
+  httpClient: {
+    timeout: 30000,
+    followRedirects: true,
   },
 };
 

@@ -15,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { useSettings } from "../contexts/settings";
 
 type ProcessEntry = {
   pid: number;
@@ -190,8 +191,13 @@ export function ProcessMonitorPanel({
   const [initialLoad, setInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
+  const { settings } = useSettings();
   const [live, setLive] = useState(false);
-  const [intervalSecs, setIntervalSecs] = useState<IntervalValue>(3);
+  const [intervalSecs, setIntervalSecs] = useState<IntervalValue>(() =>
+    (INTERVALS as readonly number[]).includes(settings.monitors.refreshInterval)
+      ? (settings.monitors.refreshInterval as IntervalValue)
+      : 3,
+  );
   const [confirmingPid, setConfirmingPid] = useState<number | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("memoryMB");
   const [sortDir, setSortDir] = useState<SortDir>("desc");

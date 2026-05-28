@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
 import { EditorState, Compartment } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-import { syntaxHighlighting, HighlightStyle, StreamLanguage } from '@codemirror/language';
+import { syntaxHighlighting, HighlightStyle, StreamLanguage, indentUnit } from '@codemirror/language';
 import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { javascript } from '@codemirror/lang-javascript';
 import { tags } from '@lezer/highlight';
@@ -15,6 +15,7 @@ import { lua } from '@codemirror/legacy-modes/mode/lua';
 import { powerShell } from '@codemirror/legacy-modes/mode/powershell';
 import { Play, Square, Trash2, ChevronDown, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
+import { useSettings } from '../contexts/settings';
 import { cn } from '@/lib/utils';
 
 type Runtime = {
@@ -61,11 +62,12 @@ const highlightStyle = HighlightStyle.define([
   { tag: tags.operator,                        color: '#79b8ff' },
 ]);
 
-const editorTheme = EditorView.theme({
+function buildEditorTheme(fontSize: number, fontFamily: string) {
+  return EditorView.theme({
   '&': {
     height: '100%',
-    fontSize: '13px',
-    fontFamily: 'var(--font-mono, ui-monospace, monospace)',
+    fontSize: `${fontSize}px`,
+    fontFamily,
     background: 'transparent',
   },
   '.cm-scroller': { overflow: 'auto', fontFamily: 'inherit' },
@@ -85,7 +87,12 @@ const editorTheme = EditorView.theme({
   '.cm-focused': { outline: 'none' },
   '.cm-tooltip': { background: 'var(--popover)', border: '1px solid var(--border)', borderRadius: '6px' },
   '.cm-tooltip-autocomplete ul li[aria-selected]': { background: 'var(--accent)', color: 'var(--accent-foreground)' },
-}, { dark: true });
+  }, { dark: true });
+}
+
+function buildTabExtensions(tabSize: number) {
+  return [EditorState.tabSize.of(tabSize), indentUnit.of(' '.repeat(tabSize))];
+}
 
 function getLanguageExtension(runtimeId: string) {
   switch (runtimeId) {
@@ -154,9 +161,13 @@ function RuntimeDropdown({
 }
 
 export function CodePlaygroundPanel({ panelId }: { panelId: string }) {
+  const { settings } = useSettings();
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const langCompartment = useRef(new Compartment());
+  const themeCompartment = useRef(new Compartment());
+  const wrapCompartment = useRef(new Compartment());
+  const tabCompartment = useRef(new Compartment());
   const outputEndRef = useRef<HTMLDivElement>(null);
   const runCodeRef = useRef<() => void>(() => {});
 
@@ -200,9 +211,14 @@ export function CodePlaygroundPanel({ panelId }: { panelId: string }) {
           closeBrackets(),
           autocompletion(),
           langCompartment.current.of(initialLang),
+          tabCompartment.current.of(buildTabExtensions(settings.editor.tabSize)),
           syntaxHighlighting(highlightStyle),
-          editorTheme,
-          EditorView.lineWrapping,
+          themeCompartment.current.of(
+            buildEditorTheme(settings.editor.fontSize, settings.editor.fontFamily),
+          ),
+          wrapCompartment.current.of(
+            settings.editor.wordWrap ? EditorView.lineWrapping : [],
+          ),
         ],
       }),
       parent: editorContainerRef.current,
@@ -215,6 +231,29 @@ export function CodePlaygroundPanel({ panelId }: { panelId: string }) {
       viewRef.current = null;
     };
   }, [loadingRuntimes]); // only once after runtimes load
+
+  // Live-reconfigure editor when editor settings change
+  useEffect(() => {
+    if (!viewRef.current) return;
+    viewRef.current.dispatch({
+      effects: [
+        themeCompartment.current.reconfigure(
+          buildEditorTheme(settings.editor.fontSize, settings.editor.fontFamily),
+        ),
+        wrapCompartment.current.reconfigure(
+          settings.editor.wordWrap ? EditorView.lineWrapping : [],
+        ),
+        tabCompartment.current.reconfigure(
+          buildTabExtensions(settings.editor.tabSize),
+        ),
+      ],
+    });
+  }, [
+    settings.editor.fontSize,
+    settings.editor.fontFamily,
+    settings.editor.wordWrap,
+    settings.editor.tabSize,
+  ]);
 
   // Update language when runtime changes (after initial mount)
   const prevRuntimeId = useRef<string | null>(null);

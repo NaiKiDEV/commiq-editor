@@ -236,27 +236,12 @@ const electronAPI = {
   },
 
   settings: {
-    load: () =>
-      ipcRenderer.invoke("settings:load") as Promise<{
-        terminal: {
-          fontFamily: string;
-          fontSize: number;
-          cursorStyle: "block" | "underline" | "bar";
-          scrollback: number;
-        };
-        browser: { defaultUrl: string };
-        whiteboard: { mcpPort: number };
-      }>,
-    save: (s: {
-      terminal: {
-        fontFamily: string;
-        fontSize: number;
-        cursorStyle: "block" | "underline" | "bar";
-        scrollback: number;
-      };
-      browser: { defaultUrl: string };
-      whiteboard: { mcpPort: number };
-    }) => ipcRenderer.invoke("settings:save", s) as Promise<void>,
+    // Shape is owned by the renderer's AppSettings type (contexts/settings.tsx).
+    // Kept loose here so new settings sections don't require dual maintenance;
+    // the renderer merges the result against its typed defaults.
+    load: () => ipcRenderer.invoke("settings:load") as Promise<unknown>,
+    save: (s: Record<string, unknown>) =>
+      ipcRenderer.invoke("settings:save", s) as Promise<void>,
   },
 
   timer: {
@@ -331,17 +316,20 @@ const electronAPI = {
     requestsDelete: (id: string) =>
       ipcRenderer.invoke("http:requests:delete", id) as Promise<void>,
 
-    request: (request: {
-      id: string;
-      collectionId: string | null;
-      workspaceId: string | null;
-      name: string;
-      method: string;
-      url: string;
-      headers: { key: string; value: string; enabled: boolean }[];
-      body: { type: "none" | "json" | "text"; content: string };
-    }) =>
-      ipcRenderer.invoke("http:request", request) as Promise<
+    request: (
+      request: {
+        id: string;
+        collectionId: string | null;
+        workspaceId: string | null;
+        name: string;
+        method: string;
+        url: string;
+        headers: { key: string; value: string; enabled: boolean }[];
+        body: { type: "none" | "json" | "text"; content: string };
+      },
+      options?: { timeoutMs?: number; redirect?: "follow" | "manual" },
+    ) =>
+      ipcRenderer.invoke("http:request", request, options) as Promise<
         | {
             status: number;
             statusText: string;

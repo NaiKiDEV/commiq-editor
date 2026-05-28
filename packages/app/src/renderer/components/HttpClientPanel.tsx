@@ -5,6 +5,7 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { useSettings } from '../contexts/settings';
 import { useActiveWorkspaceId } from '../hooks/use-workspace';
 import type { HttpCollection, HttpRequestBody, HttpRequestRecord } from '../../shared/http-types';
 
@@ -388,6 +389,7 @@ function RequestEditor({
   isLoading, setIsLoading, setResponse,
   onRequestChange,
 }: RequestEditorProps) {
+  const { settings } = useSettings();
   const auth = request.auth ?? defaultAuth();
   const queryParams = request.queryParams ?? parseQueryParams(request.url);
   const [copiedResponse, setCopiedResponse] = useState(false);
@@ -414,7 +416,10 @@ function RequestEditor({
       ];
 
       const requestToSend = { ...request, url: finalUrl, headers: mergedHeaders };
-      const result = await window.electronAPI.http.request(requestToSend) as HttpResponse | HttpError | { cancelled: true };
+      const result = await window.electronAPI.http.request(requestToSend, {
+        timeoutMs: settings.httpClient.timeout,
+        redirect: settings.httpClient.followRedirects ? 'follow' : 'manual',
+      }) as HttpResponse | HttpError | { cancelled: true };
       if ('cancelled' in result) return;
       setResponse(result as HttpResponse | HttpError);
     } finally {

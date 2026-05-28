@@ -95,11 +95,13 @@ export function registerHttpIpc(): void {
     await writeRequests((await readRequests()).filter((r) => r.id !== id));
   });
 
-  ipcMain.handle('http:request', async (_event, request: HttpRequestRecord): Promise<HttpResponse | HttpError | { cancelled: true }> => {
+  ipcMain.handle('http:request', async (_event, request: HttpRequestRecord, options?: { timeoutMs?: number; redirect?: 'follow' | 'manual' }): Promise<HttpResponse | HttpError | { cancelled: true }> => {
     const controller = new AbortController();
     inflight.set(request.id, controller);
 
-    const timeoutId = setTimeout(() => controller.abort(new Error('Request timed out')), 30_000);
+    const timeoutMs = options?.timeoutMs && options.timeoutMs > 0 ? options.timeoutMs : 30_000;
+    const redirect: 'follow' | 'manual' = options?.redirect ?? 'follow';
+    const timeoutId = setTimeout(() => controller.abort(new Error('Request timed out')), timeoutMs);
     const start = Date.now();
 
     try {
@@ -118,6 +120,7 @@ export function registerHttpIpc(): void {
         method: request.method,
         headers,
         signal: controller.signal,
+        redirect,
       };
 
       if (request.body.type !== 'none' && request.body.content) {

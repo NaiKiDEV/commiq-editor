@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { useSettings } from "../contexts/settings";
 import { cn } from "@/lib/utils";
 
 type PortEntry = {
@@ -116,6 +117,7 @@ const PortRow = memo(
 );
 
 export function PortMonitorPanel({ panelId: _panelId }: { panelId: string }) {
+  const { settings } = useSettings();
   const [entries, setEntries] = useState<PortEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
@@ -124,7 +126,11 @@ export function PortMonitorPanel({ panelId: _panelId }: { panelId: string }) {
   const [stateFilter, setStateFilter] = useState<"listening" | "all">(
     "listening",
   );
-  const [intervalSecs, setIntervalSecs] = useState<IntervalValue>(3);
+  const [intervalSecs, setIntervalSecs] = useState<IntervalValue>(() =>
+    (INTERVALS as readonly number[]).includes(settings.monitors.refreshInterval)
+      ? (settings.monitors.refreshInterval as IntervalValue)
+      : 3,
+  );
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [confirmingPid, setConfirmingPid] = useState<number | null>(null);
 

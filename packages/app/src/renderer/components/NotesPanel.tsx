@@ -3,6 +3,7 @@ import { Plus, Trash2, FileText, Check, Loader2, Eye, Pencil, Search, X, Tag, Ha
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
+import { useSettings } from '../contexts/settings';
 import { cn } from '@/lib/utils';
 
 type Note = {
@@ -180,6 +181,7 @@ function renderMarkdown(md: string): string {
 }
 
 export function NotesPanel({ panelId: _panelId }: NotesPanelProps) {
+  const { settings } = useSettings();
   const [notes, setNotes] = useState<Note[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -523,7 +525,13 @@ export function NotesPanel({ panelId: _panelId }: NotesPanelProps) {
                 value={activeNote.content}
                 onChange={(e) => updateNote(activeNote.id, { content: e.target.value })}
                 placeholder="Start writing… (Markdown supported)"
-                className="flex-1 resize-none border-0 rounded-none px-4 py-3 text-sm leading-relaxed focus-visible:ring-0 min-h-0 font-mono"
+                spellCheck={settings.notes.spellcheck}
+                wrap={settings.notes.wordWrap ? "soft" : "off"}
+                style={{ fontSize: `${settings.notes.fontSize}px` }}
+                className={cn(
+                  "flex-1 resize-none border-0 rounded-none px-4 py-3 leading-relaxed focus-visible:ring-0 min-h-0 font-mono",
+                  !settings.notes.wordWrap && "whitespace-pre overflow-x-auto",
+                )}
               />
             )}
             {/* Editor footer */}

@@ -17,6 +17,27 @@ type AppSettings = {
   whiteboard: {
     mcpPort: number;
   };
+  mockServer: {
+    mcpPort: number;
+  };
+  editor: {
+    fontFamily: string;
+    fontSize: number;
+    tabSize: number;
+    wordWrap: boolean;
+  };
+  monitors: {
+    refreshInterval: number;
+  };
+  notes: {
+    fontSize: number;
+    wordWrap: boolean;
+    spellcheck: boolean;
+  };
+  httpClient: {
+    timeout: number;
+    followRedirects: boolean;
+  };
 };
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -34,6 +55,27 @@ const DEFAULT_SETTINGS: AppSettings = {
   whiteboard: {
     mcpPort: 3100,
   },
+  mockServer: {
+    mcpPort: 3200,
+  },
+  editor: {
+    fontFamily: "'CommitMono NF', 'CommitMono NF Mono', ui-monospace, Menlo, monospace",
+    fontSize: 13,
+    tabSize: 2,
+    wordWrap: true,
+  },
+  monitors: {
+    refreshInterval: 3,
+  },
+  notes: {
+    fontSize: 13,
+    wordWrap: true,
+    spellcheck: false,
+  },
+  httpClient: {
+    timeout: 30000,
+    followRedirects: true,
+  },
 };
 
 function getSettingsPath(): string {
@@ -50,6 +92,11 @@ export function registerSettingsIpc(): void {
         terminal: { ...DEFAULT_SETTINGS.terminal, ...(parsed.terminal ?? {}) },
         browser: { ...DEFAULT_SETTINGS.browser, ...(parsed.browser ?? {}) },
         whiteboard: { ...DEFAULT_SETTINGS.whiteboard, ...(parsed.whiteboard ?? {}) },
+        mockServer: { ...DEFAULT_SETTINGS.mockServer, ...(parsed.mockServer ?? {}) },
+        editor: { ...DEFAULT_SETTINGS.editor, ...(parsed.editor ?? {}) },
+        monitors: { ...DEFAULT_SETTINGS.monitors, ...(parsed.monitors ?? {}) },
+        notes: { ...DEFAULT_SETTINGS.notes, ...(parsed.notes ?? {}) },
+        httpClient: { ...DEFAULT_SETTINGS.httpClient, ...(parsed.httpClient ?? {}) },
       };
     } catch {
       return DEFAULT_SETTINGS;

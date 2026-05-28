@@ -5,6 +5,11 @@ import {
   Globe,
   LayoutDashboard,
   Palette,
+  Server,
+  FileCode2,
+  Gauge,
+  NotebookPen,
+  Network,
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/renderer/components/ui/dialog";
 import {
@@ -14,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/renderer/components/ui/select";
+import { Checkbox } from "@/renderer/components/ui/checkbox";
 import { useSettings } from "@/renderer/contexts/settings";
 import type { Theme } from "@/renderer/contexts/settings";
 import { cn } from "@/lib/utils";
@@ -22,8 +28,13 @@ const tabs = [
   { id: "general", label: "General", icon: Settings2 },
   { id: "themes", label: "Themes", icon: Palette },
   { id: "terminal", label: "Terminal", icon: TerminalSquare },
+  { id: "editor", label: "Editor", icon: FileCode2 },
   { id: "browser", label: "Browser", icon: Globe },
+  { id: "http", label: "HTTP Client", icon: Network },
+  { id: "monitors", label: "Monitors", icon: Gauge },
+  { id: "notes", label: "Notes", icon: NotebookPen },
   { id: "whiteboard", label: "Whiteboard", icon: LayoutDashboard },
+  { id: "mockserver", label: "Mock Server", icon: Server },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -429,6 +440,221 @@ function WhiteboardTab() {
   );
 }
 
+function SettingRow({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="py-2 border-b border-border/40">
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-sm text-foreground">{label}</span>
+        {children}
+      </div>
+      {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
+    </div>
+  );
+}
+
+const numberInputClass =
+  "w-28 h-7 px-2 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring";
+const textInputClass =
+  "w-64 h-7 px-2 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring";
+
+function MockServerTab() {
+  const { settings, updateSettings } = useSettings();
+
+  return (
+    <div>
+      <SettingRow
+        label="MCP Server Port"
+        hint="Port for the Mock Server's MCP endpoint (default: 3200). Restart the MCP server after changing."
+      >
+        <input
+          type="number"
+          min={1024}
+          max={65535}
+          value={settings.mockServer.mcpPort}
+          onChange={(e) =>
+            updateSettings({ mockServer: { mcpPort: Number(e.target.value) } })
+          }
+          className={numberInputClass}
+        />
+      </SettingRow>
+    </div>
+  );
+}
+
+function EditorTab() {
+  const { settings, updateSettings } = useSettings();
+  const { editor } = settings;
+
+  return (
+    <div>
+      <SettingRow label="Font Family">
+        <input
+          type="text"
+          value={editor.fontFamily}
+          onChange={(e) =>
+            updateSettings({ editor: { fontFamily: e.target.value } })
+          }
+          className={textInputClass}
+        />
+      </SettingRow>
+      <SettingRow label="Font Size">
+        <input
+          type="number"
+          min={8}
+          max={32}
+          value={editor.fontSize}
+          onChange={(e) =>
+            updateSettings({ editor: { fontSize: Number(e.target.value) } })
+          }
+          className="w-20 h-7 px-2 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+      </SettingRow>
+      <SettingRow label="Tab Size" hint="Spaces inserted per indent level.">
+        <Select
+          value={String(editor.tabSize)}
+          onValueChange={(v) => updateSettings({ editor: { tabSize: Number(v) } })}
+        >
+          <SelectTrigger className="h-7 text-xs w-20">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[2, 4, 8].map((n) => (
+              <SelectItem key={n} value={String(n)}>
+                {n}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </SettingRow>
+      <SettingRow label="Word Wrap" hint="Wrap long lines in the code playground.">
+        <Checkbox
+          checked={editor.wordWrap}
+          onCheckedChange={(checked) =>
+            updateSettings({ editor: { wordWrap: checked === true } })
+          }
+        />
+      </SettingRow>
+    </div>
+  );
+}
+
+function MonitorsTab() {
+  const { settings, updateSettings } = useSettings();
+
+  return (
+    <div>
+      <SettingRow
+        label="Default Refresh Interval"
+        hint="Default auto-refresh rate for the Process and Port monitors. Applied to newly opened monitor tabs; you can still override it per tab."
+      >
+        <Select
+          value={String(settings.monitors.refreshInterval)}
+          onValueChange={(v) =>
+            updateSettings({ monitors: { refreshInterval: Number(v) } })
+          }
+        >
+          <SelectTrigger className="h-7 text-xs w-24">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[1, 3, 5, 10, 30].map((n) => (
+              <SelectItem key={n} value={String(n)}>
+                {n}s
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </SettingRow>
+    </div>
+  );
+}
+
+function NotesTab() {
+  const { settings, updateSettings } = useSettings();
+  const { notes } = settings;
+
+  return (
+    <div>
+      <SettingRow label="Font Size">
+        <input
+          type="number"
+          min={8}
+          max={32}
+          value={notes.fontSize}
+          onChange={(e) =>
+            updateSettings({ notes: { fontSize: Number(e.target.value) } })
+          }
+          className="w-20 h-7 px-2 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+      </SettingRow>
+      <SettingRow label="Word Wrap" hint="Wrap long lines in the note editor.">
+        <Checkbox
+          checked={notes.wordWrap}
+          onCheckedChange={(checked) =>
+            updateSettings({ notes: { wordWrap: checked === true } })
+          }
+        />
+      </SettingRow>
+      <SettingRow
+        label="Spellcheck"
+        hint="Underline misspelled words while editing."
+      >
+        <Checkbox
+          checked={notes.spellcheck}
+          onCheckedChange={(checked) =>
+            updateSettings({ notes: { spellcheck: checked === true } })
+          }
+        />
+      </SettingRow>
+    </div>
+  );
+}
+
+function HttpTab() {
+  const { settings, updateSettings } = useSettings();
+  const { httpClient } = settings;
+
+  return (
+    <div>
+      <SettingRow
+        label="Request Timeout"
+        hint="Milliseconds before an in-flight request is aborted (default: 30000)."
+      >
+        <input
+          type="number"
+          min={1000}
+          max={600000}
+          step={1000}
+          value={httpClient.timeout}
+          onChange={(e) =>
+            updateSettings({ httpClient: { timeout: Number(e.target.value) } })
+          }
+          className={numberInputClass}
+        />
+      </SettingRow>
+      <SettingRow
+        label="Follow Redirects"
+        hint="Automatically follow 3xx responses. When off, the redirect response is returned as-is."
+      >
+        <Checkbox
+          checked={httpClient.followRedirects}
+          onCheckedChange={(checked) =>
+            updateSettings({ httpClient: { followRedirects: checked === true } })
+          }
+        />
+      </SettingRow>
+    </div>
+  );
+}
+
 export function SettingsModal({
   open,
   onClose,
@@ -476,8 +702,13 @@ export function SettingsModal({
           {activeTab === "general" && <GeneralTab />}
           {activeTab === "themes" && <ThemesTab />}
           {activeTab === "terminal" && <TerminalTab />}
+          {activeTab === "editor" && <EditorTab />}
           {activeTab === "browser" && <BrowserTab />}
+          {activeTab === "http" && <HttpTab />}
+          {activeTab === "monitors" && <MonitorsTab />}
+          {activeTab === "notes" && <NotesTab />}
           {activeTab === "whiteboard" && <WhiteboardTab />}
+          {activeTab === "mockserver" && <MockServerTab />}
         </div>
       </DialogContent>
     </Dialog>
