@@ -90,6 +90,7 @@ const electronAPI = {
           title: string;
           content: string;
           tags: string[];
+          pinned: boolean;
           createdAt: string;
           updatedAt: string;
         }>
@@ -101,19 +102,37 @@ const electronAPI = {
         title: string;
         content: string;
         tags: string[];
+        pinned: boolean;
         createdAt: string;
         updatedAt: string;
       }>,
 
     update: (
       id: string,
-      data: { title?: string; content?: string; tags?: string[] },
+      data: {
+        title?: string;
+        content?: string;
+        tags?: string[];
+        pinned?: boolean;
+      },
     ) =>
       ipcRenderer.invoke("notes:update", id, data) as Promise<{
         id: string;
         title: string;
         content: string;
         tags: string[];
+        pinned: boolean;
+        createdAt: string;
+        updatedAt: string;
+      } | null>,
+
+    duplicate: (id: string) =>
+      ipcRenderer.invoke("notes:duplicate", id) as Promise<{
+        id: string;
+        title: string;
+        content: string;
+        tags: string[];
+        pinned: boolean;
         createdAt: string;
         updatedAt: string;
       } | null>,

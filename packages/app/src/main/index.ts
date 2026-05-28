@@ -120,6 +120,26 @@ const createWindow = () => {
   registerMockServerPush(mainWindow);
   registerBoardsPush(mainWindow);
 
+  // Open http/https/mailto links (e.g. markdown links in notes) in the user's
+  // real default browser instead of spawning a logged-out Electron window.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^(https?:|mailto:)/i.test(url)) {
+      shell.openExternal(url);
+    }
+    return { action: "deny" };
+  });
+
+  // Guard against the main window itself navigating away to an external URL.
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    const isAppUrl = MAIN_WINDOW_VITE_DEV_SERVER_URL
+      ? url.startsWith(MAIN_WINDOW_VITE_DEV_SERVER_URL)
+      : url.startsWith("file://");
+    if (!isAppUrl && /^(https?:|mailto:)/i.test(url)) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
