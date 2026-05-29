@@ -11,6 +11,7 @@ import {
   findTypeConfig,
   resolveIcon,
 } from "./shared";
+import { excerpt } from "../notes/utils";
 
 type Props = {
   task: Task;
@@ -149,7 +150,7 @@ export function TaskCardView({
 
       {density === "detailed" && task.description && (
         <p className="text-[11px] text-muted-foreground line-clamp-2">
-          {task.description}
+          {excerpt(task.description, 160)}
         </p>
       )}
     </button>

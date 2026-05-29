@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, MessageSquare, Pencil, Trash2, X } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -6,6 +6,8 @@ import { Separator } from "../ui/separator";
 import { cn } from "@/lib/utils";
 import type { TaskComment, TaskPriority, TaskType } from "../../../shared/boards-types";
 import { useBoardsContext } from "./BoardsContext";
+import { TaskDescription } from "./TaskDescription";
+import { MarkdownContent } from "./MarkdownContent";
 import { PRIORITY_BADGE_CLASS, PRIORITY_LABEL, resolveIcon, sortByOrder } from "./shared";
 
 const PRIORITY_OPTIONS: TaskPriority[] = ["critical", "high", "medium", "low"];
@@ -34,7 +36,6 @@ export function TaskDetailPanel({ open, onClose, taskId }: Props) {
   );
 
   const [title, setTitle] = useState(task?.title ?? "");
-  const [description, setDescription] = useState(task?.description ?? "");
   const [assignee, setAssignee] = useState(task?.assignee ?? "");
   const [labelInput, setLabelInput] = useState("");
   const [commentBody, setCommentBody] = useState("");
@@ -44,25 +45,14 @@ export function TaskDetailPanel({ open, onClose, taskId }: Props) {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentBody, setEditingCommentBody] = useState("");
 
-  const descRef = useRef<HTMLTextAreaElement>(null);
-
   useEffect(() => {
     if (!task) return;
     setTitle(task.title);
-    setDescription(task.description);
     setAssignee(task.assignee ?? "");
     setLabelInput("");
     setCommentBody("");
     setEditingCommentId(null);
   }, [task?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Auto-resize description textarea.
-  useEffect(() => {
-    const el = descRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [description]);
 
   if (!task || !open) return null;
 
@@ -91,9 +81,13 @@ export function TaskDetailPanel({ open, onClose, taskId }: Props) {
     await dispatch({ type: "UPDATE_TASK", taskId: task.id, patch: { title: next } });
   };
 
-  const commitDescription = async () => {
-    if (description === task.description) return;
-    await dispatch({ type: "UPDATE_TASK", taskId: task.id, patch: { description } });
+  const commitDescription = async (next: string) => {
+    if (next === task.description) return;
+    await dispatch({
+      type: "UPDATE_TASK",
+      taskId: task.id,
+      patch: { description: next },
+    });
   };
 
   const commitAssignee = async () => {
@@ -419,17 +413,11 @@ export function TaskDetailPanel({ open, onClose, taskId }: Props) {
         <Separator />
 
         {/* Description */}
-        <div className="px-4 py-3 flex flex-col gap-1.5">
-          <SectionLabel>Description</SectionLabel>
-          <textarea
-            ref={descRef}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            onBlur={() => void commitDescription()}
-            placeholder="Add a description…"
-            rows={4}
-            className="w-full text-xs text-foreground bg-muted/40 rounded-md px-3 py-2 resize-none outline-none placeholder-muted-foreground leading-relaxed border border-transparent focus:border-border"
-            style={{ overflow: "hidden" }}
+        <div className="px-4 py-3">
+          <TaskDescription
+            key={task.id}
+            value={task.description}
+            onCommit={(next) => void commitDescription(next)}
           />
         </div>
 
@@ -538,9 +526,10 @@ export function TaskDetailPanel({ open, onClose, taskId }: Props) {
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap bg-muted/50 rounded-md px-2.5 py-2">
-                  {c.body}
-                </p>
+                <MarkdownContent
+                  content={c.body}
+                  className="text-xs text-foreground/80 leading-relaxed bg-muted/50 rounded-md px-2.5 py-2"
+                />
               )}
             </div>
           ))}
@@ -567,7 +556,7 @@ export function TaskDetailPanel({ open, onClose, taskId }: Props) {
                   void addComment();
                 }
               }}
-              placeholder="Write a comment… (Ctrl+Enter to submit)"
+              placeholder="Write a comment… (Markdown supported · Ctrl+Enter to submit)"
               rows={3}
               className="w-full text-xs bg-muted/40 rounded-md px-2.5 py-2 outline-none resize-none border border-border/50 focus:border-border placeholder-muted-foreground"
             />
