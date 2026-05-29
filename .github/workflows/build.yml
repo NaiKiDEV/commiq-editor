@@ -15,17 +15,17 @@ jobs:
     env:
       GYP_MSVS_VERSION: '2022'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: microsoft/setup-msbuild@v2
+      - uses: microsoft/setup-msbuild@v3
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: '24.15.0'
           cache: pnpm
 
       - name: Install dependencies
@@ -34,23 +34,24 @@ jobs:
       - name: Make
         run: pnpm make
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: commiq-editor-windows
           path: packages/app/out/make/squirrel.windows/x64/
+          if-no-files-found: error
 
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: '24.15.0'
           cache: pnpm
 
       - name: Install dependencies
@@ -59,23 +60,24 @@ jobs:
       - name: Make
         run: pnpm make
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: commiq-editor-macos
           path: packages/app/out/make/zip/darwin/
+          if-no-files-found: error
 
   build-linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: '24.15.0'
           cache: pnpm
 
       - name: Install dependencies
@@ -84,42 +86,44 @@ jobs:
       - name: Make
         run: pnpm make
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: commiq-editor-linux-deb
           path: packages/app/out/make/deb/x64/
+          if-no-files-found: error
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: commiq-editor-linux-rpm
           path: packages/app/out/make/rpm/x64/
+          if-no-files-found: error
 
   release:
     needs: [build-windows, build-macos, build-linux]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: commiq-editor-windows
           path: artifacts/windows
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: commiq-editor-macos
           path: artifacts/macos
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: commiq-editor-linux-deb
           path: artifacts/linux-deb
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: commiq-editor-linux-rpm
           path: artifacts/linux-rpm
 
       - name: Publish release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'nightly' }}
           name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'Nightly' }}
