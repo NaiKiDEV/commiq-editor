@@ -40,6 +40,7 @@ import {
   SquareKanban,
   HardDrive,
   Dices,
+  CircleDollarSign,
 } from "lucide-react";
 import {
   useTabs,
@@ -143,6 +144,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <SquareKanban className="size-3" />;
     case "roulette":
       return <Dices className="size-3" />;
+    case "coinflip":
+      return <CircleDollarSign className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }

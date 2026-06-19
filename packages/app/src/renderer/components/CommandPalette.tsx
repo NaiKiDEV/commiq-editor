@@ -49,6 +49,7 @@ import {
   SquareKanban,
   HardDrive,
   Dices,
+  CircleDollarSign,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -70,6 +71,11 @@ import {
   isRouletteUnlocked,
   unlockRoulette,
 } from "./roulette/storage";
+import {
+  COINFLIP_UNLOCK_CODE,
+  isCoinflipUnlocked,
+  unlockCoinflip,
+} from "./coinflip/storage";
 
 export type CommandPaletteHandle = {
   openWithSearch: (search: string) => void;
@@ -111,6 +117,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "repo-tycoon") return <GitBranch />;
   if (type === "boards") return <SquareKanban />;
   if (type === "roulette") return <Dices />;
+  if (type === "coinflip") return <CircleDollarSign />;
   return <NotepadText />;
 }
 
@@ -120,6 +127,9 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
     const [search, setSearch] = useState("");
     const [rouletteUnlocked, setRouletteUnlocked] = useState(
       isRouletteUnlocked,
+    );
+    const [coinflipUnlocked, setCoinflipUnlocked] = useState(
+      isCoinflipUnlocked,
     );
     const panels = usePanels();
     const tabs = useTabs();
@@ -180,6 +190,16 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
         setSearch("");
       }
     }, [search, rouletteUnlocked]);
+
+    // Secret unlock: the coinflip tab uses its own code.
+    useEffect(() => {
+      if (coinflipUnlocked) return;
+      if (search.trim().toLowerCase() === COINFLIP_UNLOCK_CODE) {
+        unlockCoinflip();
+        setCoinflipUnlocked(true);
+        setSearch("");
+      }
+    }, [search, coinflipUnlocked]);
 
     const handleOpenChange = useCallback((nextOpen: boolean) => {
       setOpen(nextOpen);
@@ -475,17 +495,29 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
             </CommandItem>
           </CommandGroup>
 
-          {/* Secret — only revealed after the unlock code is entered */}
-          {rouletteUnlocked && (
+          {/* Secret — each item only revealed after its unlock code is entered */}
+          {(rouletteUnlocked || coinflipUnlocked) && (
             <CommandGroup heading="🎰 Secret">
-              <CommandItem
-                onSelect={() =>
-                  runAction(() => createTab("roulette", "Roulette"))
-                }
-              >
-                <Dices />
-                <span>New Roulette Tab</span>
-              </CommandItem>
+              {rouletteUnlocked && (
+                <CommandItem
+                  onSelect={() =>
+                    runAction(() => createTab("roulette", "Roulette"))
+                  }
+                >
+                  <Dices />
+                  <span>New Roulette Tab</span>
+                </CommandItem>
+              )}
+              {coinflipUnlocked && (
+                <CommandItem
+                  onSelect={() =>
+                    runAction(() => createTab("coinflip", "Coinflip"))
+                  }
+                >
+                  <CircleDollarSign />
+                  <span>New Coinflip Tab</span>
+                </CommandItem>
+              )}
             </CommandGroup>
           )}
 

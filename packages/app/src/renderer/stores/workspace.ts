@@ -55,7 +55,8 @@ export type PanelType =
   | "autobattler"
   | "repo-tycoon"
   | "boards"
-  | "roulette";
+  | "roulette"
+  | "coinflip";
 
 export type Panel = {
   id: string;
