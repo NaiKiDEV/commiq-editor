@@ -56,7 +56,8 @@ export type PanelType =
   | "repo-tycoon"
   | "boards"
   | "roulette"
-  | "coinflip";
+  | "coinflip"
+  | "crash";
 
 export type Panel = {
   id: string;

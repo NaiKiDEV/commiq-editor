@@ -41,6 +41,7 @@ import {
   HardDrive,
   Dices,
   CircleDollarSign,
+  Rocket,
 } from "lucide-react";
 import {
   useTabs,
@@ -146,6 +147,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <Dices className="size-3" />;
     case "coinflip":
       return <CircleDollarSign className="size-3" />;
+    case "crash":
+      return <Rocket className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }

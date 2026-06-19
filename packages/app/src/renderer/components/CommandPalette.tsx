@@ -50,6 +50,7 @@ import {
   HardDrive,
   Dices,
   CircleDollarSign,
+  Rocket,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -76,6 +77,11 @@ import {
   isCoinflipUnlocked,
   unlockCoinflip,
 } from "./coinflip/storage";
+import {
+  CRASH_UNLOCK_CODE,
+  isCrashUnlocked,
+  unlockCrash,
+} from "./crash/storage";
 
 export type CommandPaletteHandle = {
   openWithSearch: (search: string) => void;
@@ -118,6 +124,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "boards") return <SquareKanban />;
   if (type === "roulette") return <Dices />;
   if (type === "coinflip") return <CircleDollarSign />;
+  if (type === "crash") return <Rocket />;
   return <NotepadText />;
 }
 
@@ -131,6 +138,7 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
     const [coinflipUnlocked, setCoinflipUnlocked] = useState(
       isCoinflipUnlocked,
     );
+    const [crashUnlocked, setCrashUnlocked] = useState(isCrashUnlocked);
     const panels = usePanels();
     const tabs = useTabs();
     const workspaces = useWorkspaces();
@@ -200,6 +208,16 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
         setSearch("");
       }
     }, [search, coinflipUnlocked]);
+
+    // Secret unlock: the crash tab uses its own code.
+    useEffect(() => {
+      if (crashUnlocked) return;
+      if (search.trim().toLowerCase() === CRASH_UNLOCK_CODE) {
+        unlockCrash();
+        setCrashUnlocked(true);
+        setSearch("");
+      }
+    }, [search, crashUnlocked]);
 
     const handleOpenChange = useCallback((nextOpen: boolean) => {
       setOpen(nextOpen);
@@ -496,7 +514,7 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
           </CommandGroup>
 
           {/* Secret — each item only revealed after its unlock code is entered */}
-          {(rouletteUnlocked || coinflipUnlocked) && (
+          {(rouletteUnlocked || coinflipUnlocked || crashUnlocked) && (
             <CommandGroup heading="🎰 Secret">
               {rouletteUnlocked && (
                 <CommandItem
@@ -516,6 +534,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
                 >
                   <CircleDollarSign />
                   <span>New Coinflip Tab</span>
+                </CommandItem>
+              )}
+              {crashUnlocked && (
+                <CommandItem
+                  onSelect={() => runAction(() => createTab("crash", "Crash"))}
+                >
+                  <Rocket />
+                  <span>New Crash Tab</span>
                 </CommandItem>
               )}
             </CommandGroup>
