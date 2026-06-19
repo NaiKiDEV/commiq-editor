@@ -38,6 +38,7 @@ import { CodePlaygroundPanel } from "./CodePlaygroundPanel";
 import { AutoBattlerPanel } from "./AutoBattlerPanel";
 import { RepoTycoonPanel } from "./RepoTycoonPanel";
 import { BoardsPanel } from "./BoardsPanel";
+import { RoulettePanel } from "./roulette/RoulettePanel";
 import { getVisiblePanelIds } from "../lib/layout";
 import type { Panel } from "../stores/workspace";
 
@@ -112,6 +113,7 @@ function PanelContent({
       {panel.type === "autobattler" && <AutoBattlerPanel panelId={panel.id} />}
       {panel.type === "repo-tycoon" && <RepoTycoonPanel panelId={panel.id} />}
       {panel.type === "boards" && <BoardsPanel panelId={panel.id} />}
+      {panel.type === "roulette" && <RoulettePanel panelId={panel.id} />}
     </div>
   );
 }

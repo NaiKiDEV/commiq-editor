@@ -39,6 +39,7 @@ import {
   Lock,
   SquareKanban,
   HardDrive,
+  Dices,
 } from "lucide-react";
 import {
   useTabs,
@@ -140,6 +141,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <GitBranch className="size-3" />;
     case "boards":
       return <SquareKanban className="size-3" />;
+    case "roulette":
+      return <Dices className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }

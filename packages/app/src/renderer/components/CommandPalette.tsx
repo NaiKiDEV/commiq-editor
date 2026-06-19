@@ -48,6 +48,7 @@ import {
   Lock,
   SquareKanban,
   HardDrive,
+  Dices,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -64,6 +65,11 @@ import {
   useActiveWorkspace,
   useWorkspaceActions,
 } from "../hooks/use-workspace";
+import {
+  ROULETTE_UNLOCK_CODE,
+  isRouletteUnlocked,
+  unlockRoulette,
+} from "./roulette/storage";
 
 export type CommandPaletteHandle = {
   openWithSearch: (search: string) => void;
@@ -104,6 +110,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "autobattler") return <Swords />;
   if (type === "repo-tycoon") return <GitBranch />;
   if (type === "boards") return <SquareKanban />;
+  if (type === "roulette") return <Dices />;
   return <NotepadText />;
 }
 
@@ -111,6 +118,9 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
   function CommandPalette(_props, ref) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
+    const [rouletteUnlocked, setRouletteUnlocked] = useState(
+      isRouletteUnlocked,
+    );
     const panels = usePanels();
     const tabs = useTabs();
     const workspaces = useWorkspaces();
@@ -158,6 +168,18 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
         }
       });
     }, [togglePalette]);
+
+    // Secret unlock: typing the code reveals the hidden roulette command.
+    // On match we persist the unlock and clear the search so the command surfaces
+    // (cmdk would otherwise filter it out since the code isn't in the item text).
+    useEffect(() => {
+      if (rouletteUnlocked) return;
+      if (search.trim().toLowerCase() === ROULETTE_UNLOCK_CODE) {
+        unlockRoulette();
+        setRouletteUnlocked(true);
+        setSearch("");
+      }
+    }, [search, rouletteUnlocked]);
 
     const handleOpenChange = useCallback((nextOpen: boolean) => {
       setOpen(nextOpen);
@@ -452,6 +474,20 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
               <span>New Boards Tab</span>
             </CommandItem>
           </CommandGroup>
+
+          {/* Secret — only revealed after the unlock code is entered */}
+          {rouletteUnlocked && (
+            <CommandGroup heading="🎰 Secret">
+              <CommandItem
+                onSelect={() =>
+                  runAction(() => createTab("roulette", "Roulette"))
+                }
+              >
+                <Dices />
+                <span>New Roulette Tab</span>
+              </CommandItem>
+            </CommandGroup>
+          )}
 
           {/* Split */}
           {panels.length > 0 && (
