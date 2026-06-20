@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     env:
       GYP_MSVS_VERSION: '2022'
     steps:
