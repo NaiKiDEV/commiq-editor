@@ -60,6 +60,7 @@ function summarizeTask(t: Task) {
     storyPoints: t.storyPoints,
     dueDate: t.dueDate,
     order: t.order,
+    blockedBy: t.blockedBy ?? [],
     hasDescription: Boolean(t.description && t.description.trim()),
     commentCount: t.comments?.length ?? 0,
     updatedAt: t.updatedAt,
@@ -113,6 +114,15 @@ This MCP manages a kanban-style project tracker.
     active sprint per project; others are auto-completed).
   - complete_sprint computes velocity and can send unfinished (non-"done")
     tasks to the backlog, keep them, or move them to another sprint.
+
+## Blockers (task dependencies)
+  - blockedBy lists the tasks that block a task — i.e. it depends on them.
+    Blockers must be other tasks in the same project.
+  - Mutate with add_blocker / remove_blocker / set_blockers. Self-references and
+    cycles are rejected automatically.
+  - A task is effectively blocked while any of its blockers is not yet "done".
+  - get_blocker_graph(projectId) returns the whole dependency map (both
+    directions, with each blocker's resolved state) for overview/visualisation.
 
 ## Reading large boards efficiently
   list_tasks, get_board and get_project return lightweight task *summaries* —
@@ -494,6 +504,96 @@ This MCP manages a kanban-style project tracker.
         commentId,
       }) as boolean;
       return okDeleted ? ok("Deleted") : err("Task or comment not found");
+    },
+  );
+
+  // =========================================================================
+  // BLOCKER tools (task dependencies)
+  // =========================================================================
+
+  mcp.tool(
+    "set_blockers",
+    "Replace a task's blocker list — the tasks that block it (it depends on them). blockerIds must be tasks in the same project. Self-references, duplicates and cycle-forming ids are dropped. Returns the updated task.",
+    { taskId: z.string(), blockerIds: z.array(z.string()) },
+    async ({ taskId, blockerIds }) => {
+      const task = state.dispatch({
+        type: "SET_TASK_BLOCKERS",
+        taskId,
+        blockerIds,
+      }) as Task | null;
+      return task ? ok(task) : err("Task not found");
+    },
+  );
+
+  mcp.tool(
+    "add_blocker",
+    "Add a single blocker to a task (the task will depend on blockerId). Ignored if it would create a self-reference or dependency cycle.",
+    { taskId: z.string(), blockerId: z.string() },
+    async ({ taskId, blockerId }) => {
+      const task = state.dispatch({
+        type: "ADD_TASK_BLOCKER",
+        taskId,
+        blockerId,
+      }) as Task | null;
+      return task ? ok(task) : err("Task not found");
+    },
+  );
+
+  mcp.tool(
+    "remove_blocker",
+    "Remove a single blocker from a task",
+    { taskId: z.string(), blockerId: z.string() },
+    async ({ taskId, blockerId }) => {
+      const task = state.dispatch({
+        type: "REMOVE_TASK_BLOCKER",
+        taskId,
+        blockerId,
+      }) as Task | null;
+      return task ? ok(task) : err("Task not found");
+    },
+  );
+
+  mcp.tool(
+    "get_blocker_graph",
+    "Get the project's dependency graph: every task that has blockers and/or blocks others, with both directions resolved. Each entry is blocked (status not 'done') only while an unresolved blocker remains.",
+    { projectId: z.string() },
+    async ({ projectId }) => {
+      const bundle = state.getProjectBundle(projectId);
+      if (!bundle) return err("Project not found");
+      const byId = new Map(bundle.tasks.map((t) => [t.id, t]));
+      const blocks = new Map<string, string[]>();
+      for (const t of bundle.tasks) {
+        for (const b of t.blockedBy ?? []) {
+          blocks.set(b, [...(blocks.get(b) ?? []), t.id]);
+        }
+      }
+      const nodes = bundle.tasks
+        .filter(
+          (t) => (t.blockedBy?.length ?? 0) > 0 || (blocks.get(t.id)?.length ?? 0) > 0,
+        )
+        .map((t) => {
+          const blockers = (t.blockedBy ?? []).map((id) => {
+            const bt = byId.get(id);
+            return {
+              id,
+              title: bt?.title ?? "(unknown)",
+              status: bt?.status ?? null,
+              resolved: bt ? bt.status.toLowerCase() === "done" : false,
+            };
+          });
+          return {
+            id: t.id,
+            number: t.number,
+            title: t.title,
+            status: t.status,
+            blockedBy: blockers,
+            blocks: blocks.get(t.id) ?? [],
+            isBlocked:
+              t.status.toLowerCase() !== "done" &&
+              blockers.some((b) => !b.resolved),
+          };
+        });
+      return ok(nodes);
     },
   );
 

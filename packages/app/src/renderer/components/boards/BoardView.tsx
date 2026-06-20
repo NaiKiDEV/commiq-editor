@@ -20,6 +20,7 @@ import { BoardSettingsModal } from "./BoardSettingsModal";
 import { BacklogList } from "./BacklogList";
 import { EpicsView } from "./EpicsView";
 import { SprintsView } from "./SprintsView";
+import { BlockersView } from "./BlockersView";
 import { SprintSelector } from "./SprintSelector";
 import {
   fractionalOrder,
@@ -267,6 +268,17 @@ export function BoardView() {
         >
           Sprints
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("blockers")}
+          className={`px-2.5 py-1 text-xs rounded-sm transition-colors ${
+            activeTab === "blockers"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Blockers
+        </button>
       </div>
       {(activeTab === "board" || activeTab === "backlog") && (
         <div className="ml-auto">
@@ -313,6 +325,22 @@ export function BoardView() {
       <main className="flex-1 min-h-0 flex flex-col min-w-0 relative">
         {viewSwitcher}
         <SprintsView />
+        {selectedTaskId && (
+          <TaskDetailPanel
+            open={isTaskDetailOpen}
+            onClose={closeTaskDetail}
+            taskId={selectedTaskId}
+          />
+        )}
+      </main>
+    );
+  }
+
+  if (activeTab === "blockers") {
+    return (
+      <main className="flex-1 min-h-0 flex flex-col min-w-0 relative">
+        {viewSwitcher}
+        <BlockersView />
         {selectedTaskId && (
           <TaskDetailPanel
             open={isTaskDetailOpen}

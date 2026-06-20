@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, MessageSquare, Pencil, Trash2, X } from "lucide-react";
+import { Ban, ChevronDown, MessageSquare, Pencil, Trash2, X } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Separator } from "../ui/separator";
@@ -28,6 +28,7 @@ export function TaskDetailPanel({ open, onClose, taskId }: Props) {
     boards,
     sprints,
     epics,
+    openTaskDetail,
   } = useBoardsContext();
 
   const task = useMemo(
@@ -222,12 +223,33 @@ export function TaskDetailPanel({ open, onClose, taskId }: Props) {
     localStorage.setItem(COMMENT_AUTHOR_KEY, commentAuthor);
   };
 
+  const addBlocker = async (blockerId: string) => {
+    if (!blockerId) return;
+    await dispatch({ type: "ADD_TASK_BLOCKER", taskId: task.id, blockerId });
+  };
+
+  const removeBlocker = async (blockerId: string) => {
+    await dispatch({ type: "REMOVE_TASK_BLOCKER", taskId: task.id, blockerId });
+  };
+
   const deleteTask = async () => {
     await dispatch({ type: "DELETE_TASK", taskId: task.id });
     onClose();
   };
 
   const comments = task.comments ?? [];
+
+  const blockerIds = task.blockedBy ?? [];
+  const blockerTasks = blockerIds
+    .map((id) => tasks.find((t) => t.id === id))
+    .filter((t): t is (typeof tasks)[number] => Boolean(t));
+  const blockerCandidates = tasks.filter(
+    (t) => t.id !== task.id && !blockerIds.includes(t.id),
+  );
+  const isDone = (status: string) => status.toLowerCase() === "done";
+  const isBlocked =
+    !isDone(task.status) &&
+    blockerTasks.some((t) => !isDone(t.status));
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -457,6 +479,90 @@ export function TaskDetailPanel({ open, onClose, taskId }: Props) {
             placeholder="Add label and press Enter"
             className="h-7 text-xs"
           />
+        </div>
+
+        <Separator />
+
+        {/* Blockers */}
+        <div className="px-4 py-3 flex flex-col gap-1.5">
+          <SectionLabel>
+            Blocked by
+            {isBlocked && (
+              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-medium normal-case tracking-normal text-amber-500">
+                <Ban className="size-2.5" />
+                Blocked
+              </span>
+            )}
+          </SectionLabel>
+
+          {blockerTasks.length > 0 && (
+            <div className="flex flex-col gap-1 mb-1">
+              {blockerTasks.map((b) => {
+                const done = isDone(b.status);
+                return (
+                  <div
+                    key={b.id}
+                    className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-2 py-1"
+                  >
+                    <span
+                      className={cn(
+                        "size-1.5 shrink-0 rounded-full",
+                        done ? "bg-emerald-500" : "bg-amber-500",
+                      )}
+                      title={done ? "Resolved" : "Open"}
+                    />
+                    {b.number !== undefined && (
+                      <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                        #{b.number}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => openTaskDetail(b.id)}
+                      className={cn(
+                        "min-w-0 flex-1 truncate text-left text-xs hover:underline",
+                        done
+                          ? "text-muted-foreground line-through"
+                          : "text-foreground",
+                      )}
+                      title={b.title}
+                    >
+                      {b.title}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void removeBlocker(b.id)}
+                      className="shrink-0 text-muted-foreground hover:text-foreground"
+                      title="Remove blocker"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {blockerCandidates.length > 0 ? (
+            <MetaSelect
+              value=""
+              onChange={(v) => void addBlocker(v)}
+              placeholder="Add a blocking task…"
+              options={blockerCandidates.map((t) => ({
+                value: t.id,
+                label:
+                  t.number !== undefined
+                    ? `#${t.number} ${t.title}`
+                    : t.title,
+              }))}
+            />
+          ) : (
+            blockerTasks.length === 0 && (
+              <p className="text-[11px] text-muted-foreground/70">
+                No other tasks to depend on yet.
+              </p>
+            )
+          )}
         </div>
 
         <Separator />

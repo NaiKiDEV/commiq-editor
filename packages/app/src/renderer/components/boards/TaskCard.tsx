@@ -1,5 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Ban } from "lucide-react";
 import type {
   Board,
   Task,
@@ -107,6 +108,15 @@ export function TaskCardView({
         <span className="text-xs font-medium leading-snug flex-1 min-w-0 break-words">
           {task.title}
         </span>
+        {(task.blockedBy?.length ?? 0) > 0 && (
+          <span
+            className="shrink-0 inline-flex items-center gap-0.5 text-[9px] text-amber-500 mt-0.5"
+            title={`Depends on ${task.blockedBy!.length} task${task.blockedBy!.length === 1 ? "" : "s"}`}
+          >
+            <Ban className="size-3" />
+            {task.blockedBy!.length}
+          </span>
+        )}
         {task.number !== undefined && (
           <span className="shrink-0 text-[9px] font-mono text-muted-foreground/50 mt-0.5">
             #{task.number}

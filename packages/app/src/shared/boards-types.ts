@@ -14,8 +14,13 @@ export type SprintStatus = "planning" | "active" | "completed";
 
 export type CardDisplayDensity = "compact" | "normal" | "detailed";
 
-/** Which view the user is on inside a project: kanban, backlog, epic management, or sprint management. */
-export type ProjectViewTab = "board" | "backlog" | "epics" | "sprints";
+/** Which view the user is on inside a project: kanban, backlog, epic management, sprint management, or the blocker dependency map. */
+export type ProjectViewTab =
+  | "board"
+  | "backlog"
+  | "epics"
+  | "sprints"
+  | "blockers";
 
 /**
  * Config-as-data registry entry. Adding a new task type = appending one entry.
@@ -113,6 +118,12 @@ export type Task = {
   storyPoints?: number;
   dueDate?: string;
   comments?: TaskComment[];
+  /**
+   * IDs of other tasks (within the same project) that block this one — this
+   * task depends on them. Validated to exclude self-references and dependency
+   * cycles. Use the *_BLOCKER actions to mutate; never patch directly.
+   */
+  blockedBy?: string[];
   createdAt: string;
   updatedAt: string;
 };
@@ -270,6 +281,10 @@ export type BoardsAction =
   | { type: "ADD_COMMENT"; taskId: string; author: string; body: string }
   | { type: "DELETE_COMMENT"; taskId: string; commentId: string }
   | { type: "UPDATE_COMMENT"; taskId: string; commentId: string; body: string }
+  // Blockers (task dependencies)
+  | { type: "SET_TASK_BLOCKERS"; taskId: string; blockerIds: string[] }
+  | { type: "ADD_TASK_BLOCKER"; taskId: string; blockerId: string }
+  | { type: "REMOVE_TASK_BLOCKER"; taskId: string; blockerId: string }
   // Sprints
   | {
       type: "CREATE_SPRINT";

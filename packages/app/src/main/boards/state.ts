@@ -219,6 +219,12 @@ export class BoardsStateManager extends EventEmitter {
           action.commentId,
           action.body,
         );
+      case "SET_TASK_BLOCKERS":
+        return this.setBlockers(action.taskId, action.blockerIds);
+      case "ADD_TASK_BLOCKER":
+        return this.addBlocker(action.taskId, action.blockerId);
+      case "REMOVE_TASK_BLOCKER":
+        return this.removeBlocker(action.taskId, action.blockerId);
       case "CREATE_SPRINT":
         return this.createSprint(action);
       case "UPDATE_SPRINT":
@@ -503,6 +509,7 @@ export class BoardsStateManager extends EventEmitter {
       order: nextOrder,
       backlogOrder: nextBacklogOrder,
       labels: [],
+      blockedBy: [],
       sprintId: opts.sprintId,
       createdAt: now,
       updatedAt: now,
@@ -546,6 +553,23 @@ export class BoardsStateManager extends EventEmitter {
     if (board) board.updatedAt = new Date().toISOString();
     this.scheduleBoardSave(boardId);
     this.emit("tasks-changed", { boardId, tasks });
+
+    // Strip the deleted task from any blocker lists referencing it, across all
+    // boards in the project, so the dependency graph never points at a ghost.
+    for (const [otherBoardId, list] of bucket.tasks) {
+      let mutated = false;
+      for (const t of list) {
+        if (t.blockedBy?.includes(taskId)) {
+          t.blockedBy = t.blockedBy.filter((id) => id !== taskId);
+          t.updatedAt = new Date().toISOString();
+          mutated = true;
+        }
+      }
+      if (mutated) {
+        this.scheduleBoardSave(otherBoardId);
+        this.emit("tasks-changed", { boardId: otherBoardId, tasks: list });
+      }
+    }
     return true;
   }
 
@@ -682,6 +706,82 @@ export class BoardsStateManager extends EventEmitter {
     const tasks = bucket.tasks.get(boardId) ?? [];
     this.emit("tasks-changed", { boardId, tasks });
     return true;
+  }
+
+  // ─── Blockers (task dependencies) ────────────────────────────────────────────
+
+  /**
+   * Replace a task's blocker list. Blocker ids are sanitised: self-references,
+   * duplicates, ids outside the task's project, and any that would introduce a
+   * dependency cycle are dropped silently. Returns the updated task.
+   */
+  private setBlockers(taskId: string, blockerIds: string[]): Task | null {
+    const located = this.locateTask(taskId);
+    if (!located) return null;
+    const { bucket, boardId, task } = located;
+
+    const projectTaskIds = new Set<string>();
+    for (const list of bucket.tasks.values()) {
+      for (const t of list) projectTaskIds.add(t.id);
+    }
+
+    const sanitised: string[] = [];
+    for (const id of blockerIds) {
+      if (id === taskId) continue; // no self-block
+      if (!projectTaskIds.has(id)) continue; // must be a task in this project
+      if (sanitised.includes(id)) continue; // dedupe
+      // Skip if depending on `id` would close a cycle (id already depends on taskId).
+      if (this.dependsOn(bucket, id, taskId)) continue;
+      sanitised.push(id);
+    }
+
+    this.pushUndo(boardId);
+    task.blockedBy = sanitised;
+    task.updatedAt = new Date().toISOString();
+    this.scheduleBoardSave(boardId);
+    this.emit("tasks-changed", { boardId, tasks: bucket.tasks.get(boardId) ?? [] });
+    return task;
+  }
+
+  private addBlocker(taskId: string, blockerId: string): Task | null {
+    const task = this.getTask(taskId);
+    if (!task) return null;
+    return this.setBlockers(taskId, [...(task.blockedBy ?? []), blockerId]);
+  }
+
+  private removeBlocker(taskId: string, blockerId: string): Task | null {
+    const task = this.getTask(taskId);
+    if (!task) return null;
+    return this.setBlockers(
+      taskId,
+      (task.blockedBy ?? []).filter((id) => id !== blockerId),
+    );
+  }
+
+  /**
+   * True if `fromId` (transitively) depends on `targetId` by following
+   * `blockedBy` edges within the project. Used to reject cycle-forming edges.
+   */
+  private dependsOn(
+    bucket: ProjectBucket,
+    fromId: string,
+    targetId: string,
+  ): boolean {
+    const byId = new Map<string, Task>();
+    for (const list of bucket.tasks.values()) {
+      for (const t of list) byId.set(t.id, t);
+    }
+    const seen = new Set<string>();
+    const stack = [...(byId.get(fromId)?.blockedBy ?? [])];
+    while (stack.length) {
+      const id = stack.pop()!;
+      if (id === targetId) return true;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const next = byId.get(id)?.blockedBy;
+      if (next) stack.push(...next);
+    }
+    return false;
   }
 
   // ─── Sprints ───────────────────────────────────────────────────────────────
@@ -1100,6 +1200,7 @@ export class BoardsStateManager extends EventEmitter {
               ...t,
               backlogOrder: t.backlogOrder ?? i,
               labels: t.labels ?? [],
+              blockedBy: t.blockedBy ?? [],
             }));
             bucket.tasks.set(data.board.id, tasks);
           } catch {
