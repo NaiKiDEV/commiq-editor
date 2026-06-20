@@ -1,8 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
-import { Ban, ChevronDown, MessageSquare, Pencil, Trash2, X } from "lucide-react";
+import {
+  Ban,
+  ChevronDown,
+  MessageSquare,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Separator } from "../ui/separator";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "../ui/command";
 import { cn } from "@/lib/utils";
 import type { TaskComment, TaskPriority, TaskType } from "../../../shared/boards-types";
 import { useBoardsContext } from "./BoardsContext";
@@ -45,6 +62,7 @@ export function TaskDetailPanel({ open, onClose, taskId }: Props) {
   );
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentBody, setEditingCommentBody] = useState("");
+  const [blockerPickerOpen, setBlockerPickerOpen] = useState(false);
 
   useEffect(() => {
     if (!task) return;
@@ -544,18 +562,47 @@ export function TaskDetailPanel({ open, onClose, taskId }: Props) {
           )}
 
           {blockerCandidates.length > 0 ? (
-            <MetaSelect
-              value=""
-              onChange={(v) => void addBlocker(v)}
-              placeholder="Add a blocking task…"
-              options={blockerCandidates.map((t) => ({
-                value: t.id,
-                label:
-                  t.number !== undefined
-                    ? `#${t.number} ${t.title}`
-                    : t.title,
-              }))}
-            />
+            <Popover open={blockerPickerOpen} onOpenChange={setBlockerPickerOpen}>
+              <PopoverTrigger
+                render={
+                  <button
+                    type="button"
+                    className="flex h-7 w-full items-center gap-1 rounded-md border border-border bg-background px-2 text-xs text-muted-foreground outline-none hover:text-foreground focus:ring-1 focus:ring-ring"
+                  />
+                }
+              >
+                <Plus className="size-3 shrink-0" />
+                <span className="flex-1 text-left">Add a blocking task…</span>
+                <ChevronDown className="size-3 shrink-0" />
+              </PopoverTrigger>
+              <PopoverContent align="start" sideOffset={4} className="w-[320px] p-0">
+                <Command>
+                  <CommandInput placeholder="Search tasks by number or title…" />
+                  <CommandList>
+                    <CommandEmpty>No matching tasks.</CommandEmpty>
+                    <CommandGroup>
+                      {blockerCandidates.map((t) => (
+                        <CommandItem
+                          key={t.id}
+                          value={`${t.number !== undefined ? `#${t.number} ` : ""}${t.title}`}
+                          onSelect={() => {
+                            void addBlocker(t.id);
+                            setBlockerPickerOpen(false);
+                          }}
+                        >
+                          {t.number !== undefined && (
+                            <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                              #{t.number}
+                            </span>
+                          )}
+                          <span className="truncate">{t.title}</span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           ) : (
             blockerTasks.length === 0 && (
               <p className="text-[11px] text-muted-foreground/70">
