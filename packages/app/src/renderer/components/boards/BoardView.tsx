@@ -4,8 +4,10 @@ import {
   DragOverlay,
   PointerSensor,
   closestCorners,
+  pointerWithin,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
@@ -106,6 +108,20 @@ export function BoardView() {
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
+  // Resolve drop targets from the real pointer position rather than the dragged
+  // card's translated rect. With a DragOverlay the source card stays put, so
+  // closestCorners would compute collisions from a card-sized box offset from
+  // the cursor — making drop zones (especially empty columns) feel misaligned
+  // with what's on screen. pointerWithin tracks the cursor; we fall back to
+  // closestCorners only when the cursor is in a gutter between columns.
+  const collisionDetection = useMemo<CollisionDetection>(
+    () => (args) => {
+      const pointerHits = pointerWithin(args);
+      return pointerHits.length > 0 ? pointerHits : closestCorners(args);
+    },
+    [],
+  );
+
   const createBoard = async () => {
     if (!activeProjectId) return;
     const name = newBoardName.trim();
@@ -177,25 +193,35 @@ export function BoardView() {
       targetColumnId = overTask.columnId;
     }
 
-    // Compute fractional order in the target column.
-    const targetColTasks = tasksInColumn(boardTasks, targetColumnId).filter(
-      (t) => t.id !== activeId,
-    );
+    // Compute the fractional order in the target column. We work against the
+    // full sorted column (including the active task) so we can tell which side
+    // of the over-task the drop lands on, matching the sortable preview.
+    const colTasks = tasksInColumn(boardTasks, targetColumnId);
+    const activeIdx = colTasks.findIndex((t) => t.id === activeId);
+
+    const appendToEnd = (): number => {
+      const others = colTasks.filter((t) => t.id !== activeId);
+      const last = others[others.length - 1]?.order ?? null;
+      return fractionalOrder(last, null);
+    };
 
     let newOrder: number;
-    if (overId.startsWith("column:") || targetColTasks.length === 0) {
-      const last = targetColTasks[targetColTasks.length - 1]?.order ?? null;
-      newOrder = fractionalOrder(last, null);
+    if (overId.startsWith("column:")) {
+      newOrder = appendToEnd();
     } else {
-      const overIdx = targetColTasks.findIndex((t) => t.id === overId);
+      const overIdx = colTasks.findIndex((t) => t.id === overId);
       if (overIdx === -1) {
-        const last = targetColTasks[targetColTasks.length - 1]?.order ?? null;
-        newOrder = fractionalOrder(last, null);
+        newOrder = appendToEnd();
+      } else if (activeIdx !== -1 && activeIdx < overIdx) {
+        // Same column, moving down → insert *below* the over-task. The neighbor
+        // after the over-task is never the active task (it sits above overIdx).
+        const next = colTasks[overIdx + 1]?.order ?? null;
+        newOrder = fractionalOrder(colTasks[overIdx].order, next);
       } else {
-        // Drop above the over-task by default (mirrors typical kanban UX).
-        const prev = targetColTasks[overIdx - 1]?.order ?? null;
-        const next = targetColTasks[overIdx].order;
-        newOrder = fractionalOrder(prev, next);
+        // Moving up, or arriving from another column → insert *above* the
+        // over-task. The neighbor before it is never the active task here.
+        const prev = colTasks[overIdx - 1]?.order ?? null;
+        newOrder = fractionalOrder(prev, colTasks[overIdx].order);
       }
     }
 
@@ -475,7 +501,7 @@ export function BoardView() {
       ) : (
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={collisionDetection}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           onDragCancel={() => setActiveTask(null)}
