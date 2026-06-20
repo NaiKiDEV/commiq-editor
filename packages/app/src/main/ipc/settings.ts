@@ -20,6 +20,9 @@ type AppSettings = {
   mockServer: {
     mcpPort: number;
   };
+  boards: {
+    mcpPort: number;
+  };
   editor: {
     fontFamily: string;
     fontSize: number;
@@ -58,6 +61,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   mockServer: {
     mcpPort: 3200,
   },
+  boards: {
+    mcpPort: 3300,
+  },
   editor: {
     fontFamily: "'CommitMono NF', 'CommitMono NF Mono', ui-monospace, Menlo, monospace",
     fontSize: 13,
@@ -93,6 +99,7 @@ export function registerSettingsIpc(): void {
         browser: { ...DEFAULT_SETTINGS.browser, ...(parsed.browser ?? {}) },
         whiteboard: { ...DEFAULT_SETTINGS.whiteboard, ...(parsed.whiteboard ?? {}) },
         mockServer: { ...DEFAULT_SETTINGS.mockServer, ...(parsed.mockServer ?? {}) },
+        boards: { ...DEFAULT_SETTINGS.boards, ...(parsed.boards ?? {}) },
         editor: { ...DEFAULT_SETTINGS.editor, ...(parsed.editor ?? {}) },
         monitors: { ...DEFAULT_SETTINGS.monitors, ...(parsed.monitors ?? {}) },
         notes: { ...DEFAULT_SETTINGS.notes, ...(parsed.notes ?? {}) },

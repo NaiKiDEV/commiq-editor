@@ -9,6 +9,11 @@ import type {
   TaskTypeConfig,
 } from "../../shared/boards-types";
 import { getBoardsState } from "../boards/state";
+import {
+  startBoardsMcp,
+  stopBoardsMcp,
+  getBoardsMcpStatus,
+} from "../boards/mcp-server";
 
 export function registerBoardsIpc(): void {
   const state = getBoardsState();
@@ -59,9 +64,20 @@ export function registerBoardsIpc(): void {
   );
 
   // ─── Mutations (single dispatch channel) ─────────────────────────────────
-  ipcMain.handle("boards:dispatch", (_e, action: BoardsAction) => {
-    state.dispatch(action);
-  });
+  ipcMain.handle("boards:dispatch", (_e, action: BoardsAction) =>
+    state.dispatch(action),
+  );
+
+  // ─── MCP server lifecycle ────────────────────────────────────────────────
+  ipcMain.handle("boards:start-mcp-server", (_e, port: number) =>
+    startBoardsMcp(port),
+  );
+  ipcMain.handle("boards:stop-mcp-server", () => stopBoardsMcp());
+  ipcMain.handle("boards:mcp-status", () => getBoardsMcpStatus());
+}
+
+export function stopBoardsMcpServer(): void {
+  stopBoardsMcp().catch(() => {});
 }
 
 export function registerBoardsPush(mainWindow: BrowserWindow): void {

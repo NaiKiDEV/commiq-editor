@@ -36,6 +36,9 @@ export type AppSettings = {
   mockServer: {
     mcpPort: number;
   };
+  boards: {
+    mcpPort: number;
+  };
   editor: {
     fontFamily: string;
     fontSize: number;
@@ -74,6 +77,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   mockServer: {
     mcpPort: 3200,
+  },
+  boards: {
+    mcpPort: 3300,
   },
   editor: {
     fontFamily:

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ChevronsUpDown, Plus, Settings, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { ChevronsUpDown, Plus, Radio, Settings, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -9,6 +9,48 @@ import {
 } from "../ui/popover";
 import { useBoardsContext } from "./BoardsContext";
 import { ProjectSettingsModal } from "./ProjectSettingsModal";
+import { useSettings } from "../../contexts/settings";
+import { cn } from "@/lib/utils";
+
+function McpToggle() {
+  const { settings } = useSettings();
+  const [running, setRunning] = useState(false);
+
+  useEffect(() => {
+    window.electronAPI.boards
+      .getMcpStatus()
+      .then((s) => setRunning(s.running))
+      .catch(() => {});
+  }, []);
+
+  const toggle = useCallback(async () => {
+    if (running) {
+      await window.electronAPI.boards.stopMcpServer();
+      setRunning(false);
+    } else {
+      const port = settings.boards?.mcpPort ?? 3300;
+      const result = await window.electronAPI.boards.startMcpServer(port);
+      if (result.success) setRunning(true);
+    }
+  }, [running, settings]);
+
+  return (
+    <button
+      type="button"
+      onClick={() => void toggle()}
+      className={cn(
+        "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs border transition-colors",
+        running
+          ? "text-green-500 border-green-500/40 bg-green-500/10"
+          : "text-muted-foreground border-border hover:text-foreground hover:bg-muted/50",
+      )}
+      title={running ? "Stop MCP server" : "Start MCP server"}
+    >
+      <Radio className="size-3.5" />
+      {running ? "MCP" : "MCP Off"}
+    </button>
+  );
+}
 
 export function ProjectHeader() {
   const {
@@ -171,6 +213,10 @@ export function ProjectHeader() {
             )}
           </>
         )}
+
+        <div className="ml-auto">
+          <McpToggle />
+        </div>
       </header>
 
       {activeProject && (

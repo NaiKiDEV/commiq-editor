@@ -10,6 +10,7 @@ import {
   Gauge,
   NotebookPen,
   Network,
+  SquareKanban,
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/renderer/components/ui/dialog";
 import {
@@ -35,6 +36,7 @@ const tabs = [
   { id: "notes", label: "Notes", icon: NotebookPen },
   { id: "whiteboard", label: "Whiteboard", icon: LayoutDashboard },
   { id: "mockserver", label: "Mock Server", icon: Server },
+  { id: "boards", label: "Boards", icon: SquareKanban },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -489,6 +491,30 @@ function MockServerTab() {
   );
 }
 
+function BoardsTab() {
+  const { settings, updateSettings } = useSettings();
+
+  return (
+    <div>
+      <SettingRow
+        label="MCP Server Port"
+        hint="Port for the Boards MCP endpoint (default: 3300). Lets an AI agent read and manage projects, boards, tasks, sprints and epics. Restart the MCP server after changing."
+      >
+        <input
+          type="number"
+          min={1024}
+          max={65535}
+          value={settings.boards.mcpPort}
+          onChange={(e) =>
+            updateSettings({ boards: { mcpPort: Number(e.target.value) } })
+          }
+          className={numberInputClass}
+        />
+      </SettingRow>
+    </div>
+  );
+}
+
 function EditorTab() {
   const { settings, updateSettings } = useSettings();
   const { editor } = settings;
@@ -709,6 +735,7 @@ export function SettingsModal({
           {activeTab === "notes" && <NotesTab />}
           {activeTab === "whiteboard" && <WhiteboardTab />}
           {activeTab === "mockserver" && <MockServerTab />}
+          {activeTab === "boards" && <BoardsTab />}
         </div>
       </DialogContent>
     </Dialog>

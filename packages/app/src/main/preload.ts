@@ -1638,7 +1638,21 @@ const electronAPI = {
 
     // Mutations
     dispatch: (action: BoardsAction) =>
-      ipcRenderer.invoke("boards:dispatch", action) as Promise<void>,
+      ipcRenderer.invoke("boards:dispatch", action) as Promise<unknown>,
+
+    // MCP server
+    startMcpServer: (port: number) =>
+      ipcRenderer.invoke("boards:start-mcp-server", port) as Promise<{
+        success: boolean;
+        error?: string;
+      }>,
+    stopMcpServer: () =>
+      ipcRenderer.invoke("boards:stop-mcp-server") as Promise<void>,
+    getMcpStatus: () =>
+      ipcRenderer.invoke("boards:mcp-status") as Promise<{
+        running: boolean;
+        port: number | null;
+      }>,
 
     // Undo / Redo
     undo: (boardId: string) =>

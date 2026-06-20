@@ -160,83 +160,82 @@ export class BoardsStateManager extends EventEmitter {
 
   // ─── Dispatch ──────────────────────────────────────────────────────────────
 
-  dispatch(action: BoardsAction): void {
+  /**
+   * Apply a mutation. Returns the affected entity (or boolean for deletes) so
+   * callers that need the result — notably the MCP server, which chains
+   * operations by id — can use it. The renderer ignores the return value.
+   */
+  dispatch(action: BoardsAction): unknown {
     switch (action.type) {
       case "CREATE_PROJECT":
-        this.createProject(action);
-        return;
+        return this.createProject(action);
       case "UPDATE_PROJECT":
-        this.updateProject(action.projectId, action.patch);
-        return;
+        return this.updateProject(action.projectId, action.patch);
       case "DELETE_PROJECT":
-        this.deleteProject(action.projectId);
-        return;
+        return this.deleteProject(action.projectId);
       case "CREATE_BOARD":
-        this.createBoard(action.projectId, action.name);
-        return;
+        return this.createBoard(action.projectId, action.name);
       case "UPDATE_BOARD":
-        this.updateBoard(action.boardId, action.patch);
-        return;
+        return this.updateBoard(action.boardId, action.patch);
       case "DELETE_BOARD":
-        this.deleteBoard(action.boardId);
-        return;
+        return this.deleteBoard(action.boardId);
       case "CREATE_COLUMN":
-        this.createColumn(action);
-        return;
+        return this.createColumn(action);
       case "UPDATE_COLUMN":
-        this.updateColumn(action.boardId, action.columnId, action.patch);
-        return;
+        return this.updateColumn(action.boardId, action.columnId, action.patch);
       case "DELETE_COLUMN":
-        this.deleteColumn(action.boardId, action.columnId);
-        return;
+        return this.deleteColumn(action.boardId, action.columnId);
       case "REORDER_COLUMN":
-        this.reorderColumn(action.boardId, action.columnId, action.newOrder);
-        return;
+        return this.reorderColumn(
+          action.boardId,
+          action.columnId,
+          action.newOrder,
+        );
       case "CREATE_TASK":
-        this.createTask(action);
-        return;
+        return this.createTask(action);
       case "UPDATE_TASK":
-        this.updateTask(action.taskId, action.patch);
-        return;
+        return this.updateTask(action.taskId, action.patch);
       case "DELETE_TASK":
-        this.deleteTask(action.taskId);
-        return;
+        return this.deleteTask(action.taskId);
       case "MOVE_TASK":
-        this.moveTask(action.taskId, action.targetColumnId, action.newOrder);
-        return;
+        return this.moveTask(
+          action.taskId,
+          action.targetColumnId,
+          action.newOrder,
+        );
       case "MOVE_TASK_TO_BOARD":
-        this.moveTaskToBoard(action.taskId, action.targetBoardId, action.targetColumnId);
-        return;
+        return this.moveTaskToBoard(
+          action.taskId,
+          action.targetBoardId,
+          action.targetColumnId,
+        );
       case "ADD_COMMENT":
-        this.addComment(action.taskId, action.author, action.body);
-        return;
+        return this.addComment(action.taskId, action.author, action.body);
       case "DELETE_COMMENT":
-        this.deleteComment(action.taskId, action.commentId);
-        return;
+        return this.deleteComment(action.taskId, action.commentId);
       case "UPDATE_COMMENT":
-        this.updateComment(action.taskId, action.commentId, action.body);
-        return;
+        return this.updateComment(
+          action.taskId,
+          action.commentId,
+          action.body,
+        );
       case "CREATE_SPRINT":
-        this.createSprint(action);
-        return;
+        return this.createSprint(action);
       case "UPDATE_SPRINT":
-        this.updateSprint(action.sprintId, action.patch);
-        return;
+        return this.updateSprint(action.sprintId, action.patch);
       case "START_SPRINT":
-        this.startSprint(action.sprintId);
-        return;
+        return this.startSprint(action.sprintId);
       case "COMPLETE_SPRINT":
-        this.completeSprint(action.sprintId, action.unfinishedTasks ?? "keep");
-        return;
+        return this.completeSprint(
+          action.sprintId,
+          action.unfinishedTasks ?? "keep",
+        );
       case "CREATE_EPIC":
-        this.createEpic(action);
-        return;
+        return this.createEpic(action);
       case "UPDATE_EPIC":
-        this.updateEpic(action.epicId, action.patch);
-        return;
+        return this.updateEpic(action.epicId, action.patch);
       case "DELETE_EPIC":
-        this.deleteEpic(action.epicId);
-        return;
+        return this.deleteEpic(action.epicId);
     }
   }
 

@@ -35,7 +35,11 @@ import { registerAutoBattlerIpc } from "./ipc/auto-battler";
 import { getAutoBattlerState } from "./auto-battler/state";
 import { registerRepoTycoonIpc } from "./ipc/repo-tycoon";
 import { getRepoTycoonState } from "./repo-tycoon/state";
-import { registerBoardsIpc, registerBoardsPush } from "./ipc/boards";
+import {
+  registerBoardsIpc,
+  registerBoardsPush,
+  stopBoardsMcpServer,
+} from "./ipc/boards";
 import { getBoardsState } from "./boards/state";
 
 if (started) {
@@ -166,6 +170,7 @@ app.on("window-all-closed", () => {
   closeAllDbConnections();
   stopAllDockerStreams();
   stopAllMockServers();
+  stopBoardsMcpServer();
   if (process.platform !== "darwin") {
     app.quit();
   }
