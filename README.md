@@ -41,12 +41,13 @@ This launches the Electron app via `electron-forge`. The renderer hot-reloads on
 
 ## Connecting to Commiq MCP servers
 
-Commiq exposes two MCP servers that let LLMs interact with your workspace:
+Commiq exposes three MCP servers that let LLMs interact with your workspace:
 
 | Server          | Default Port | What it controls                                                                        |
 | --------------- | ------------ | --------------------------------------------------------------------------------------- |
 | **Whiteboard**  | `3100`       | Boards, stickies, frames, connections, text labels, color meanings                      |
 | **Mock Server** | `3200`       | Mock server configs, HTTP routes, response rules, WebSocket endpoints, server lifecycle |
+| **Boards**      | `3300`       | Projects, boards, columns, tasks, sprints, epics, blockers, comments                    |
 
 ### Prerequisites
 
@@ -56,13 +57,15 @@ Each MCP server has its own toggle button that must be enabled before an LLM can
 
 **Mock Server MCP** — click the **MCP** button in the header of the Mock Server panel (visible in both the server list and editor views). It turns green when running.
 
+**Boards MCP** — click the **MCP** button in the project header of the Boards panel. It turns green when running.
+
 The port for each server can be changed in **Settings**. Both servers stop when Commiq closes.
 
 ---
 
 ### VS Code Copilot
 
-A `.vscode/mcp.json` is already included in this repo with both servers:
+Create a `.vscode/mcp.json` in the repo root with all three servers (this file is not committed, so add it yourself):
 
 ```json
 {
@@ -74,6 +77,10 @@ A `.vscode/mcp.json` is already included in this repo with both servers:
     "commiq-mock-server": {
       "type": "http",
       "url": "http://127.0.0.1:3200/mcp"
+    },
+    "commiq-boards": {
+      "type": "http",
+      "url": "http://127.0.0.1:3300/mcp"
     }
   }
 }
@@ -91,9 +98,15 @@ A `.vscode/mcp.json` is already included in this repo with both servers:
 
    > Create a mock server called "Users API" on port 4000 with a GET /api/users route that returns a JSON array of users
 
+   Boards:
+
+   > Create a task "Fix auth bug" in the Backlog column of my board, then mark it as blocked by the "Set up auth provider" task
+
 **Whiteboard tools:** `list_boards`, `create_board`, `create_sticky`, `create_frame`, `connect`, `set_color_meaning`, `create_text`, and more.
 
 **Mock Server tools:** `list_configs`, `create_config`, `create_route`, `add_rule`, `create_ws_endpoint`, `start_server`, `stop_server`, `get_server_state`, and more.
+
+**Boards tools:** `list_projects`, `create_project`, `create_board`, `create_column`, `create_task`, `move_task`, `set_blockers`, `get_blocker_graph`, `create_sprint`, `start_sprint`, `create_epic`, `add_comment`, and more. Call `get_usage_guide` first for a full walkthrough.
 
 ---
 
@@ -104,9 +117,10 @@ Add both servers to Claude Code's MCP config (one-time setup):
 ```bash
 claude mcp add --transport http commiq-whiteboard http://127.0.0.1:3100/mcp --scope project
 claude mcp add --transport http commiq-mock-server http://127.0.0.1:3200/mcp --scope project
+claude mcp add --transport http commiq-boards http://127.0.0.1:3300/mcp --scope project
 ```
 
-Or use the `.claude/mcp.json` already included in this repo:
+Or create a `.claude/mcp.json` in the repo root yourself (this file is not committed) with the following contents:
 
 ```json
 {
@@ -118,6 +132,10 @@ Or use the `.claude/mcp.json` already included in this repo:
     "commiq-mock-server": {
       "type": "http",
       "url": "http://127.0.0.1:3200/mcp"
+    },
+    "commiq-boards": {
+      "type": "http",
+      "url": "http://127.0.0.1:3300/mcp"
     }
   }
 }
@@ -129,6 +147,6 @@ Or use the `.claude/mcp.json` already included in this repo:
 /mcp
 ```
 
-You should see `commiq-whiteboard` and `commiq-mock-server` listed as connected with their tools.
+You should see `commiq-whiteboard`, `commiq-mock-server`, and `commiq-boards` listed as connected with their tools.
 
 1. **Use it** — same capabilities as Copilot above.
