@@ -363,10 +363,6 @@ export function BlackjackPanel({ panelId: _panelId }: { panelId: string }) {
             value={playerValue}
             showValue={dealt}
             highlight
-            glow={
-              phase === "resolved" &&
-              (outcome === "win" || outcome === "blackjack")
-            }
           />
         </div>
 
@@ -558,8 +554,6 @@ interface SeatProps {
   value: ReturnType<typeof handValue>;
   showValue: boolean;
   highlight?: boolean;
-  /** Pulses a green glow behind the cards (used on a winning player hand). */
-  glow?: boolean;
 }
 
 function Seat({
@@ -569,7 +563,6 @@ function Seat({
   value,
   showValue,
   highlight,
-  glow,
 }: SeatProps) {
   return (
     <div className="flex flex-col items-center gap-2.5">
@@ -599,10 +592,7 @@ function Seat({
         )}
       </div>
       <div
-        className={cn(
-          "flex min-h-[116px] items-center justify-center gap-2 rounded-2xl px-3",
-          glow && "bj-seat-glow",
-        )}
+        className="flex min-h-[116px] items-center justify-center gap-2 px-3"
       >
         {cards.length === 0 ? (
           <span className="font-mono text-xs italic text-white/30">
@@ -643,12 +633,6 @@ const tableKeyframes = `
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 .bj-chip-in { animation: bj-chip-in 340ms cubic-bezier(0.2, 0.9, 0.25, 1) both; }
-
-@keyframes bj-seat-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-  50%      { box-shadow: 0 0 30px 4px rgba(16, 185, 129, 0.4); }
-}
-.bj-seat-glow { animation: bj-seat-glow 1.5s ease-in-out infinite; }
 
 @keyframes bj-result-pop {
   0%   { opacity: 0; transform: scale(0.82); }
