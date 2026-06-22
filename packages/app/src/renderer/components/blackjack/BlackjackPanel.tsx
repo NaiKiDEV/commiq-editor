@@ -328,12 +328,14 @@ export function BlackjackPanel({ panelId: _panelId }: { panelId: string }) {
 
         {/* The felt table */}
         <div
-          className="flex flex-1 flex-col justify-between gap-4 rounded-xl border border-emerald-900/40 p-5 shadow-inner"
+          className="flex flex-1 flex-col justify-between gap-2 rounded-xl border border-emerald-900/40 p-5 shadow-inner"
           style={{
             background:
               "radial-gradient(ellipse at 50% 25%, hsl(155 42% 17%), hsl(155 48% 10%))",
           }}
         >
+          <style>{tableKeyframes}</style>
+
           {/* Dealer */}
           <Seat
             label="Dealer"
@@ -343,10 +345,14 @@ export function BlackjackPanel({ panelId: _panelId }: { panelId: string }) {
             showValue={dealt}
           />
 
-          <div className="flex items-center justify-center">
-            <span className="rounded-full border border-white/10 bg-black/20 px-3 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">
-              Blackjack pays 3 to 2
-            </span>
+          <div className="flex items-center justify-center py-1">
+            {dealt ? (
+              <BetChip amount={bet} />
+            ) : (
+              <span className="rounded-full border border-white/10 bg-black/20 px-3 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">
+                Blackjack pays 3 to 2
+              </span>
+            )}
           </div>
 
           {/* Player */}
@@ -357,6 +363,10 @@ export function BlackjackPanel({ panelId: _panelId }: { panelId: string }) {
             value={playerValue}
             showValue={dealt}
             highlight
+            glow={
+              phase === "resolved" &&
+              (outcome === "win" || outcome === "blackjack")
+            }
           />
         </div>
 
@@ -364,8 +374,9 @@ export function BlackjackPanel({ panelId: _panelId }: { panelId: string }) {
         <div className="flex h-7 items-center justify-center">
           {phase === "resolved" && outcome && (
             <span
+              key={`${outcome}-${history.length}`}
               className={cn(
-                "flex items-center gap-2 text-sm font-semibold",
+                "bj-result-pop flex items-center gap-2 text-sm font-semibold",
                 outcome === "blackjack" || outcome === "win"
                   ? "text-emerald-400"
                   : outcome === "push"
@@ -547,11 +558,21 @@ interface SeatProps {
   value: ReturnType<typeof handValue>;
   showValue: boolean;
   highlight?: boolean;
+  /** Pulses a green glow behind the cards (used on a winning player hand). */
+  glow?: boolean;
 }
 
-function Seat({ label, cards, holeHidden, value, showValue, highlight }: SeatProps) {
+function Seat({
+  label,
+  cards,
+  holeHidden,
+  value,
+  showValue,
+  highlight,
+  glow,
+}: SeatProps) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col items-center gap-2.5">
       <div className="flex items-center gap-2">
         <span
           className={cn(
@@ -577,7 +598,12 @@ function Seat({ label, cards, holeHidden, value, showValue, highlight }: SeatPro
           </span>
         )}
       </div>
-      <div className="flex min-h-[84px] items-center gap-1.5">
+      <div
+        className={cn(
+          "flex min-h-[116px] items-center justify-center gap-2 rounded-2xl px-3",
+          glow && "bj-seat-glow",
+        )}
+      >
         {cards.length === 0 ? (
           <span className="font-mono text-xs italic text-white/30">
             {label === "You" ? "Deal to start" : "—"}
@@ -596,3 +622,38 @@ function Seat({ label, cards, holeHidden, value, showValue, highlight }: SeatPro
     </div>
   );
 }
+
+/** A casino chip on the table showing the wager riding on the current hand. */
+function BetChip({ amount }: { amount: number }) {
+  return (
+    <div className="bj-chip-in flex items-center gap-2">
+      <div className="flex size-11 items-center justify-center rounded-full border-[3px] border-dashed border-white/50 bg-gradient-to-b from-amber-400 to-amber-600 shadow-[0_4px_10px_rgba(0,0,0,0.45)]">
+        <Coins className="size-5 text-amber-950/80" />
+      </div>
+      <span className="font-mono text-xs font-bold tabular-nums text-amber-200">
+        {formatMoney(amount)}
+      </span>
+    </div>
+  );
+}
+
+const tableKeyframes = `
+@keyframes bj-chip-in {
+  0%   { opacity: 0; transform: translateY(-12px) scale(0.55); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.bj-chip-in { animation: bj-chip-in 340ms cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+
+@keyframes bj-seat-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  50%      { box-shadow: 0 0 30px 4px rgba(16, 185, 129, 0.4); }
+}
+.bj-seat-glow { animation: bj-seat-glow 1.5s ease-in-out infinite; }
+
+@keyframes bj-result-pop {
+  0%   { opacity: 0; transform: scale(0.82); }
+  60%  { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.bj-result-pop { animation: bj-result-pop 320ms cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+`;
