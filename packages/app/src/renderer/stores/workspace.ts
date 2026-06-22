@@ -58,7 +58,8 @@ export type PanelType =
   | "roulette"
   | "coinflip"
   | "crash"
-  | "plinko";
+  | "plinko"
+  | "blackjack";
 
 export type Panel = {
   id: string;

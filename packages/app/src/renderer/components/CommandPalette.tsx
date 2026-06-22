@@ -52,6 +52,7 @@ import {
   CircleDollarSign,
   Rocket,
   CircleDot,
+  Spade,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -88,6 +89,11 @@ import {
   isPlinkoUnlocked,
   unlockPlinko,
 } from "./plinko/storage";
+import {
+  BLACKJACK_UNLOCK_CODE,
+  isBlackjackUnlocked,
+  unlockBlackjack,
+} from "./blackjack/storage";
 
 export type CommandPaletteHandle = {
   openWithSearch: (search: string) => void;
@@ -132,6 +138,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "coinflip") return <CircleDollarSign />;
   if (type === "crash") return <Rocket />;
   if (type === "plinko") return <CircleDot />;
+  if (type === "blackjack") return <Spade />;
   return <NotepadText />;
 }
 
@@ -147,6 +154,8 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
     );
     const [crashUnlocked, setCrashUnlocked] = useState(isCrashUnlocked);
     const [plinkoUnlocked, setPlinkoUnlocked] = useState(isPlinkoUnlocked);
+    const [blackjackUnlocked, setBlackjackUnlocked] =
+      useState(isBlackjackUnlocked);
     const panels = usePanels();
     const tabs = useTabs();
     const workspaces = useWorkspaces();
@@ -236,6 +245,16 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
         setSearch("");
       }
     }, [search, plinkoUnlocked]);
+
+    // Secret unlock: the blackjack tab uses its own code.
+    useEffect(() => {
+      if (blackjackUnlocked) return;
+      if (search.trim().toLowerCase() === BLACKJACK_UNLOCK_CODE) {
+        unlockBlackjack();
+        setBlackjackUnlocked(true);
+        setSearch("");
+      }
+    }, [search, blackjackUnlocked]);
 
     const handleOpenChange = useCallback((nextOpen: boolean) => {
       setOpen(nextOpen);
@@ -535,7 +554,8 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
           {(rouletteUnlocked ||
             coinflipUnlocked ||
             crashUnlocked ||
-            plinkoUnlocked) && (
+            plinkoUnlocked ||
+            blackjackUnlocked) && (
             <CommandGroup heading="🎰 Secret">
               {rouletteUnlocked && (
                 <CommandItem
@@ -571,6 +591,16 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
                 >
                   <CircleDot />
                   <span>New Plinko Tab</span>
+                </CommandItem>
+              )}
+              {blackjackUnlocked && (
+                <CommandItem
+                  onSelect={() =>
+                    runAction(() => createTab("blackjack", "Blackjack"))
+                  }
+                >
+                  <Spade />
+                  <span>New Blackjack Tab</span>
                 </CommandItem>
               )}
             </CommandGroup>

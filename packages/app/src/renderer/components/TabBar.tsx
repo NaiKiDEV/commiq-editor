@@ -43,6 +43,7 @@ import {
   CircleDollarSign,
   Rocket,
   CircleDot,
+  Spade,
 } from "lucide-react";
 import {
   useTabs,
@@ -152,6 +153,8 @@ function TabIcon({ type }: { type: PanelType }) {
       return <Rocket className="size-3" />;
     case "plinko":
       return <CircleDot className="size-3" />;
+    case "blackjack":
+      return <Spade className="size-3" />;
     default:
       return <TerminalSquare className="size-3" />;
   }
