@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Coins, RotateCcw, Sparkles, Swords } from "lucide-react";
+import { Coins, RotateCcw, Sparkles, Swords, History } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
 import { Coin } from "./Coin";
@@ -21,6 +21,9 @@ import {
   MONEY_CHEAT_AMOUNT,
   ROULETTE_MONEY_CODE,
 } from "../roulette/storage";
+import { useSharedBalance } from "../casino/balance";
+import { useBetHistory, useHistoryOpen } from "../casino/betHistoryStore";
+import { BetHistory } from "../casino/BetHistory";
 import {
   randomBettorName,
   avatarColor,
@@ -56,14 +59,13 @@ function rollOpponentStake(yourStake: number): number {
 }
 
 export function CoinflipPanel({ panelId: _panelId }: { panelId: string }) {
-  const [balance, setBalance] = usePersistentState<number>(
-    "commiq.coinflip.balance",
-    STARTING_BALANCE,
-  );
+  const [balance, setBalance] = useSharedBalance();
   const [history, setHistory] = usePersistentState<CoinSide[]>(
     "commiq.coinflip.history",
     [],
   );
+  const [betLog, recordBet, clearBetLog] = useBetHistory("commiq.coinflip.betlog");
+  const [historyOpen, toggleHistory] = useHistoryOpen();
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [chosenSide, setChosenSide] = useState<CoinSide>("green");
@@ -107,8 +109,15 @@ export function CoinflipPanel({ panelId: _panelId }: { panelId: string }) {
       if (payout > 0) setBalance((b) => b + payout);
       setLastResult({ winner: win, youWon, payout, yourStake });
       setHistory((h) => [win, ...h].slice(0, 20));
+      if (yourStake > 0) {
+        recordBet({
+          bet: yourStake,
+          net: payout - yourStake,
+          outcome: `${SIDE_LABEL[win]} wins`,
+        });
+      }
     },
-    [setBalance, setHistory],
+    [setBalance, setHistory, recordBet],
   );
 
   // Round loop driven by phase transitions.
@@ -196,7 +205,8 @@ export function CoinflipPanel({ panelId: _panelId }: { panelId: string }) {
     if (!window.confirm("Reset balance and history?")) return;
     setBalance(STARTING_BALANCE);
     setHistory([]);
-  }, [setBalance, setHistory]);
+    clearBetLog();
+  }, [setBalance, setHistory, clearBetLog]);
 
   const phaseLabel =
     phase === "idle"
@@ -210,11 +220,12 @@ export function CoinflipPanel({ panelId: _panelId }: { panelId: string }) {
           : "Round over";
 
   return (
-    <div className="flex h-full flex-col gap-3 overflow-y-auto bg-background p-4 text-sm text-foreground">
+    <div className="flex h-full bg-background text-sm text-foreground">
+      <div className="flex h-full min-w-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-col">
-          <h1 className="bg-linear-to-br from-emerald-300 via-zinc-300 to-red-400 bg-clip-text text-2xl font-bold leading-tight tracking-tight text-transparent">
+          <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground">
             Coinflip
           </h1>
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60">
@@ -231,6 +242,16 @@ export function CoinflipPanel({ panelId: _panelId }: { panelId: string }) {
               {formatMoney(balance)}
             </span>
           </div>
+          {!historyOpen && (
+            <Button
+              variant="outline"
+              size="icon-sm"
+              onClick={toggleHistory}
+              title="Show bet history"
+            >
+              <History className="size-3.5" />
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -471,6 +492,15 @@ export function CoinflipPanel({ panelId: _panelId }: { panelId: string }) {
           )}
         </div>
       </div>
+      </div>
+
+      {historyOpen && (
+        <BetHistory
+          entries={betLog}
+          onClear={clearBetLog}
+          onClose={toggleHistory}
+        />
+      )}
     </div>
   );
 }

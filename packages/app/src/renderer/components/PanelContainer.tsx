@@ -41,6 +41,7 @@ import { BoardsPanel } from "./BoardsPanel";
 import { RoulettePanel } from "./roulette/RoulettePanel";
 import { CoinflipPanel } from "./coinflip/CoinflipPanel";
 import { CrashPanel } from "./crash/CrashPanel";
+import { PlinkoPanel } from "./plinko/PlinkoPanel";
 import { getVisiblePanelIds } from "../lib/layout";
 import type { Panel } from "../stores/workspace";
 
@@ -118,6 +119,7 @@ function PanelContent({
       {panel.type === "roulette" && <RoulettePanel panelId={panel.id} />}
       {panel.type === "coinflip" && <CoinflipPanel panelId={panel.id} />}
       {panel.type === "crash" && <CrashPanel panelId={panel.id} />}
+      {panel.type === "plinko" && <PlinkoPanel panelId={panel.id} />}
     </div>
   );
 }

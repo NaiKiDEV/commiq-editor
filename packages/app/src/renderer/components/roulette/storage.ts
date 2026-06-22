@@ -1,12 +1,17 @@
 import { useCallback, useState } from "react";
+import { MONEY_CODE } from "../casino/balance";
 
 /** Secret code typed into the command palette to reveal the hidden roulette tab. */
 export const ROULETTE_UNLOCK_CODE = "csgodouble";
-/** Separate code typed into the roulette panel to top up the balance. */
-export const ROULETTE_MONEY_CODE = "hesoiyam";
+/**
+ * Separate code typed into a game's cheat console to top up the balance.
+ * Re-exported from the shared casino store so every game uses one code.
+ */
+export const ROULETTE_MONEY_CODE = MONEY_CODE;
 
-export const STARTING_BALANCE = 1000;
-export const MONEY_CHEAT_AMOUNT = 100_000;
+// Balance constants now live in the shared casino store; re-export for the
+// existing panels that import them from here.
+export { STARTING_BALANCE, MONEY_CHEAT_AMOUNT } from "../casino/balance";
 
 const UNLOCK_KEY = "commiq.roulette.unlocked";
 

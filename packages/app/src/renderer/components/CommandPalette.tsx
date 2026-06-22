@@ -51,6 +51,7 @@ import {
   Dices,
   CircleDollarSign,
   Rocket,
+  CircleDot,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -82,6 +83,11 @@ import {
   isCrashUnlocked,
   unlockCrash,
 } from "./crash/storage";
+import {
+  PLINKO_UNLOCK_CODE,
+  isPlinkoUnlocked,
+  unlockPlinko,
+} from "./plinko/storage";
 
 export type CommandPaletteHandle = {
   openWithSearch: (search: string) => void;
@@ -125,6 +131,7 @@ function PanelIcon({ type }: { type: string }) {
   if (type === "roulette") return <Dices />;
   if (type === "coinflip") return <CircleDollarSign />;
   if (type === "crash") return <Rocket />;
+  if (type === "plinko") return <CircleDot />;
   return <NotepadText />;
 }
 
@@ -139,6 +146,7 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
       isCoinflipUnlocked,
     );
     const [crashUnlocked, setCrashUnlocked] = useState(isCrashUnlocked);
+    const [plinkoUnlocked, setPlinkoUnlocked] = useState(isPlinkoUnlocked);
     const panels = usePanels();
     const tabs = useTabs();
     const workspaces = useWorkspaces();
@@ -218,6 +226,16 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
         setSearch("");
       }
     }, [search, crashUnlocked]);
+
+    // Secret unlock: the plinko tab uses its own code.
+    useEffect(() => {
+      if (plinkoUnlocked) return;
+      if (search.trim().toLowerCase() === PLINKO_UNLOCK_CODE) {
+        unlockPlinko();
+        setPlinkoUnlocked(true);
+        setSearch("");
+      }
+    }, [search, plinkoUnlocked]);
 
     const handleOpenChange = useCallback((nextOpen: boolean) => {
       setOpen(nextOpen);
@@ -514,7 +532,10 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
           </CommandGroup>
 
           {/* Secret — each item only revealed after its unlock code is entered */}
-          {(rouletteUnlocked || coinflipUnlocked || crashUnlocked) && (
+          {(rouletteUnlocked ||
+            coinflipUnlocked ||
+            crashUnlocked ||
+            plinkoUnlocked) && (
             <CommandGroup heading="🎰 Secret">
               {rouletteUnlocked && (
                 <CommandItem
@@ -542,6 +563,14 @@ export const CommandPalette = forwardRef<CommandPaletteHandle>(
                 >
                   <Rocket />
                   <span>New Crash Tab</span>
+                </CommandItem>
+              )}
+              {plinkoUnlocked && (
+                <CommandItem
+                  onSelect={() => runAction(() => createTab("plinko", "Plinko"))}
+                >
+                  <CircleDot />
+                  <span>New Plinko Tab</span>
                 </CommandItem>
               )}
             </CommandGroup>

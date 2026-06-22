@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Coins, RotateCcw, Sparkles } from "lucide-react";
+import { Coins, RotateCcw, Sparkles, History } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
 import { Reel } from "./Reel";
@@ -21,6 +21,9 @@ import {
   MONEY_CHEAT_AMOUNT,
   ROULETTE_MONEY_CODE,
 } from "./storage";
+import { useSharedBalance } from "../casino/balance";
+import { useBetHistory, useHistoryOpen } from "../casino/betHistoryStore";
+import { BetHistory } from "../casino/BetHistory";
 import {
   type Bettor,
   type BettorBoard,
@@ -51,10 +54,7 @@ interface LastResult {
 }
 
 export function RoulettePanel({ panelId: _panelId }: { panelId: string }) {
-  const [balance, setBalance] = usePersistentState<number>(
-    "commiq.roulette.balance",
-    STARTING_BALANCE,
-  );
+  const [balance, setBalance] = useSharedBalance();
   const [history, setHistory] = usePersistentState<WheelSlot[]>(
     "commiq.roulette.history",
     [],
@@ -63,6 +63,8 @@ export function RoulettePanel({ panelId: _panelId }: { panelId: string }) {
     "commiq.roulette.betDuration",
     20000,
   );
+  const [betLog, recordBet, clearBetLog] = useBetHistory("commiq.roulette.betlog");
+  const [historyOpen, toggleHistory] = useHistoryOpen();
 
   const [phase, setPhase] = useState<Phase>("betting");
   const [roundSeq, setRoundSeq] = useState(0);
@@ -87,12 +89,20 @@ export function RoulettePanel({ panelId: _panelId }: { panelId: string }) {
     (winIndex: number) => {
       const slot = WHEEL[winIndex];
       const staked = betsRef.current;
+      const total = staked.red + staked.black + staked.green;
       const payout = staked[slot.color] * MULTIPLIER[slot.color];
       if (payout > 0) setBalance((b) => b + payout);
       setLastResult({ slot, staked: { ...staked }, payout });
       setHistory((h) => [slot, ...h].slice(0, 18));
+      if (total > 0) {
+        recordBet({
+          bet: total,
+          net: payout - total,
+          outcome: `${slot.n} ${slot.color}`,
+        });
+      }
     },
-    [setBalance, setHistory],
+    [setBalance, setHistory, recordBet],
   );
 
   // Round loop: betting -> rolling -> result -> betting.
@@ -201,7 +211,8 @@ export function RoulettePanel({ panelId: _panelId }: { panelId: string }) {
     setHistory([]);
     setBets(EMPTY_BETS);
     setLastResult(null);
-  }, [setBalance, setHistory]);
+    clearBetLog();
+  }, [setBalance, setHistory, clearBetLog]);
 
   const phaseLabel =
     phase === "betting"
@@ -211,11 +222,12 @@ export function RoulettePanel({ panelId: _panelId }: { panelId: string }) {
         : "Round over";
 
   return (
-    <div className="flex h-full flex-col gap-3 overflow-y-auto bg-background p-4 text-sm text-foreground">
+    <div className="flex h-full bg-background text-sm text-foreground">
+      <div className="flex h-full min-w-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-col">
-          <h1 className="bg-linear-to-br from-emerald-300 via-sky-400 to-fuchsia-500 bg-clip-text text-2xl font-bold leading-tight tracking-tight text-transparent">
+          <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground">
             Roulette
           </h1>
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60">
@@ -232,6 +244,16 @@ export function RoulettePanel({ panelId: _panelId }: { panelId: string }) {
               {formatMoney(balance)}
             </span>
           </div>
+          {!historyOpen && (
+            <Button
+              variant="outline"
+              size="icon-sm"
+              onClick={toggleHistory}
+              title="Show bet history"
+            >
+              <History className="size-3.5" />
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -498,6 +520,15 @@ export function RoulettePanel({ panelId: _panelId }: { panelId: string }) {
           )}
         </div>
       </div>
+      </div>
+
+      {historyOpen && (
+        <BetHistory
+          entries={betLog}
+          onClear={clearBetLog}
+          onClose={toggleHistory}
+        />
+      )}
     </div>
   );
 }

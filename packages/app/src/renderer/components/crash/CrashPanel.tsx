@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Coins, RotateCcw, Rocket, Sparkles, TrendingUp, XCircle } from "lucide-react";
+import { Coins, RotateCcw, Rocket, Sparkles, TrendingUp, XCircle, History } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
 import { CrashGraph } from "./CrashGraph";
@@ -19,6 +19,9 @@ import {
   MONEY_CHEAT_AMOUNT,
   ROULETTE_MONEY_CODE,
 } from "../roulette/storage";
+import { useSharedBalance } from "../casino/balance";
+import { useBetHistory, useHistoryOpen } from "../casino/betHistoryStore";
+import { BetHistory } from "../casino/BetHistory";
 import { avatarColor, bettorInitial } from "../roulette/bettors";
 
 /** How long bets stay open before the rocket launches. */
@@ -33,14 +36,13 @@ interface ActiveBet {
 }
 
 export function CrashPanel({ panelId: _panelId }: { panelId: string }) {
-  const [balance, setBalance] = usePersistentState<number>(
-    "commiq.crash.balance",
-    STARTING_BALANCE,
-  );
+  const [balance, setBalance] = useSharedBalance();
   const [history, setHistory] = usePersistentState<number[]>(
     "commiq.crash.history",
     [],
   );
+  const [betLog, recordBet, clearBetLog] = useBetHistory("commiq.crash.betlog");
+  const [historyOpen, toggleHistory] = useHistoryOpen();
 
   const [phase, setPhase] = useState<CrashPhase>("betting");
   const [multiplier, setMultiplier] = useState(1);
@@ -140,6 +142,19 @@ export function CrashPanel({ panelId: _panelId }: { panelId: string }) {
 
     if (phase === "crashed") {
       setHistory((h) => [crashPointRef.current, ...h].slice(0, 24));
+      const bet = activeBetRef.current;
+      if (bet) {
+        const cashed = cashedRef.current;
+        const net = cashed !== null ? bet.amount * cashed - bet.amount : -bet.amount;
+        recordBet({
+          bet: bet.amount,
+          net,
+          outcome:
+            cashed !== null
+              ? `Cashed ${formatMultiplier(cashed)}`
+              : `Busted ${formatMultiplier(crashPointRef.current)}`,
+        });
+      }
       const t = setTimeout(() => {
         setActiveBet(null);
         activeBetRef.current = null;
@@ -149,7 +164,7 @@ export function CrashPanel({ panelId: _panelId }: { panelId: string }) {
       }, RESULT_MS);
       return () => clearTimeout(t);
     }
-  }, [phase, settleCashOut, setBalance, setHistory]);
+  }, [phase, settleCashOut, setBalance, setHistory, recordBet]);
 
   const canPlace =
     phase === "betting" && activeBet === null && amount > 0 && amount <= balance;
@@ -199,7 +214,8 @@ export function CrashPanel({ panelId: _panelId }: { panelId: string }) {
     if (!window.confirm("Reset balance and history?")) return;
     setBalance(STARTING_BALANCE);
     setHistory([]);
-  }, [setBalance, setHistory]);
+    clearBetLog();
+  }, [setBalance, setHistory, clearBetLog]);
 
   // Your live position for the lobby row + result banner.
   const yourPotential = activeBet ? activeBet.amount * multiplier : 0;
@@ -209,12 +225,12 @@ export function CrashPanel({ panelId: _panelId }: { panelId: string }) {
       : 0;
 
   return (
-    <div className="flex h-full flex-col gap-3 overflow-y-auto bg-background p-4 text-sm text-foreground">
+    <div className="flex h-full bg-background text-sm text-foreground">
+      <div className="flex h-full min-w-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-col">
-          <h1 className="flex items-center gap-2 bg-linear-to-br from-emerald-300 via-cyan-300 to-amber-300 bg-clip-text text-2xl font-bold leading-tight tracking-tight text-transparent">
-            <Rocket className="size-5 text-emerald-300" />
+          <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground">
             Crash
           </h1>
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60">
@@ -235,6 +251,16 @@ export function CrashPanel({ panelId: _panelId }: { panelId: string }) {
               {formatMoney(balance)}
             </span>
           </div>
+          {!historyOpen && (
+            <Button
+              variant="outline"
+              size="icon-sm"
+              onClick={toggleHistory}
+              title="Show bet history"
+            >
+              <History className="size-3.5" />
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -500,6 +526,15 @@ export function CrashPanel({ panelId: _panelId }: { panelId: string }) {
           )}
         </div>
       </div>
+      </div>
+
+      {historyOpen && (
+        <BetHistory
+          entries={betLog}
+          onClear={clearBetLog}
+          onClose={toggleHistory}
+        />
+      )}
     </div>
   );
 }
